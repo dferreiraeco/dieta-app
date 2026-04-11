@@ -8,6 +8,9 @@
 <meta name="theme-color" content="#1a365d">
 <link rel="manifest" href="manifest.json">
 <title>Plano de Recomposição</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --blue: #1a365d; --blue-mid: #2b6cb0; --blue-light: #bee3f8; --blue-bg: #ebf8ff;
@@ -408,6 +411,40 @@ body {
   background: var(--red-light); color: var(--red); border-radius: 10px;
   font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
 }
+/* ---- AUTH ---- */
+.auth-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100dvh; padding: 20px; text-align: center;
+}
+.auth-screen h1 { font-size: 24px; color: var(--blue); margin-bottom: 8px; }
+.auth-screen p { font-size: 14px; color: var(--gray-mid); margin-bottom: 24px; }
+.google-btn {
+  display: flex; align-items: center; gap: 10px; padding: 12px 24px;
+  border: 2px solid var(--gray-light); border-radius: 12px; background: #fff;
+  font-size: 15px; font-weight: 600; cursor: pointer; color: var(--gray);
+  transition: all 0.2s;
+}
+.google-btn:active { background: var(--gray-bg); }
+.google-btn img { width: 20px; height: 20px; }
+.skip-btn {
+  margin-top: 16px; background: none; border: none; color: var(--gray-mid);
+  font-size: 13px; cursor: pointer; text-decoration: underline;
+}
+.user-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; background: var(--blue); color: #fff; font-size: 12px;
+  margin: -16px -16px 12px;
+}
+.user-bar .user-name { font-weight: 600; }
+.user-bar .logout-btn {
+  background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff;
+  padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
+}
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px;
+}
+.sync-dot.online { background: #48bb78; }
+.sync-dot.offline { background: #f56565; }
 /* ---- CHART ---- */
 .chart-container { margin: 10px 0 16px; }
 .chart-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 6px; }
@@ -415,6 +452,21 @@ body {
 </style>
 </head>
 <body>
+
+<!-- ==================== AUTH SCREEN ==================== -->
+<div id="auth-screen" class="auth-screen">
+  <h1>Plano de Recomposição</h1>
+  <p>Faça login para sincronizar seus dados entre dispositivos</p>
+  <button class="google-btn" onclick="googleLogin()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+    Entrar com Google
+  </button>
+  <button class="skip-btn" onclick="skipLogin()">Usar sem conta (dados apenas neste dispositivo)</button>
+</div>
+
+<!-- ==================== APP CONTAINER ==================== -->
+<div id="app-container" style="display:none">
+<div id="user-bar" class="user-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99"></div>
 
 <!-- ==================== TAB: MARMITAS (PLANNER) ==================== -->
 <div id="page-marmitas" class="page active">
@@ -615,6 +667,7 @@ body {
     <span class="icon">&#128197;</span>Agenda
   </button>
 </nav>
+</div><!-- /app-container -->
 
 <script>
 // ============================================================
@@ -2368,19 +2421,192 @@ function clearTodayWorkout() {
 }
 
 // ============================================================
-// INIT
+// FIREBASE + DATA SYNC LAYER
 // ============================================================
-renderMarmitaPlanner();
-updateWeekLabel();
-renderMarmitaSelector();
-renderStockCard();
-renderMeals();
-checkSundayPrompt();
-renderShoppingList();
-renderPrepList();
-renderExercises();
-loadTodayCardio();
-renderCalendar();
+const firebaseConfig = {
+  apiKey: "AIzaSyACq68zH7MIkCnWUG_qXhZdqjgy-zdnsuk",
+  authDomain: "peitudasnow.firebaseapp.com",
+  projectId: "peitudasnow",
+  storageBucket: "peitudasnow.firebasestorage.app",
+  messagingSenderId: "890572333630",
+  appId: "1:890572333630:web:6a6e3baf5e48ed73b1276f"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence().catch(() => {});
+
+let currentUser = null;
+let firestoreUnsubscribes = [];
+
+// Data keys we sync
+const SYNC_KEYS = ['marmita_plan','marmita_history','marmita_current_week','marmita_consumed',
+  'shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+
+// Save to localStorage AND Firestore (if logged in)
+function saveData(key, value) {
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  localStorage.setItem(key, str);
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).collection('data').doc(key)
+      .set({ value: str, updated: firebase.firestore.FieldValue.serverTimestamp() })
+      .catch(() => {});
+  }
+}
+
+// Load from localStorage (Firestore syncs in background)
+function loadData(key, fallback) {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  try { return JSON.parse(raw); } catch(e) { return raw; }
+}
+
+// Override localStorage.setItem for sync keys to auto-sync
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origRemoveItem = localStorage.removeItem.bind(localStorage);
+localStorage.setItem = function(key, value) {
+  _origSetItem(key, value);
+  if (currentUser && SYNC_KEYS.includes(key)) {
+    db.collection('users').doc(currentUser.uid).collection('data').doc(key)
+      .set({ value: value, updated: firebase.firestore.FieldValue.serverTimestamp() })
+      .catch(() => {});
+  }
+};
+localStorage.removeItem = function(key) {
+  _origRemoveItem(key);
+  if (currentUser && SYNC_KEYS.includes(key)) {
+    db.collection('users').doc(currentUser.uid).collection('data').doc(key)
+      .delete().catch(() => {});
+  }
+};
+
+// Sync: listen for Firestore changes and update localStorage
+function startFirestoreSync() {
+  stopFirestoreSync();
+  if (!currentUser) return;
+  const unsub = db.collection('users').doc(currentUser.uid).collection('data')
+    .onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        const key = change.doc.id;
+        if (change.type === 'removed') {
+          _origRemoveItem(key);
+        } else {
+          const val = change.doc.data().value;
+          if (val !== undefined) _origSetItem(key, val);
+        }
+      });
+      // Re-render after sync
+      initApp();
+    }, () => {});
+  firestoreUnsubscribes.push(unsub);
+}
+
+function stopFirestoreSync() {
+  firestoreUnsubscribes.forEach(fn => fn());
+  firestoreUnsubscribes = [];
+}
+
+// Upload all local data to Firestore (first login)
+function uploadLocalToFirestore() {
+  if (!currentUser) return;
+  const batch = db.batch();
+  const userRef = db.collection('users').doc(currentUser.uid).collection('data');
+  SYNC_KEYS.forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val !== null) {
+      batch.set(userRef.doc(key), { value: val, updated: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+  });
+  // Also sync meals_ keys
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('meals_')) {
+      batch.set(userRef.doc(key), { value: localStorage.getItem(key), updated: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+  });
+  batch.commit().catch(() => {});
+}
+
+// Auth functions
+function googleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    // Fallback for mobile: use redirect
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+      auth.signInWithRedirect(provider);
+    } else {
+      alert('Erro ao fazer login: ' + err.message);
+    }
+  });
+}
+
+function skipLogin() {
+  localStorage.setItem('skip_login', '1');
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-container').style.display = 'block';
+  initApp();
+}
+
+function logout() {
+  if (!confirm('Sair da conta? Seus dados continuam salvos.')) return;
+  stopFirestoreSync();
+  currentUser = null;
+  auth.signOut();
+}
+
+// Auth state listener
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  const authScreen = document.getElementById('auth-screen');
+  const appContainer = document.getElementById('app-container');
+
+  if (user) {
+    authScreen.style.display = 'none';
+    appContainer.style.display = 'block';
+
+    // Check if Firestore has data for this user
+    db.collection('users').doc(user.uid).collection('data').doc('marmita_plan').get()
+      .then(doc => {
+        if (!doc.exists) {
+          // First login: upload local data
+          uploadLocalToFirestore();
+        }
+        startFirestoreSync();
+      })
+      .catch(() => { startFirestoreSync(); });
+  } else {
+    // Check if was previously logged in
+    if (localStorage.getItem('skip_login')) {
+      authScreen.style.display = 'none';
+      appContainer.style.display = 'block';
+      initApp();
+    }
+  }
+});
+
+function initApp() {
+  renderMarmitaPlanner();
+  updateWeekLabel();
+  renderMarmitaSelector();
+  renderStockCard();
+  renderMeals();
+  renderShoppingList();
+  renderPrepList();
+  renderExercises();
+  loadTodayCardio();
+  renderCalendar();
+
+  // Update user bar
+  const userBar = document.getElementById('user-bar');
+  if (currentUser && userBar) {
+    userBar.style.display = 'flex';
+    userBar.innerHTML = `
+      <span><span class="sync-dot online"></span><span class="user-name">${currentUser.displayName || currentUser.email}</span></span>
+      <button class="logout-btn" onclick="logout()">Sair</button>`;
+  } else if (userBar) {
+    userBar.style.display = 'none';
+  }
+}
 
 // Block pinch-to-zoom and double-tap zoom on iOS
 document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
@@ -2389,6 +2615,9 @@ document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { p
 document.addEventListener('touchstart', function(e) {
   if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
+
+// Sunday prompt (delayed to not conflict with auth)
+setTimeout(checkSundayPrompt, 2000);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
