@@ -692,6 +692,12 @@ function getMeals() {
 }
 const GOALS = { kcal: 2100, p: 190, c: 170, g: 70 };
 
+// Helper: local date string YYYY-MM-DD (avoids UTC timezone issues)
+function localDateStr(date) {
+  const d = date || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function getTodayKey() {
   const d = new Date();
   return `meals_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -857,7 +863,7 @@ function getStock() {
 
 function getTodaySelections() {
   const consumed = getConsumed();
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   const val = consumed[today];
   if (!val) return [];
   if (Array.isArray(val)) return val;
@@ -866,7 +872,7 @@ function getTodaySelections() {
 
 function selectTodayMarmita(type) {
   const consumed = getConsumed();
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   let selections = getTodaySelections();
 
   // Check stock before adding
@@ -895,7 +901,7 @@ function selectTodayMarmita(type) {
 
 function removeTodayMarmita(type) {
   const consumed = getConsumed();
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   let selections = getTodaySelections();
   const idx = selections.lastIndexOf(type);
   if (idx !== -1) selections.splice(idx, 1);
@@ -1061,7 +1067,7 @@ function checkSundayPrompt() {
   const today = new Date();
   if (today.getDay() !== 0) return; // not Sunday
   const lastPrompt = localStorage.getItem('sunday_prompt_date');
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = localDateStr(today);
   if (lastPrompt === todayStr) return; // already prompted today
   localStorage.setItem('sunday_prompt_date', todayStr);
   setTimeout(() => {
@@ -1466,7 +1472,7 @@ function getSavedWorkout(type, week) {
 
 // ---- CARDIO (daily) ----
 function getTodayCardioKey() {
-  return 'cardio_' + new Date().toISOString().slice(0,10);
+  return 'cardio_' + localDateStr();
 }
 
 function loadTodayCardio() {
@@ -1574,7 +1580,7 @@ function saveWorkout() {
     const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
     allW[currentWorkout + '_w' + currentWeek] = data;
     if (!allW._meta) allW._meta = {};
-    allW._meta[currentWorkout + '_w' + currentWeek] = { type: currentWorkout, week: currentWeek, date: new Date().toISOString().slice(0,10) };
+    allW._meta[currentWorkout + '_w' + currentWeek] = { type: currentWorkout, week: currentWeek, date: localDateStr() };
     localStorage.setItem('workouts', JSON.stringify(allW));
   }
 
@@ -1593,7 +1599,7 @@ function saveWorkout() {
 
 function saveToCalendar() {
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   if (!cal[today]) cal[today] = {};
 
   if (currentWorkout === 'F') {
@@ -1777,7 +1783,7 @@ function renderCalendar() {
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
   const grid = document.getElementById('cal-grid');
   const today = new Date();
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = localDateStr(today);
 
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
@@ -2004,7 +2010,7 @@ function exportData() {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const date = new Date().toISOString().slice(0,10);
+  const date = localDateStr();
 
   // Use share API on mobile if available, otherwise download
   const file = new File([blob], `dieta-backup-${date}.json`, { type: 'application/json' });
@@ -2132,7 +2138,7 @@ function clearTodayWorkout() {
 
   // Remove today from calendar
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   delete cal[today];
   localStorage.setItem('cal_log', JSON.stringify(cal));
 }
