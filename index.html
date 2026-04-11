@@ -414,21 +414,58 @@ body {
 /* ---- AUTH ---- */
 .auth-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100dvh; padding: 20px; text-align: center;
+  min-height: 100dvh; padding: 24px; text-align: center;
+  background: linear-gradient(160deg, var(--blue) 0%, #2b6cb0 40%, #276749 100%);
 }
-.auth-screen h1 { font-size: 24px; color: var(--blue); margin-bottom: 8px; }
-.auth-screen p { font-size: 14px; color: var(--gray-mid); margin-bottom: 24px; }
+.auth-logo {
+  width: 80px; height: 80px; border-radius: 20px; background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 40px;
+  margin-bottom: 20px; backdrop-filter: blur(10px);
+}
+.auth-screen h1 { font-size: 26px; color: #fff; margin-bottom: 6px; font-weight: 800; }
+.auth-screen .auth-subtitle { font-size: 15px; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+.auth-screen .auth-desc {
+  font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 32px;
+  max-width: 280px; line-height: 1.5;
+}
+.auth-card {
+  background: #fff; border-radius: 20px; padding: 28px 24px; width: 100%;
+  max-width: 340px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.auth-card h2 { font-size: 16px; color: var(--gray); margin-bottom: 16px; }
 .google-btn {
-  display: flex; align-items: center; gap: 10px; padding: 12px 24px;
-  border: 2px solid var(--gray-light); border-radius: 12px; background: #fff;
-  font-size: 15px; font-weight: 600; cursor: pointer; color: var(--gray);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 14px; border: 2px solid var(--gray-light); border-radius: 12px;
+  background: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+  color: var(--gray); transition: all 0.2s;
+}
+.google-btn:active { background: var(--gray-bg); transform: scale(0.98); }
+.google-btn img { width: 20px; height: 20px; }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px; margin: 16px 0;
+  color: var(--gray-mid); font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--gray-light);
+}
+.skip-btn {
+  display: block; width: 100%; padding: 12px; background: none;
+  border: 1.5px solid var(--gray-light); border-radius: 12px;
+  color: var(--gray-mid); font-size: 13px; cursor: pointer;
   transition: all 0.2s;
 }
-.google-btn:active { background: var(--gray-bg); }
-.google-btn img { width: 20px; height: 20px; }
-.skip-btn {
-  margin-top: 16px; background: none; border: none; color: var(--gray-mid);
-  font-size: 13px; cursor: pointer; text-decoration: underline;
+.skip-btn:active { background: var(--gray-bg); }
+.auth-features {
+  margin-top: 24px; text-align: left; padding: 0 4px;
+}
+.auth-feat {
+  display: flex; align-items: flex-start; gap: 10px; padding: 6px 0;
+  font-size: 12px; color: var(--gray-mid); line-height: 1.4;
+}
+.auth-feat-icon {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--green-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0; color: var(--green);
 }
 .user-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -455,13 +492,33 @@ body {
 
 <!-- ==================== AUTH SCREEN ==================== -->
 <div id="auth-screen" class="auth-screen">
+  <div class="auth-logo">&#127857;</div>
   <h1>Plano de Recomposição</h1>
-  <p>Faça login para sincronizar seus dados entre dispositivos</p>
-  <button class="google-btn" onclick="googleLogin()">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
-    Entrar com Google
-  </button>
-  <button class="skip-btn" onclick="skipLogin()">Usar sem conta (dados apenas neste dispositivo)</button>
+  <p class="auth-subtitle">Dieta + Treino + Marmitas</p>
+  <p class="auth-desc">Controle seu plano alimentar, planeje marmitas, registre treinos e acompanhe sua evolução</p>
+  <div class="auth-card">
+    <h2>Comece agora</h2>
+    <button class="google-btn" onclick="googleLogin()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+      Entrar com Google
+    </button>
+    <div class="auth-divider">ou</div>
+    <button class="skip-btn" onclick="skipLogin()">Continuar sem conta</button>
+    <div class="auth-features">
+      <div class="auth-feat">
+        <div class="auth-feat-icon">&#10003;</div>
+        <span><b>Com conta:</b> dados sincronizados entre celular e computador</span>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-icon">&#10003;</div>
+        <span><b>Com conta:</b> backup automático na nuvem</span>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-icon">&#8226;</div>
+        <span><b>Sem conta:</b> dados salvos apenas neste dispositivo</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ==================== APP CONTAINER ==================== -->
