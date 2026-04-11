@@ -1026,10 +1026,15 @@ function updatePlannerSummary() {
 }
 
 function getWeekId(date) {
+  // Week runs Sunday to Saturday
   const d = date || new Date();
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d - jan1) / 86400000);
-  return d.getFullYear() + '-S' + String(Math.ceil((days + jan1.getDay() + 1) / 7)).padStart(2, '0');
+  // Find the Sunday that starts this week
+  const day = d.getDay(); // 0=Sunday
+  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
+  const jan1 = new Date(sunday.getFullYear(), 0, 1);
+  const days = Math.floor((sunday - jan1) / 86400000);
+  const weekNum = Math.ceil((days + jan1.getDay() + 1) / 7);
+  return sunday.getFullYear() + '-S' + String(weekNum).padStart(2, '0');
 }
 
 function saveMarmitaPlan() {
