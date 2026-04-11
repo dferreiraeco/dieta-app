@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a365d">
+<link rel="manifest" href="manifest.json">
+<title>Plano de Recomposição</title>
+<style>
+:root {
+  --blue: #1a365d; --blue-mid: #2b6cb0; --blue-light: #bee3f8; --blue-bg: #ebf8ff;
+  --green: #276749; --green-light: #c6f6d5; --green-bg: #f0fff4;
+  --orange: #dd6b20; --orange-light: #feebc8;
+  --purple: #6b46c1; --purple-light: #e9d8fd;
+  --red: #e53e3e; --red-light: #fed7d7;
+  --gray: #2d3748; --gray-mid: #4a5568; --gray-light: #e2e8f0; --gray-bg: #f7fafc;
+  --radius: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--gray-bg); color: var(--gray);
+  padding-top: var(--safe-top);
+  padding-bottom: calc(70px + var(--safe-bottom));
+  min-height: 100dvh;
+}
+/* ---- NAV ---- */
+.tab-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-top: 1px solid var(--gray-light);
+  display: flex; z-index: 100;
+  padding-bottom: var(--safe-bottom);
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 4px 6px; border: none; background: none;
+  font-size: 10px; color: var(--gray-mid); cursor: pointer;
+  transition: all 0.25s; position: relative; border-top: 3px solid transparent;
+}
+.tab-btn.active { color: var(--blue-mid); background: var(--blue-bg); border-top-color: var(--blue-mid); font-weight: 700; }
+.tab-btn .icon { font-size: 22px; margin-bottom: 2px; }
+/* ---- PAGES ---- */
+.page { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+.page.active { display: block; }
+/* ---- HEADER ---- */
+.page-header {
+  background: var(--blue); color: #fff; margin: -16px -16px 16px;
+  padding: 20px 16px 16px; border-radius: 0 0 20px 20px;
+}
+.page-header h1 { font-size: 20px; font-weight: 700; }
+.page-header p { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+/* ---- CARDS ---- */
+.card {
+  background: #fff; border-radius: var(--radius); padding: 16px;
+  margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.card h3 { font-size: 15px; color: var(--blue); margin-bottom: 10px; }
+.card h4 { font-size: 13px; color: var(--gray-mid); margin: 10px 0 6px; }
+/* ---- MACRO BAR ---- */
+.macro-row { display: flex; gap: 6px; margin-bottom: 12px; }
+.macro-box {
+  flex: 1; text-align: center; padding: 10px 4px; border-radius: 10px; font-size: 11px;
+}
+.macro-box .val { font-size: 20px; font-weight: 700; display: block; }
+.macro-box.kcal { background: var(--blue-bg); color: var(--blue); }
+.macro-box.prot { background: var(--green-bg); color: var(--green); }
+.macro-box.carb { background: var(--orange-light); color: var(--orange); }
+.macro-box.fat  { background: var(--purple-light); color: var(--purple); }
+/* ---- MEAL CARD ---- */
+.meal {
+  border-left: 4px solid var(--blue-mid); padding: 12px; margin-bottom: 10px;
+  border-radius: 0 10px 10px 0; cursor: pointer; transition: all 0.25s;
+  background: #fff; position: relative;
+}
+.meal:active { transform: scale(0.98); }
+.meal.eaten {
+  background: var(--green-bg); border-left-color: var(--green); opacity: 0.75;
+}
+.meal.eaten::after {
+  content: '\2713'; position: absolute; top: 10px; right: 12px;
+  font-size: 20px; font-weight: 700; color: var(--green);
+}
+.meal.eaten .title, .meal.eaten .foods { text-decoration: line-through; opacity: 0.6; }
+.meal .time { font-size: 11px; color: var(--blue-mid); font-weight: 600; text-transform: uppercase; }
+.meal .title { font-size: 14px; font-weight: 600; margin: 2px 0 4px; }
+.meal .foods { font-size: 13px; color: var(--gray-mid); line-height: 1.5; }
+.meal .macros-sm { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 4px; }
+/* ---- DAILY TRACKER ---- */
+.daily-tracker {
+  background: #fff; border-radius: var(--radius); padding: 14px 16px;
+  margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.daily-tracker .tracker-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.daily-tracker .tracker-header h3 { font-size: 14px; color: var(--blue); margin: 0; }
+.daily-tracker .tracker-date { font-size: 12px; color: var(--gray-mid); }
+.macro-progress { display: flex; gap: 6px; margin-bottom: 6px; }
+.macro-prog-item { flex: 1; }
+.macro-prog-item .label { font-size: 10px; color: var(--gray-mid); display: flex; justify-content: space-between; margin-bottom: 3px; }
+.macro-prog-item .bar { height: 8px; background: var(--gray-light); border-radius: 4px; overflow: hidden; }
+.macro-prog-item .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.bar-fill.kcal-f { background: var(--blue-mid); }
+.bar-fill.prot-f { background: var(--green); }
+.bar-fill.carb-f { background: var(--orange); }
+.bar-fill.fat-f  { background: var(--purple); }
+.meals-count { font-size: 12px; color: var(--gray-mid); text-align: center; margin-top: 6px; }
+.daily-reset-btn {
+  display: block; width: 100%; padding: 10px; border: 1.5px solid var(--gray-light);
+  background: #fff; color: var(--gray-mid); border-radius: 10px;
+  font-size: 13px; cursor: pointer; margin-top: 8px; text-align: center;
+}
+/* ---- MARMITA TABS ---- */
+.marmita-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.marmita-tab {
+  flex: 1; padding: 10px; border: 2px solid var(--gray-light); border-radius: 10px;
+  background: #fff; text-align: center; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.marmita-tab.active { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+.marmita-content { display: none; }
+.marmita-content.active { display: block; }
+/* ---- CHECKLIST ---- */
+.check-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 0;
+  border-bottom: 1px solid var(--gray-light);
+}
+.check-item:last-child { border-bottom: none; }
+.check-item input[type="checkbox"] {
+  width: 22px; height: 22px; margin-top: 1px; accent-color: var(--green);
+  flex-shrink: 0; cursor: pointer;
+}
+.check-item.checked .check-label { text-decoration: line-through; opacity: 0.5; }
+.check-label { font-size: 14px; line-height: 1.4; flex: 1; }
+.check-label .qty { font-weight: 600; color: var(--blue); }
+.check-section { font-size: 13px; font-weight: 700; color: var(--green); padding: 12px 0 4px;
+  text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--green-light); }
+.progress-bar { height: 6px; background: var(--gray-light); border-radius: 3px; margin: 8px 0; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.3s; }
+.progress-text { font-size: 12px; color: var(--gray-mid); text-align: right; }
+.reset-btn {
+  display: block; width: 100%; padding: 12px; border: 2px solid var(--red);
+  background: var(--red-light); color: var(--red); border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; text-align: center;
+}
+/* ---- TREINO ---- */
+.exercise-card {
+  background: #fff; border-radius: var(--radius); padding: 14px;
+  margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  overflow: hidden; position: relative; transition: opacity 0.2s;
+}
+.exercise-card.not-done { opacity: 0.5; }
+.exercise-card.done { border-left: 4px solid var(--green); }
+.ex-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.ex-header-info { flex: 1; min-width: 0; }
+.exercise-card .ex-name { font-size: 14px; font-weight: 700; color: var(--blue); }
+.exercise-card .ex-target { font-size: 12px; color: var(--gray-mid); margin: 2px 0 8px; }
+.ex-check {
+  width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid var(--gray-light);
+  background: #fff; cursor: pointer; flex-shrink: 0; margin-left: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: transparent; transition: all 0.2s;
+}
+.ex-check.checked { border-color: var(--green); background: var(--green); color: #fff; }
+.sets-grid {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px 6px; align-items: center;
+}
+.sets-grid .set-label { font-size: 12px; font-weight: 600; color: var(--gray-mid); text-align: center; }
+.sets-grid .hdr { font-size: 11px; color: var(--gray-mid); text-align: center; font-weight: 600; }
+.input-stepper {
+  display: flex; align-items: center; min-width: 0;
+}
+.input-stepper input {
+  flex: 1; min-width: 0; width: 0; padding: 8px 1px; border: 1.5px solid var(--gray-light);
+  border-radius: 0; font-size: 14px; text-align: center; font-weight: 600;
+  background: var(--gray-bg); -webkit-appearance: none; border-left: none; border-right: none;
+}
+.input-stepper input:focus { border-color: var(--blue-mid); outline: none; background: #fff; }
+.step-btn {
+  width: 28px; height: 36px; border: 1.5px solid var(--gray-light);
+  background: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue-mid); flex-shrink: 0; transition: background 0.15s;
+  padding: 0;
+}
+.step-btn:active { background: var(--blue-bg); }
+.step-btn.minus { border-radius: 8px 0 0 8px; }
+.step-btn.plus  { border-radius: 0 8px 8px 0; }
+.workout-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.workout-toggle button {
+  flex: 1; padding: 12px; border: 2px solid var(--gray-light); border-radius: 10px;
+  background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.workout-toggle button.active { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+.week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.week-nav button {
+  width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--gray-light);
+  background: #fff; font-size: 18px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+}
+.week-nav .week-label { font-size: 15px; font-weight: 700; color: var(--blue); }
+.save-btn {
+  display: block; width: 100%; padding: 14px; border: none;
+  background: var(--green); color: #fff; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px;
+  transition: opacity 0.2s;
+}
+.save-btn:active { opacity: 0.7; }
+.history-btn {
+  display: block; width: 100%; padding: 12px; border: 2px solid var(--blue-mid);
+  background: var(--blue-bg); color: var(--blue-mid); border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
+}
+/* ---- HISTORY MODAL ---- */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 200; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #fff; width: 100%; max-width: 600px; max-height: 80vh;
+  border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + var(--safe-bottom));
+  overflow-y: auto;
+}
+.modal h2 { font-size: 18px; color: var(--blue); margin-bottom: 14px; }
+.modal .close-btn {
+  float: right; background: none; border: none; font-size: 24px;
+  color: var(--gray-mid); cursor: pointer; padding: 0 4px;
+}
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+.history-table th { background: var(--blue); color: #fff; padding: 8px 6px; text-align: center; }
+.history-table td { padding: 6px; text-align: center; border-bottom: 1px solid var(--gray-light); }
+.history-table tr:nth-child(even) { background: var(--gray-bg); }
+.empty-state { text-align: center; padding: 30px; color: var(--gray-mid); font-size: 14px; }
+/* ---- PREP ---- */
+.prep-day { margin-bottom: 14px; }
+.prep-day .day-header {
+  font-size: 14px; font-weight: 700; color: #fff; padding: 10px 14px;
+  border-radius: 10px 10px 0 0;
+}
+.prep-day .day-content { background: #fff; border-radius: 0 0 10px 10px; padding: 4px 14px; }
+.day-header.domingo { background: var(--blue); }
+.day-header.quarta { background: var(--green); }
+.day-header.diario { background: var(--orange); }
+/* ---- CARDIO LOG ---- */
+.cardio-section { margin-top: 16px; }
+.cardio-entry {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 8px;
+  background: var(--gray-bg); padding: 8px 10px; border-radius: 10px;
+}
+.cardio-entry select, .cardio-entry input {
+  padding: 8px 6px; border: 1.5px solid var(--gray-light); border-radius: 8px;
+  font-size: 13px; background: #fff; -webkit-appearance: none;
+}
+.cardio-entry select { flex: 2; }
+.cardio-entry input { flex: 1; text-align: center; }
+.cardio-entry .day-sel { flex: 1.2; }
+.cardio-rm {
+  width: 30px; height: 30px; border: none; background: var(--red-light);
+  color: var(--red); border-radius: 50%; font-size: 16px; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.add-cardio-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px; border: 2px dashed var(--blue-mid);
+  background: var(--blue-bg); color: var(--blue-mid); border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px;
+}
+/* ---- MARMITA PLANNER ---- */
+.planner-card {
+  background: #fff; border-radius: var(--radius); padding: 14px;
+  margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: flex; align-items: center; gap: 12px;
+}
+.planner-info { flex: 1; min-width: 0; }
+.planner-info .pl-name { font-size: 14px; font-weight: 700; color: var(--blue); }
+.planner-info .pl-desc { font-size: 12px; color: var(--gray-mid); margin-top: 2px; }
+.planner-info .pl-macros { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 4px; }
+.planner-stepper {
+  display: flex; align-items: center; gap: 0; flex-shrink: 0;
+}
+.planner-stepper .step-btn { width: 36px; height: 40px; }
+.planner-stepper .qty-display {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: var(--blue);
+  border-top: 1.5px solid var(--gray-light); border-bottom: 1.5px solid var(--gray-light);
+  background: var(--gray-bg);
+}
+.planner-summary {
+  background: #fff; border-radius: var(--radius); padding: 16px;
+  margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.planner-summary .sum-row {
+  display: flex; justify-content: space-between; padding: 6px 0;
+  font-size: 13px; border-bottom: 1px solid var(--gray-light);
+}
+.planner-summary .sum-row:last-child { border-bottom: none; }
+.planner-summary .sum-val { font-weight: 700; color: var(--blue); }
+.planner-warning {
+  background: var(--red-light); color: var(--red); padding: 10px 14px;
+  border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 10px; text-align: center;
+}
+.planner-ok {
+  background: var(--green-bg); color: var(--green); padding: 10px 14px;
+  border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 10px; text-align: center;
+}
+/* ---- MARMITA SELECTOR ---- */
+.msel-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px;
+  border: 2px solid var(--gray-light); border-radius: 10px;
+  margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+}
+.msel-option:active { transform: scale(0.98); }
+.msel-option.selected { border-color: var(--green); background: var(--green-bg); }
+.msel-option.disabled { opacity: 0.35; pointer-events: none; border-style: dashed; }
+.msel-option .msel-icon {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--blue-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: var(--blue); flex-shrink: 0;
+}
+.msel-option.selected .msel-icon { background: var(--green); color: #fff; }
+.msel-option .msel-info { flex: 1; min-width: 0; }
+.msel-option .msel-name { font-size: 13px; font-weight: 600; }
+.msel-option .msel-macros { font-size: 11px; color: var(--gray-mid); }
+.msel-option .msel-stock {
+  font-size: 11px; font-weight: 700; padding: 3px 8px;
+  border-radius: 12px; background: var(--blue-bg); color: var(--blue);
+}
+.msel-option.disabled .msel-stock { background: var(--red-light); color: var(--red); }
+/* ---- STOCK CARD ---- */
+.stock-card { margin-bottom: 12px; }
+.stock-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid var(--gray-light); font-size: 13px;
+}
+.stock-item:last-child { border-bottom: none; }
+.stock-badge {
+  font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 10px;
+}
+.stock-badge.has { background: var(--green-bg); color: var(--green); }
+.stock-badge.empty { background: var(--gray-light); color: var(--gray-mid); }
+/* ---- CALENDAR ---- */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-nav button {
+  width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--gray-light);
+  background: #fff; font-size: 18px; cursor: pointer;
+}
+.cal-nav .month-label { font-size: 16px; font-weight: 700; color: var(--blue); }
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;
+}
+.cal-grid .cal-header { font-size: 11px; font-weight: 700; color: var(--gray-mid); padding: 6px 0; }
+.cal-cell {
+  aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; border-radius: 10px; font-size: 13px;
+  position: relative; cursor: pointer; transition: background 0.15s;
+}
+.cal-cell:active:not(.empty) { background: var(--blue-bg); }
+.cal-cell.has-data { background: var(--gray-bg); }
+.cal-cell.today { font-weight: 700; border: 2px solid var(--blue-mid); }
+.cal-cell.selected { background: var(--orange-light); border: 2px solid var(--orange); font-weight: 700; }
+.cal-cell.today.selected { border: 2px solid var(--blue-mid); background: var(--blue-bg); }
+.cal-cell.empty { opacity: 0; pointer-events: none; }
+.cal-dots { display: flex; gap: 3px; margin-top: 2px; }
+.cal-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.cal-dot.forca { background: var(--blue-mid); }
+.cal-dot.cardio { background: var(--orange); }
+.cal-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px; color: var(--gray-mid); }
+.cal-legend span { display: flex; align-items: center; gap: 4px; }
+.cal-summary { margin-top: 14px; }
+.cal-summary .stat-row {
+  display: flex; justify-content: space-between; padding: 8px 0;
+  border-bottom: 1px solid var(--gray-light); font-size: 13px;
+}
+.cal-summary .stat-val { font-weight: 700; color: var(--blue); }
+/* ---- DAY DETAIL ---- */
+.day-detail {
+  background: #fff; border-radius: var(--radius); padding: 16px;
+  margin-top: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  border-left: 4px solid var(--blue-mid); display: none;
+}
+.day-detail.open { display: block; }
+.day-detail .dd-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.day-detail .dd-date { font-size: 15px; font-weight: 700; color: var(--blue); }
+.day-detail .dd-close {
+  width: 30px; height: 30px; border: none; background: var(--gray-light);
+  border-radius: 50%; font-size: 16px; cursor: pointer; color: var(--gray-mid);
+}
+.day-detail .dd-section { margin-bottom: 10px; }
+.day-detail .dd-label { font-size: 11px; font-weight: 700; color: var(--gray-mid); text-transform: uppercase; margin-bottom: 4px; }
+.day-detail .dd-content { font-size: 13px; line-height: 1.6; color: var(--gray); }
+.day-detail .dd-exercise { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--gray-light); }
+.day-detail .dd-exercise:last-child { border-bottom: none; }
+.day-detail .dd-ex-name { font-weight: 600; font-size: 12px; }
+.day-detail .dd-ex-stats { font-size: 12px; color: var(--blue-mid); font-weight: 600; }
+.dd-delete-btn {
+  display: block; width: 100%; padding: 10px; border: 2px solid var(--red);
+  background: var(--red-light); color: var(--red); border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
+}
+/* ---- CHART ---- */
+.chart-container { margin: 10px 0 16px; }
+.chart-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 6px; }
+.chart-canvas { width: 100%; height: 140px; background: var(--gray-bg); border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ==================== TAB: MARMITAS (PLANNER) ==================== -->
+<div id="page-marmitas" class="page active">
+  <div class="page-header" style="background:var(--green);">
+    <h1>Planejamento de Marmitas</h1>
+    <p>Monte sua semana (para 2 pessoas)</p>
+  </div>
+
+  <div id="planner-status"></div>
+  <div id="planner-cards"></div>
+
+  <div class="planner-summary" id="planner-summary"></div>
+
+  <!-- Stock card -->
+  <div class="card stock-card" id="stock-card" style="display:none"></div>
+
+  <div id="current-week-label" style="text-align:center;font-size:13px;color:var(--gray-mid);margin-bottom:8px"></div>
+  <button class="save-btn" onclick="saveMarmitaPlan()">Salvar e Atualizar Lista de Compras</button>
+  <button class="save-btn" onclick="startNewWeek()" style="margin-top:10px;background:var(--orange)">Iniciar Nova Semana</button>
+
+  <!-- Prep checklist integrado -->
+  <div style="margin-top:20px">
+    <h3 style="font-size:16px;color:var(--orange);margin-bottom:10px">Checklist de Preparo</h3>
+    <div class="card">
+      <div class="progress-bar"><div class="progress-fill" id="prep-progress" style="width:0%"></div></div>
+      <div class="progress-text" id="prep-progress-text">0 de 0 itens</div>
+    </div>
+    <div id="prep-list"></div>
+    <button class="reset-btn" onclick="resetChecklist('prep')" style="margin-top:12px;">Limpar Checklist</button>
+  </div>
+</div>
+
+<!-- ==================== TAB: DIETA ==================== -->
+<div id="page-dieta" class="page">
+  <div class="page-header">
+    <h1>Plano de Recomposição</h1>
+    <p>Diego Ferreira | 118.3 kg | Meta: ~2.100 kcal/dia</p>
+  </div>
+
+  <!-- Daily macro tracker -->
+  <div class="daily-tracker">
+    <div class="tracker-header">
+      <h3>Progresso do Dia</h3>
+      <span class="tracker-date" id="diet-date"></span>
+    </div>
+    <div class="macro-progress">
+      <div class="macro-prog-item">
+        <div class="label"><span>Kcal</span><span id="prog-kcal">0/2100</span></div>
+        <div class="bar"><div class="bar-fill kcal-f" id="bar-kcal" style="width:0%"></div></div>
+      </div>
+      <div class="macro-prog-item">
+        <div class="label"><span>Prot</span><span id="prog-prot">0/190g</span></div>
+        <div class="bar"><div class="bar-fill prot-f" id="bar-prot" style="width:0%"></div></div>
+      </div>
+      <div class="macro-prog-item">
+        <div class="label"><span>Carb</span><span id="prog-carb">0/170g</span></div>
+        <div class="bar"><div class="bar-fill carb-f" id="bar-carb" style="width:0%"></div></div>
+      </div>
+      <div class="macro-prog-item">
+        <div class="label"><span>Gord</span><span id="prog-fat">0/70g</span></div>
+        <div class="bar"><div class="bar-fill fat-f" id="bar-fat" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="meals-count" id="meals-count">0 de 6 refeições realizadas</div>
+    <button class="daily-reset-btn" onclick="resetDailyMeals()">Resetar dia</button>
+  </div>
+
+  <!-- Marmita selector for today -->
+  <div class="card">
+    <h3>Marmita de Hoje (Almoço)</h3>
+    <div id="marmita-selector"></div>
+  </div>
+
+  <!-- Meals rendered by JS -->
+  <div class="card">
+    <h3>Toque na refeição ao concluir</h3>
+    <div id="meals-container"></div>
+  </div>
+
+  <div class="card">
+    <h3>Suplementação Diária</h3>
+    <div class="foods" style="line-height:2">
+      <b>Creatina:</b> 5g/dia (qualquer horario)<br>
+      <b>Whey:</b> 1-1.5 scoops/dia (manha + pré-treino)<br>
+      <b>Caseina:</b> 1 scoop pre-sono (opcional)<br>
+      <b>Cafeina:</b> 350-500mg pré-treino (opcional)
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: COMPRAS ==================== -->
+<div id="page-compras" class="page">
+  <div class="page-header" style="background:var(--green);">
+    <h1>Lista de Compras</h1>
+    <p>Semanal para 2 pessoas | Estimativa: ~R$ 660</p>
+  </div>
+  <div class="card">
+    <div class="progress-bar"><div class="progress-fill" id="shop-progress" style="width:0%"></div></div>
+    <div class="progress-text" id="shop-progress-text">0 de 0 itens</div>
+  </div>
+  <div class="card" id="shopping-list"></div>
+  <button class="reset-btn" onclick="resetChecklist('shop')">Limpar Lista (Nova Semana)</button>
+</div>
+
+<!-- ==================== TAB: PREP ==================== -->
+<!-- ==================== TAB: TREINO ==================== -->
+<div id="page-treino" class="page">
+  <div class="page-header" style="background:var(--blue);">
+    <h1>Registro de Treino</h1>
+    <p>Acompanhe sua progressão semana a semana</p>
+  </div>
+
+  <div class="workout-toggle">
+    <button class="active" onclick="switchWorkout('A')">Treino A</button>
+    <button onclick="switchWorkout('B')">Treino B</button>
+    <button onclick="switchWorkout('F')">Funcional</button>
+  </div>
+
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">&larr;</button>
+    <span class="week-label" id="week-label">Semana 1</span>
+    <button onclick="changeWeek(1)">&rarr;</button>
+  </div>
+
+  <div id="exercises-container"></div>
+
+  <!-- CARDIO LOG -->
+  <div class="card cardio-section">
+    <h3 id="cardio-title">Cardio de Hoje</h3>
+    <div id="cardio-entries"></div>
+    <button class="add-cardio-btn" onclick="addCardioEntry()">+ Adicionar Cardio</button>
+  </div>
+
+  <button class="save-btn" onclick="saveWorkout()">Salvar Treino</button>
+  <button class="history-btn" onclick="openHistory()">Ver Histórico de Progressão</button>
+  <button class="reset-btn" style="margin-top:16px" onclick="clearTodayWorkout()">Limpar Treino de Hoje</button>
+</div>
+
+<!-- ==================== TAB: CALENDARIO ==================== -->
+<div id="page-calendário" class="page">
+  <div class="page-header" style="background:#553c9a;">
+    <h1>Calendário de Treinos</h1>
+    <p>Visualize sua consistência ao longo do mês</p>
+  </div>
+
+  <div class="card">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">&larr;</button>
+      <span class="month-label" id="cal-month-label"></span>
+      <button onclick="changeMonth(1)">&rarr;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-legend">
+      <span><span class="cal-dot forca" style="display:inline-block"></span> Forca</span>
+      <span><span class="cal-dot cardio" style="display:inline-block"></span> Cardio</span>
+    </div>
+  </div>
+
+  <div class="day-detail" id="day-detail"></div>
+
+  <div class="card cal-summary" id="cal-summary"></div>
+
+  <div class="card" style="margin-top:16px">
+    <h3 style="font-size:14px;color:var(--blue);margin-bottom:10px">Backup dos Dados</h3>
+    <button class="save-btn" onclick="exportData()" style="margin-top:0;background:var(--blue-mid)">Exportar Backup (JSON)</button>
+    <label class="history-btn" style="margin-top:10px;display:block;cursor:pointer">
+      Importar Backup (JSON)
+      <input type="file" accept=".json,application/json" onchange="importData(event)" style="display:none">
+    </label>
+  </div>
+</div>
+
+<!-- ==================== HISTORY MODAL ==================== -->
+<div class="modal-overlay" id="history-modal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeHistory()">&times;</button>
+    <h2 id="history-title">Histórico</h2>
+    <div id="history-content"></div>
+  </div>
+</div>
+
+<!-- ==================== TAB BAR ==================== -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('marmitas')">
+    <span class="icon">&#127857;</span>Marmitas
+  </button>
+  <button class="tab-btn" onclick="switchTab('compras')">
+    <span class="icon">&#128722;</span>Compras
+  </button>
+  <button class="tab-btn" onclick="switchTab('dieta')">
+    <span class="icon">&#127858;</span>Dieta
+  </button>
+  <button class="tab-btn" onclick="switchTab('treino')">
+    <span class="icon">&#127947;</span>Treino
+  </button>
+  <button class="tab-btn" onclick="switchTab('calendário')">
+    <span class="icon">&#128197;</span>Agenda
+  </button>
+</nav>
+
+<script>
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+const TABS = ['marmitas','compras','dieta','treino','calendário'];
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelectorAll('.tab-btn')[TABS.indexOf(tab)].classList.add('active');
+  if (tab === 'calendário') renderCalendar();
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// MARMITA TABS
+// ============================================================
+function showMarmita(idx) {
+  document.querySelectorAll('.marmita-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.marmita-content').forEach((c, i) => c.classList.toggle('active', i === idx));
+}
+
+// ============================================================
+// DAILY MEAL TRACKER
+// ============================================================
+const FIXED_MEALS = [
+  { id: 'cafe',    time: '7h',  name: 'Café da Manhã',        desc: 'Ovos + Pão Integral',
+    foods: '2 ovos mexidos + 2 claras | 2 fatias pão integral | 1 fatia mussarela (20g) | 1 banana prata | Café preto',
+    kcal: 430, p: 32, c: 38, g: 17, color: '' },
+  { id: 'lanche1', time: '10h', name: 'Lanche da Manhã',      desc: 'Whey + Fruta',
+    foods: '1 scoop whey isolado em água (30g) | 1 maçã média',
+    kcal: 200, p: 24, c: 23, g: 2, color: '' },
+  null, // placeholder for dynamic lunch
+  { id: 'lanche2', time: '16h', name: 'Lanche / Pré-Treino',  desc: 'Iogurte + Whey + Banana',
+    foods: '170g iogurte grego natural | 1/2 scoop whey (15g) | 1 banana prata',
+    kcal: 270, p: 27, c: 24, g: 9, color: '' },
+  { id: 'jantar',  time: '20h', name: 'Jantar',                desc: 'Omelete / Tapioca / Carne',
+    foods: '<b>Op.1:</b> 3 ovos + 50g peru + mussarela + 2 fatias pão<br><b>Op.2:</b> Tapioca (50g) + 130g frango desfiado + cottage<br><b>Op.3:</b> 130g alcatra + 100g arroz + salada + azeite',
+    kcal: 440, p: 38, c: 31, g: 15, color: 'var(--purple)' },
+  { id: 'presono', time: '22h', name: 'Pré-Sono',              desc: 'Proteína Lenta',
+    foods: '200g cottage | OU caseína | OU iogurte grego | OU minas + peru | OU whey | OU omelete (1 ovo + 2 claras)',
+    kcal: 170, p: 24, c: 5, g: 7, color: '' },
+];
+
+function getMeals() {
+  const selections = getTodaySelections();
+  let lunch;
+  if (selections.length === 0) {
+    lunch = { id: 'almoco', time: '13h', name: 'Almoço (Marmita)',
+        desc: 'Selecione acima', foods: 'Escolha a marmita do dia no card acima',
+        kcal: 0, p: 0, c: 0, g: 0, color: 'var(--green)' };
+  } else {
+    // Average macros across selections (app serves 2 people, show per-person average)
+    let kcal = 0, p = 0, c = 0, g = 0;
+    const names = [];
+    const grouped = {};
+    selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
+    Object.entries(grouped).forEach(([type, count]) => {
+      const def = MARMITA_DEFS.find(x => x.id === type);
+      if (!def) return;
+      kcal += def.kcal * count; p += def.p * count; c += def.c * count; g += def.g * count;
+      names.push(count > 1 ? `${count}x ${def.name.split(' - ')[1]}` : def.name.split(' - ')[1]);
+    });
+    const n = selections.length;
+    const avgKcal = Math.round(kcal / n);
+    const avgP = Math.round(p / n);
+    const avgC = Math.round(c / n);
+    const avgG = Math.round(g / n);
+    lunch = { id: 'almoco', time: '13h', name: 'Almoço (' + names.join(' + ') + ')',
+        desc: 'Média por pessoa', foods: names.join(' + '),
+        kcal: avgKcal, p: avgP, c: avgC, g: avgG, color: 'var(--green)' };
+  }
+  return FIXED_MEALS.map(m => m === null ? lunch : m);
+}
+const GOALS = { kcal: 2100, p: 190, c: 170, g: 70 };
+
+function getTodayKey() {
+  const d = new Date();
+  return `meals_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getTodayDateStr() {
+  const d = new Date();
+  const dias = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+  return `${dias[d.getDay()]}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getSavedMeals() {
+  return JSON.parse(localStorage.getItem(getTodayKey()) || '{}');
+}
+
+function renderMeals() {
+  const saved = getSavedMeals();
+  const container = document.getElementById('meals-container');
+  let html = '';
+
+  getMeals().forEach(m => {
+    const eaten = saved[m.id] || false;
+    const borderColor = m.color || 'var(--blue-mid)';
+    const timeColor = m.color || 'var(--blue-mid)';
+    html += `<div class="meal ${eaten ? 'eaten' : ''}" onclick="toggleMeal('${m.id}')"
+      style="border-left-color:${eaten ? 'var(--green)' : borderColor}">
+      <div class="time" style="color:${eaten ? 'var(--green)' : timeColor}">${m.time} - ${m.name}</div>
+      <div class="title">${m.desc}</div>
+      <div class="foods">${m.foods}</div>
+      <div class="macros-sm">~${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+  updateDailyProgress();
+}
+
+function toggleMeal(id) {
+  const saved = getSavedMeals();
+  saved[id] = !saved[id];
+  localStorage.setItem(getTodayKey(), JSON.stringify(saved));
+  renderMeals();
+}
+
+function updateDailyProgress() {
+  const saved = getSavedMeals();
+  let kcal = 0, p = 0, c = 0, g = 0, count = 0;
+
+  getMeals().forEach(m => {
+    if (saved[m.id]) {
+      kcal += m.kcal; p += m.p; c += m.c; g += m.g; count++;
+    }
+  });
+
+  document.getElementById('diet-date').textContent = getTodayDateStr();
+  document.getElementById('meals-count').textContent = `${count} de ${getMeals().length} refeições realizadas`;
+
+  const update = (id, val, max) => {
+    const pct = Math.min(100, Math.round(val / max * 100));
+    document.getElementById('bar-' + id).style.width = pct + '%';
+    document.getElementById('prog-' + id).textContent = `${val}/${max}${id === 'kcal' ? '' : 'g'}`;
+  };
+  update('kcal', kcal, GOALS.kcal);
+  update('prot', p, GOALS.p);
+  update('carb', c, GOALS.c);
+  update('fat', g, GOALS.g);
+}
+
+function resetDailyMeals() {
+  if (!confirm('Desmarcar todas as refeições de hoje?')) return;
+  localStorage.removeItem(getTodayKey());
+  renderMeals();
+}
+
+// ============================================================
+// MARMITA PLANNER
+// ============================================================
+const MARMITA_DEFS = [
+  { id: 'A', name: 'Marmita A - Frango', desc: 'Peito de frango grelhado + arroz branco',
+    kcal: 510, p: 52, c: 40, g: 11,
+    ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
+  { id: 'B', name: 'Marmita B - Carne Moída', desc: 'Patinho moído + batata doce',
+    kcal: 530, p: 46, c: 35, g: 18,
+    ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 } },
+  { id: 'C', name: 'Marmita C - Tilápia', desc: 'Filé de tilápia + arroz integral',
+    kcal: 490, p: 52, c: 34, g: 11,
+    ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 } },
+  { id: 'D', name: 'Marmita D - Lombo Suíno', desc: 'Lombo suíno grelhado + arroz branco',
+    kcal: 520, p: 50, c: 40, g: 15,
+    ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
+  { id: 'E', name: 'Marmita E - Sobrecoxa', desc: 'Sobrecoxa sem pele + mandioca cozida',
+    kcal: 540, p: 48, c: 40, g: 19,
+    ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 } },
+  { id: 'F', name: 'Marmita F - Coxão Mole', desc: 'Coxão mole grelhado + macarrão integral',
+    kcal: 500, p: 50, c: 32, g: 16,
+    ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 } },
+];
+
+const DEFAULT_PLAN = {"A":2,"B":2,"C":2,"D":2,"E":2,"F":2};
+
+function getMarmitaPlan() {
+  return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
+}
+
+function getCurrentWeekLabel() {
+  const wk = localStorage.getItem('marmita_current_week') || getWeekId();
+  return wk;
+}
+
+function updateWeekLabel() {
+  const el = document.getElementById('current-week-label');
+  if (el) el.textContent = 'Semana atual: ' + getCurrentWeekLabel();
+}
+
+function renderMarmitaPlanner() {
+  const plan = getMarmitaPlan();
+  const container = document.getElementById('planner-cards');
+  let html = '';
+  MARMITA_DEFS.forEach(m => {
+    const qty = plan[m.id] || 0;
+    html += `<div class="planner-card">
+      <div class="planner-info">
+        <div class="pl-name">${m.name}</div>
+        <div class="pl-desc">${m.desc}</div>
+        <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      </div>
+      <div class="planner-stepper">
+        <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
+        <div class="qty-display" id="mq_${m.id}">${qty}</div>
+        <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+  updatePlannerSummary();
+}
+
+function stepMarmita(id, delta) {
+  const plan = getMarmitaPlan();
+  plan[id] = Math.max(0, (plan[id] || 0) + delta);
+  localStorage.setItem('marmita_plan', JSON.stringify(plan));
+  document.getElementById('mq_' + id).textContent = plan[id];
+  updatePlannerSummary();
+}
+
+// ---- STOCK MANAGEMENT ----
+function getConsumed() {
+  return JSON.parse(localStorage.getItem('marmita_consumed') || '{}');
+}
+
+function getStock() {
+  const plan = getMarmitaPlan();
+  const consumed = getConsumed();
+  const stock = {};
+  MARMITA_DEFS.forEach(m => { stock[m.id] = plan[m.id] || 0; });
+  // Each entry is an array of consumed types
+  Object.values(consumed).forEach(arr => {
+    if (Array.isArray(arr)) arr.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
+    else if (typeof arr === 'string' && stock[arr] !== undefined) stock[arr] -= 2; // legacy
+  });
+  return stock;
+}
+
+function getTodaySelections() {
+  const consumed = getConsumed();
+  const today = new Date().toISOString().slice(0,10);
+  const val = consumed[today];
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return [val, val]; // legacy: single string = 2 of that type
+}
+
+function selectTodayMarmita(type) {
+  const consumed = getConsumed();
+  const today = new Date().toISOString().slice(0,10);
+  let selections = getTodaySelections();
+
+  // Check stock before adding
+  const stock = getStock();
+  const currentCount = selections.filter(t => t === type).length;
+  // When adding, check if stock allows it (stock already accounts for today's selections)
+  // stock[type] is already reduced by today's selections, so if > 0 we can add more
+  if (stock[type] > 0) {
+    selections.push(type);
+  } else if (currentCount > 0) {
+    // Remove last occurrence of this type (toggle off)
+    const idx = selections.lastIndexOf(type);
+    if (idx !== -1) selections.splice(idx, 1);
+  }
+
+  if (selections.length === 0) {
+    delete consumed[today];
+  } else {
+    consumed[today] = selections;
+  }
+  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  renderMarmitaSelector();
+  renderMeals();
+  renderStockCard();
+}
+
+function removeTodayMarmita(type) {
+  const consumed = getConsumed();
+  const today = new Date().toISOString().slice(0,10);
+  let selections = getTodaySelections();
+  const idx = selections.lastIndexOf(type);
+  if (idx !== -1) selections.splice(idx, 1);
+  if (selections.length === 0) delete consumed[today];
+  else consumed[today] = selections;
+  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  renderMarmitaSelector();
+  renderMeals();
+  renderStockCard();
+}
+
+function renderMarmitaSelector() {
+  const stock = getStock();
+  const selections = getTodaySelections();
+  const container = document.getElementById('marmita-selector');
+
+  // Count per type today
+  const todayCounts = {};
+  selections.forEach(t => { todayCounts[t] = (todayCounts[t] || 0) + 1; });
+
+  let html = '';
+
+  // Show current selections
+  if (selections.length > 0) {
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px">Selecionadas hoje:</div>';
+    // Group by type
+    const grouped = {};
+    selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
+    Object.entries(grouped).forEach(([type, count]) => {
+      const m = MARMITA_DEFS.find(x => x.id === type);
+      if (!m) return;
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--green-bg);border-radius:8px;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:600;color:var(--green)">${count}x ${m.name.split(' - ')[1]} (${m.kcal} kcal | ${m.p}g P)</span>
+        <button onclick="removeTodayMarmita('${type}')" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Show options to add
+  html += '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:6px">Toque para adicionar:</div>';
+  MARMITA_DEFS.forEach(m => {
+    const remaining = stock[m.id] || 0;
+    const disabled = remaining <= 0;
+    html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
+      onclick="selectTodayMarmita('${m.id}')">
+      <div class="msel-icon">${m.id}</div>
+      <div class="msel-info">
+        <div class="msel-name">${m.name.split(' - ')[1]}</div>
+        <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      </div>
+      <div class="msel-stock">${disabled ? 'Esgotada' : remaining + ' rest.'}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function renderStockCard() {
+  const stock = getStock();
+  const card = document.getElementById('stock-card');
+  let totalRemaining = 0;
+  MARMITA_DEFS.forEach(m => { totalRemaining += Math.max(0, stock[m.id] || 0); });
+
+  if (totalRemaining <= 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  let html = `<h3 style="font-size:14px;color:var(--orange);margin-bottom:8px">Estoque de Marmitas (${totalRemaining} restantes)</h3>`;
+  MARMITA_DEFS.forEach(m => {
+    const rem = Math.max(0, stock[m.id] || 0);
+    if (rem > 0 || (getMarmitaPlan()[m.id] || 0) > 0) {
+      html += `<div class="stock-item">
+        <span>${m.id} - ${m.name.split(' - ')[1]}</span>
+        <span class="stock-badge ${rem > 0 ? 'has' : 'empty'}">${rem > 0 ? rem + ' un.' : 'Esgotada'}</span>
+      </div>`;
+    }
+  });
+  card.innerHTML = html;
+}
+
+function updatePlannerSummary() {
+  const plan = getMarmitaPlan();
+  let total = 0, kcal = 0, p = 0, c = 0, g = 0;
+  MARMITA_DEFS.forEach(m => {
+    const qty = plan[m.id] || 0;
+    total += qty;
+    kcal += m.kcal * qty; p += m.p * qty; c += m.c * qty; g += m.g * qty;
+  });
+
+  const statusEl = document.getElementById('planner-status');
+  statusEl.innerHTML = `<div class="planner-ok">${total} marmitas planejadas (${total / 2} dias para 2 pessoas)</div>`;
+
+  document.getElementById('planner-summary').innerHTML = `
+    <h3 style="font-size:14px;color:var(--blue);margin-bottom:8px">Resumo da Semana</h3>
+    <div class="sum-row"><span>Total de marmitas</span><span class="sum-val">${total}</span></div>
+    <div class="sum-row"><span>Dias cobertos (2 pessoas)</span><span class="sum-val">${total / 2} dias</span></div>
+    <div class="sum-row"><span>Kcal/almoço (média)</span><span class="sum-val">${total ? Math.round(kcal / total) : 0}</span></div>
+    <div class="sum-row"><span>Proteína/almoço (média)</span><span class="sum-val">${total ? Math.round(p / total) : 0}g</span></div>
+    <button class="history-btn" onclick="openMarmitaHistory()" style="margin-top:10px">Histórico de Semanas</button>
+  `;
+  renderStockCard();
+}
+
+function getWeekId(date) {
+  const d = date || new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d - jan1) / 86400000);
+  return d.getFullYear() + '-S' + String(Math.ceil((days + jan1.getDay() + 1) / 7)).padStart(2, '0');
+}
+
+function saveMarmitaPlan() {
+  const plan = getMarmitaPlan();
+  renderShoppingList();
+  renderPrepList();
+  renderStockCard();
+  renderMarmitaSelector();
+
+  const weekId = getCurrentWeekLabel();
+  localStorage.setItem('marmita_current_week', weekId);
+  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  history[weekId] = { ...plan, _saved: new Date().toISOString() };
+  localStorage.setItem('marmita_history', JSON.stringify(history));
+  updateWeekLabel();
+
+  const btn = document.querySelectorAll('#page-marmitas .save-btn')[0];
+  btn.textContent = 'Salvo! Lista atualizada';
+  btn.style.background = '#276749';
+  setTimeout(() => { btn.textContent = 'Salvar e Atualizar Lista de Compras'; btn.style.background = ''; }, 2000);
+}
+
+function startNewWeek() {
+  const currentWeek = getCurrentWeekLabel();
+  const newWeek = getWeekId();
+  if (!confirm(`Iniciar nova semana?\n\nO planejamento da semana ${currentWeek} será arquivado.\nA lista de compras, checklist de preparo e consumo de marmitas serão resetados.\n\nMarmitas não consumidas serão perdidas do estoque.\n\nDeseja continuar?`)) return;
+
+  const plan = getMarmitaPlan();
+  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  history[currentWeek] = { ...plan, _saved: new Date().toISOString() };
+  localStorage.setItem('marmita_history', JSON.stringify(history));
+
+  localStorage.setItem('marmita_plan', JSON.stringify(DEFAULT_PLAN));
+  localStorage.removeItem('shop_checks');
+  localStorage.removeItem('prep_checks');
+  localStorage.removeItem('marmita_consumed');
+  localStorage.setItem('marmita_current_week', newWeek);
+
+  renderMarmitaPlanner();
+  renderShoppingList();
+  renderPrepList();
+  renderStockCard();
+  renderMarmitaSelector();
+  updateWeekLabel();
+
+  const btn = document.querySelectorAll('#page-marmitas .save-btn')[1];
+  btn.textContent = 'Nova semana iniciada!';
+  btn.style.background = '#276749';
+  setTimeout(() => { btn.textContent = 'Iniciar Nova Semana'; btn.style.background = 'var(--orange)'; }, 2000);
+}
+
+function checkSundayPrompt() {
+  const today = new Date();
+  if (today.getDay() !== 0) return; // not Sunday
+  const lastPrompt = localStorage.getItem('sunday_prompt_date');
+  const todayStr = today.toISOString().slice(0,10);
+  if (lastPrompt === todayStr) return; // already prompted today
+  localStorage.setItem('sunday_prompt_date', todayStr);
+  setTimeout(() => {
+    if (confirm('Hoje é domingo! Deseja iniciar um novo planejamento de marmitas para a semana?')) {
+      startNewWeek();
+      switchTab('marmitas');
+    }
+  }, 500);
+}
+
+function openMarmitaHistory() {
+  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Histórico de Marmitas';
+
+  const weeks = Object.keys(history).sort().reverse();
+
+  if (weeks.length === 0) {
+    content.innerHTML = '<div class="empty-state">Nenhum histórico ainda.<br>Salve seu primeiro planejamento para começar o registro.</div>';
+    modal.classList.add('open');
+    return;
+  }
+
+  // Build header
+  const ids = MARMITA_DEFS.map(m => m.id);
+  let html = '<table class="history-table"><tr><th>Semana</th>';
+  ids.forEach(id => { html += `<th>${id}</th>`; });
+  html += '<th>Total</th></tr>';
+
+  weeks.forEach(wk => {
+    const p = history[wk];
+    let total = 0;
+    html += `<tr><td><b>${wk}</b></td>`;
+    ids.forEach(id => {
+      const q = p[id] || 0;
+      total += q;
+      html += `<td>${q || '-'}</td>`;
+    });
+    html += `<td><b>${total}</b></td></tr>`;
+  });
+  html += '</table>';
+
+  // Summary chart: total marmitas per type across all weeks
+  html += '<div style="margin-top:16px"><b style="font-size:13px;color:var(--blue)">Acumulado (todas as semanas)</b></div>';
+  const totals = {};
+  ids.forEach(id => { totals[id] = 0; });
+  let grandTotal = 0;
+  weeks.forEach(wk => {
+    ids.forEach(id => { totals[id] += (history[wk][id] || 0); grandTotal += (history[wk][id] || 0); });
+  });
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
+  MARMITA_DEFS.forEach(m => {
+    const pct = grandTotal ? Math.round(totals[m.id] / grandTotal * 100) : 0;
+    html += `<div style="flex:1;min-width:70px;text-align:center;background:var(--green-bg);border-radius:8px;padding:8px 4px">
+      <div style="font-size:18px;font-weight:700;color:var(--green)">${totals[m.id]}</div>
+      <div style="font-size:10px;color:var(--gray-mid)">${m.name.split(' - ')[1]} (${pct}%)</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+}
+
+// ============================================================
+// SHOPPING LIST (dynamic based on marmita plan)
+// ============================================================
+function buildShoppingList() {
+  const plan = getMarmitaPlan();
+  const qA = plan.A||0, qB = plan.B||0, qC = plan.C||0, qD = plan.D||0, qE = plan.E||0, qF = plan.F||0;
+
+  // Proteínas cruas (com fator de conversão cru→cozido)
+  const frangoG = qA * 215 + 280; // +280g para frango desfiado jantar
+  const carneG = qB * 230;
+  const tilapiaG = qC * 250;
+  const lomboG = qD * 215;
+  const sobrecoxaG = qE * 240; // 180g cozida = 240g crua (~25% perda)
+  const coxaoG = qF * 215;     // 160g cozido = 215g cru (~25% perda)
+
+  // Carboidratos crus
+  const arrozBrancoG = (qA + qD) * 56 + 200; // +200g para jantar
+  const arrozIntegralG = qC * 52;
+  const batataDoceG = qB * 180;
+  const mandiocaG = qE * 145;   // 130g cozida = 145g crua (~10% perda)
+  const macarraoG = qF * 52;    // 130g cozido = 52g cru (~2.5x)
+
+  // Vegetais
+  const totalMarmitas = qA + qB + qC + qD + qE + qF;
+  const pepinos = Math.ceil((totalMarmitas * 75 + 320) / 150);
+
+  const fmt = (g) => g >= 1000 ? `~${(g/1000).toFixed(1)} kg` : `~${Math.round(g/10)*10} g`;
+
+  return [
+    { section: 'Proteínas (marmitas + refeições)', items: [
+      ...(frangoG > 0 ? [{ name: 'Peito de frango (cru)', qty: fmt(frangoG) }] : []),
+      ...(sobrecoxaG > 0 ? [{ name: 'Sobrecoxa sem pele (crua)', qty: fmt(sobrecoxaG) }] : []),
+      ...(carneG > 0 ? [{ name: 'Carne moída magra - patinho', qty: fmt(carneG) }] : []),
+      ...(coxaoG > 0 ? [{ name: 'Coxão mole (cru)', qty: fmt(coxaoG) }] : []),
+      ...(tilapiaG > 0 ? [{ name: 'Filé de tilápia (cru)', qty: fmt(tilapiaG) }] : []),
+      ...(lomboG > 0 ? [{ name: 'Lombo suíno (cru)', qty: fmt(lomboG) }] : []),
+      { name: 'Alcatra (crua)', qty: '~800 g' },
+      { name: 'Ovos', qty: '6 duzias (72 un)' },
+      { name: 'Peito de peru defumado', qty: '~400 g' },
+      { name: 'Queijo mussarela fatiado', qty: '~500 g' },
+      { name: 'Queijo cottage', qty: '4 potes (400g cada)' },
+      { name: 'Iogurte grego natural', qty: '~2.4 kg (~12 potes)' },
+    ]},
+    { section: 'Carboidratos', items: [
+      ...(arrozBrancoG > 0 ? [{ name: 'Arroz branco (cru)', qty: fmt(arrozBrancoG) }] : []),
+      ...(arrozIntegralG > 0 ? [{ name: 'Arroz integral (cru)', qty: fmt(arrozIntegralG) }] : []),
+      ...(batataDoceG > 0 ? [{ name: 'Batata doce', qty: fmt(batataDoceG) }] : []),
+      ...(mandiocaG > 0 ? [{ name: 'Mandioca (crua)', qty: fmt(mandiocaG) }] : []),
+      ...(macarraoG > 0 ? [{ name: 'Macarrão integral (cru)', qty: fmt(macarraoG) }] : []),
+      { name: 'Pão integral', qty: '4 pacotes' },
+      { name: 'Goma de tapioca', qty: '~300 g' },
+      { name: 'Aveia em flocos (opcional)', qty: '~400 g' },
+    ]},
+    { section: 'Frutas', items: [
+      { name: 'Banana prata', qty: '28 unidades' },
+      { name: 'Maçã (ou fruta preferida)', qty: '14 unidades' },
+    ]},
+    { section: 'Folhas e Vegetais', items: [
+      { name: 'Alface', qty: `${Math.ceil(totalMarmitas / 2) + 2} unidades` },
+      { name: 'Rucula', qty: `${Math.ceil(totalMarmitas / 3) + 1} macos` },
+      { name: 'Pepino', qty: `${pepinos} unidades` },
+    ]},
+    { section: 'Temperos e Outros', items: [
+      { name: 'Azeite de oliva extra virgem', qty: '1 garrafa (500ml)' },
+      { name: 'Alho fresco', qty: '2 cabecas' },
+      { name: 'Limao', qty: '6-8 unidades' },
+      { name: 'Paprica doce/defumada', qty: '1 pote' },
+      { name: 'Ervas finas', qty: '1 pote' },
+      { name: 'Cafe em po', qty: '2 pacotes' },
+    ]},
+    { section: 'Suplementos (mensal)', items: [
+      { name: 'Whey protein isolado', qty: '2 potes (900g)' },
+      { name: 'Creatina monoidratada', qty: '2 potes (300g)' },
+      { name: 'Caseina (opcional)', qty: '2 potes (900g)' },
+      { name: 'Psyllium (opcional)', qty: '1 pote (400g)' },
+    ]},
+  ];
+}
+
+function renderShoppingList() {
+  const saved = JSON.parse(localStorage.getItem('shop_checks') || '{}');
+  const shopItems = buildShoppingList();
+  const container = document.getElementById('shopping-list');
+  let html = '', total = 0, checked = 0;
+  shopItems.forEach(sec => {
+    html += `<div class="check-section">${sec.section}</div>`;
+    sec.items.forEach(item => {
+      const key = sec.section.slice(0,10) + '_' + item.name;
+      const isChecked = saved[key] || false;
+      total++;
+      if (isChecked) checked++;
+      html += `<div class="check-item ${isChecked ? 'checked' : ''}" onclick="toggleShopRow('${key.replace(/'/g,"\\'")}', this)" style="cursor:pointer">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleShop('${key.replace(/'/g,"\\'")}', this)">
+        <label class="check-label"><span class="qty">${item.qty}</span> ${item.name}</label>
+      </div>`;
+    });
+  });
+  container.innerHTML = html;
+  updateProgress('shop', checked, total);
+}
+
+function toggleShop(key, el) {
+  const saved = JSON.parse(localStorage.getItem('shop_checks') || '{}');
+  saved[key] = el.checked;
+  localStorage.setItem('shop_checks', JSON.stringify(saved));
+  el.closest('.check-item').classList.toggle('checked', el.checked);
+  const total = document.querySelectorAll('#shopping-list input[type="checkbox"]').length;
+  const checked = document.querySelectorAll('#shopping-list input[type="checkbox"]:checked').length;
+  updateProgress('shop', checked, total);
+}
+
+function toggleShopRow(key, row) {
+  const cb = row.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  toggleShop(key, cb);
+}
+
+function updateProgress(type, checked, total) {
+  const pct = total ? Math.round(checked / total * 100) : 0;
+  document.getElementById(type + '-progress').style.width = pct + '%';
+  document.getElementById(type + '-progress-text').textContent = `${checked} de ${total} itens (${pct}%)`;
+}
+
+function resetChecklist(type) {
+  if (!confirm('Limpar todos os itens marcados?')) return;
+  localStorage.removeItem(type + '_checks');
+  if (type === 'shop') renderShoppingList();
+  else renderPrepList();
+}
+
+// ============================================================
+// PREP LIST
+// ============================================================
+function buildPrepItems() {
+  const plan = getMarmitaPlan();
+  const qA = plan.A||0, qB = plan.B||0, qC = plan.C||0, qD = plan.D||0, qE = plan.E||0, qF = plan.F||0;
+  const fmt = (g) => g >= 1000 ? `${(g/1000).toFixed(1)}kg` : `${Math.round(g/10)*10}g`;
+  const items = [];
+
+  // Carboidratos
+  const arrozBrancoCru = (qA + qD) * 56;
+  if (arrozBrancoCru > 0) {
+    const tipos = [qA > 0 ? 'A' : '', qD > 0 ? 'D' : ''].filter(Boolean).join(' + ');
+    items.push(`Cozinhar arroz branco (${fmt(arrozBrancoCru)} cru) para marmitas ${tipos}`);
+  }
+  if (qC > 0) items.push(`Cozinhar arroz integral (${fmt(qC * 52)} cru) para ${qC} marmitas C`);
+  if (qB > 0) items.push(`Cozinhar batata doce (${fmt(qB * 180)} crua) em cubos para ${qB} marmitas B`);
+  if (qE > 0) items.push(`Cozinhar mandioca (${fmt(qE * 145)} crua) em cubos para ${qE} marmitas E`);
+  if (qF > 0) items.push(`Cozinhar macarrão integral (${fmt(qF * 52)} cru) para ${qF} marmitas F`);
+
+  // Proteínas
+  if (qA > 0) items.push(`Grelhar peito de frango (${fmt(qA * 215)} cru) em filés para ${qA} marmitas A`);
+  if (qE > 0) items.push(`Grelhar sobrecoxa sem pele (${fmt(qE * 240)} crua) para ${qE} marmitas E`);
+  if (qB > 0) items.push(`Refogar carne moída (${fmt(qB * 230)} crua) com alho e temperos para ${qB} marmitas B`);
+  if (qF > 0) items.push(`Grelhar coxão mole (${fmt(qF * 215)} cru) em fatias para ${qF} marmitas F`);
+  if (qC > 0) items.push(`Grelhar tilápia (${fmt(qC * 250)} crua) com limão e ervas para ${qC} marmitas C`);
+  if (qD > 0) items.push(`Grelhar lombo suíno (${fmt(qD * 215)} cru) com alho e ervas para ${qD} marmitas D`);
+
+  // Montar
+  const sep = [];
+  if (qA > 0) sep.push(`${qA}x A (frango + arroz)`);
+  if (qB > 0) sep.push(`${qB}x B (carne + batata doce)`);
+  if (qC > 0) sep.push(`${qC}x C (tilápia + arroz integral)`);
+  if (qD > 0) sep.push(`${qD}x D (lombo + arroz)`);
+  if (qE > 0) sep.push(`${qE}x E (sobrecoxa + mandioca)`);
+  if (qF > 0) sep.push(`${qF}x F (coxão + macarrão)`);
+  if (sep.length > 0) items.push(`Montar marmitas: ${sep.join(', ')}`);
+
+  // Folhas e pepino
+  items.push('Lavar e secar folhas (alface + rúcula)');
+  items.push('Fatiar pepinos (guardar em pote com água)');
+
+  return [{ day: 'Preparo das Marmitas', css: 'domingo', items }];
+}
+
+function renderPrepList() {
+  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
+  const container = document.getElementById('prep-list');
+  const PREP_ITEMS = buildPrepItems();
+  let html = '', total = 0, checked = 0;
+  PREP_ITEMS.forEach(day => {
+    html += `<div class="prep-day"><div class="day-header ${day.css}">${day.day}</div><div class="day-content">`;
+    day.items.forEach((item, i) => {
+      const key = day.css + '_' + i;
+      const isChecked = saved[key] || false;
+      total++;
+      if (isChecked) checked++;
+      html += `<div class="check-item ${isChecked ? 'checked' : ''}">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePrep('${key}', this)">
+        <label class="check-label">${item}</label>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+  updateProgress('prep', checked, total);
+}
+
+function togglePrep(key, el) {
+  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
+  saved[key] = el.checked;
+  localStorage.setItem('prep_checks', JSON.stringify(saved));
+  el.closest('.check-item').classList.toggle('checked', el.checked);
+  const total = document.querySelectorAll('#prep-list input[type="checkbox"]').length;
+  const checked = document.querySelectorAll('#prep-list input[type="checkbox"]:checked').length;
+  updateProgress('prep', checked, total);
+}
+
+// ============================================================
+// WORKOUT TRACKER
+// ============================================================
+const WORKOUTS = {
+  A: [
+    { name: 'Agachamento livre / Leg press', sets: 4, reps: '8-10', muscles: 'Quadriceps, glúteos, core' },
+    { name: 'Supino reto (halteres)', sets: 4, reps: '8-10', muscles: 'Peitoral, triceps, ombros' },
+    { name: 'Remada curvada (halteres)', sets: 3, reps: '10-12', muscles: 'Costas, biceps, trapezio' },
+    { name: 'Elevação lateral', sets: 3, reps: '12-15', muscles: 'Deltóides laterais' },
+    { name: 'Rosca direta', sets: 2, reps: '10-12', muscles: 'Biceps' },
+    { name: 'Prancha abdominal', sets: 3, reps: '30-45s', muscles: 'Core' },
+  ],
+  B: [
+    { name: 'Lev. terra romeno (halteres)', sets: 4, reps: '8-10', muscles: 'Posteriores, glúteos, lombar' },
+    { name: 'Press militar sentado', sets: 4, reps: '8-10', muscles: 'Ombros, triceps' },
+    { name: 'Puxada frontal', sets: 3, reps: '8-12', muscles: 'Costas, biceps' },
+    { name: 'Afundo bulgaro', sets: 3, reps: '10-12/perna', muscles: 'Quadriceps, glúteos' },
+    { name: 'Triceps testa', sets: 2, reps: '10-12', muscles: 'Triceps' },
+    { name: 'Elevação de pernas', sets: 3, reps: '12-15', muscles: 'Abdômen inferior' },
+  ]
+};
+const CARDIO_TYPES = ['Caminhada','Bicicleta','Corrida','HIIT','Outro'];
+const CARDIO_HAS_DISTANCE = ['Caminhada','Bicicleta','Corrida'];
+
+let currentWorkout = 'A';
+let currentWeek = 1;
+let cardioEntries = [];
+
+function switchWorkout(type) {
+  currentWorkout = type;
+  document.querySelectorAll('.workout-toggle button').forEach((b, i) =>
+    b.classList.toggle('active', (i === 0 && type === 'A') || (i === 1 && type === 'B') || (i === 2 && type === 'F'))
+  );
+  // Hide/show exercise-specific elements
+  document.getElementById('exercises-container').style.display = type === 'F' ? 'none' : 'block';
+  document.querySelector('.week-nav').style.display = type === 'F' ? 'none' : 'flex';
+  if (type !== 'F') renderExercises();
+}
+
+function changeWeek(delta) {
+  currentWeek = Math.max(1, currentWeek + delta);
+  document.getElementById('week-label').textContent = 'Semana ' + currentWeek;
+  renderExercises();
+}
+
+function stepVal(inputId, delta) {
+  const el = document.getElementById(inputId);
+  const cur = parseFloat(el.value) || 0;
+  const next = Math.max(0, cur + delta);
+  el.value = next % 1 === 0 ? next : next.toFixed(1);
+}
+
+// Track which exercises are checked as done
+let exerciseChecks = {};
+
+function getLastWorkoutData(type, currentWk) {
+  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  // First try current week
+  const current = all[type + '_w' + currentWk];
+  if (current && Object.keys(current).length > 0) return current;
+  // Otherwise find most recent previous week
+  let bestWeek = 0, bestData = null;
+  Object.keys(all).forEach(k => {
+    if (k.startsWith(type + '_w') && k !== '_meta') {
+      const wk = parseInt(k.split('_w')[1]);
+      if (wk < currentWk && wk > bestWeek) { bestWeek = wk; bestData = all[k]; }
+    }
+  });
+  return bestData || {};
+}
+
+function renderExercises() {
+  const exercises = WORKOUTS[currentWorkout];
+  const saved = getLastWorkoutData(currentWorkout, currentWeek);
+  const container = document.getElementById('exercises-container');
+  // Initialize checks for this render
+  if (!exerciseChecks[currentWorkout]) exerciseChecks[currentWorkout] = {};
+  let html = '';
+  exercises.forEach((ex, ei) => {
+    const isPlank = ex.reps.includes('s');
+    const kgStep = 1;
+    const repStep = 1;
+    const isChecked = exerciseChecks[currentWorkout][ei] || false;
+    html += `<div class="exercise-card ${isChecked ? 'done' : ''}" id="excard_${ei}">
+      <div class="ex-header">
+        <div class="ex-header-info">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-target">Meta: ${ex.sets} x ${ex.reps} | ${ex.muscles}</div>
+        </div>
+        <div class="ex-check ${isChecked ? 'checked' : ''}" onclick="toggleExCheck(${ei})">&#10003;</div>
+      </div>
+      <div class="sets-grid">
+        <div class="hdr"></div><div class="hdr">Peso (kg)</div><div class="hdr">${isPlank ? 'Seg' : 'Reps'}</div>`;
+    for (let s = 0; s < ex.sets; s++) {
+      const sv = saved[ei] && saved[ei][s] ? saved[ei][s] : { kg: '', reps: '' };
+      const kgId = `w_${ei}_${s}_kg`;
+      const repId = `w_${ei}_${s}_reps`;
+      html += `<div class="set-label">S${s+1}</div>
+        <div class="input-stepper">
+          <button class="step-btn minus" onclick="stepVal('${kgId}',-${kgStep})">-</button>
+          <input type="number" inputmode="decimal" placeholder="kg" id="${kgId}" value="${sv.kg}">
+          <button class="step-btn plus" onclick="stepVal('${kgId}',${kgStep})">+</button>
+        </div>
+        <div class="input-stepper">
+          <button class="step-btn minus" onclick="stepVal('${repId}',-${repStep})">-</button>
+          <input type="number" inputmode="numeric" placeholder="${isPlank ? 'seg' : 'reps'}" id="${repId}" value="${sv.reps}">
+          <button class="step-btn plus" onclick="stepVal('${repId}',${repStep})">+</button>
+        </div>`;
+    }
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+function toggleExCheck(ei) {
+  if (!exerciseChecks[currentWorkout]) exerciseChecks[currentWorkout] = {};
+  exerciseChecks[currentWorkout][ei] = !exerciseChecks[currentWorkout][ei];
+  const card = document.getElementById('excard_' + ei);
+  const check = card.querySelector('.ex-check');
+  const isChecked = exerciseChecks[currentWorkout][ei];
+  card.classList.toggle('done', isChecked);
+  check.classList.toggle('checked', isChecked);
+}
+
+function getSavedWorkout(type, week) {
+  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  return all[type + '_w' + week] || {};
+}
+
+// ---- CARDIO (daily) ----
+function getTodayCardioKey() {
+  return 'cardio_' + new Date().toISOString().slice(0,10);
+}
+
+function loadTodayCardio() {
+  const all = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  cardioEntries = all[getTodayCardioKey()] || [];
+  renderCardioEntries();
+  // Update title with today's date
+  const d = new Date();
+  document.getElementById('cardio-title').textContent = `Cardio de Hoje (${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')})`;
+}
+
+function renderCardioEntries() {
+  const container = document.getElementById('cardio-entries');
+  if (cardioEntries.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:10px 0">Nenhum cardio hoje</div>';
+    return;
+  }
+  let html = '';
+  cardioEntries.forEach((e, i) => {
+    const showDist = CARDIO_HAS_DISTANCE.includes(e.type);
+    const showDesc = e.type === 'Outro';
+    html += `<div style="background:var(--gray-bg);border-radius:10px;padding:10px;margin-bottom:8px">
+      <div class="cardio-entry" style="margin-bottom:0">
+        <select onchange="updateCardio(${i},'type',this.value)">
+          ${CARDIO_TYPES.map(t => `<option ${t===e.type?'selected':''}>${t}</option>`).join('')}
+        </select>
+        <input type="number" inputmode="numeric" value="${e.min}" placeholder="min"
+          onchange="updateCardio(${i},'min',this.value)" style="max-width:55px">
+        <span style="font-size:11px;color:var(--gray-mid)">min</span>
+        <button class="cardio-rm" onclick="removeCardio(${i})">&#10005;</button>
+      </div>
+      ${showDist ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-left:4px">
+        <input type="number" inputmode="decimal" value="${e.km || ''}" placeholder="km"
+          onchange="updateCardio(${i},'km',this.value)"
+          style="width:70px;padding:6px 4px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;text-align:center;background:#fff">
+        <span style="font-size:12px;color:var(--gray-mid)">km percorridos</span>
+      </div>` : ''}
+      ${showDesc ? `<div style="margin-top:6px">
+        <input type="text" value="${e.desc || ''}" placeholder="Descreva a atividade..."
+          onchange="updateCardio(${i},'desc',this.value)"
+          style="width:100%;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box">
+      </div>` : ''}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function addCardioEntry() {
+  cardioEntries.push({ type: 'Caminhada', min: 30, km: '', desc: '' });
+  renderCardioEntries();
+}
+
+function updateCardio(i, field, val) {
+  if (field === 'min') cardioEntries[i][field] = parseInt(val) || 0;
+  else if (field === 'km') cardioEntries[i][field] = parseFloat(val) || '';
+  else cardioEntries[i][field] = val;
+  // Re-render if type changed (to show/hide distance/description fields)
+  if (field === 'type') renderCardioEntries();
+}
+
+function removeCardio(i) {
+  cardioEntries.splice(i, 1);
+  renderCardioEntries();
+}
+
+function saveTodayCardio() {
+  const all = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  if (cardioEntries.length > 0) {
+    all[getTodayCardioKey()] = cardioEntries;
+  } else {
+    delete all[getTodayCardioKey()];
+  }
+  localStorage.setItem('cardio_log', JSON.stringify(all));
+}
+
+// ---- SAVE ----
+function saveWorkout() {
+  if (currentWorkout !== 'F') {
+    const exercises = WORKOUTS[currentWorkout];
+    const checks = exerciseChecks[currentWorkout] || {};
+
+    // Count checked vs total
+    const totalEx = exercises.length;
+    const checkedEx = Object.values(checks).filter(Boolean).length;
+
+    if (checkedEx === 0) {
+      if (!confirm('Nenhum exercício foi marcado como realizado.\n\nDeseja salvar apenas o cardio?')) return;
+    } else if (checkedEx < totalEx) {
+      const missing = totalEx - checkedEx;
+      if (!confirm(`${missing} exercício(s) não foi(ram) marcado(s) como realizado(s).\n\nDeseja salvar o treino assim mesmo?`)) return;
+    }
+
+    // Save only checked exercises
+    const data = {};
+    exercises.forEach((ex, ei) => {
+      if (checks[ei]) {
+        data[ei] = {};
+        for (let s = 0; s < ex.sets; s++) {
+          const kg = document.getElementById(`w_${ei}_${s}_kg`).value;
+          const reps = document.getElementById(`w_${ei}_${s}_reps`).value;
+          data[ei][s] = { kg, reps };
+        }
+      }
+    });
+    const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+    allW[currentWorkout + '_w' + currentWeek] = data;
+    if (!allW._meta) allW._meta = {};
+    allW._meta[currentWorkout + '_w' + currentWeek] = { type: currentWorkout, week: currentWeek, date: new Date().toISOString().slice(0,10) };
+    localStorage.setItem('workouts', JSON.stringify(allW));
+  }
+
+  // Save today's cardio
+  saveTodayCardio();
+
+  // Save to calendar log (date-based)
+  saveToCalendar();
+
+  const btn = document.querySelector('#page-treino .save-btn');
+  const label = currentWorkout === 'F' ? 'Funcional' : 'Treino ' + currentWorkout;
+  btn.textContent = 'Salvo! ' + label + ' registrado na Agenda';
+  btn.style.background = '#276749';
+  setTimeout(() => { btn.textContent = 'Salvar Treino'; btn.style.background = ''; }, 2000);
+}
+
+function saveToCalendar() {
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const today = new Date().toISOString().slice(0,10);
+  if (!cal[today]) cal[today] = {};
+
+  if (currentWorkout === 'F') {
+    cal[today].forca = 'F';
+  } else {
+    // Only register if at least one exercise is checked
+    const checks = exerciseChecks[currentWorkout] || {};
+    const hasChecked = Object.values(checks).some(Boolean);
+    if (hasChecked) cal[today].forca = currentWorkout;
+  }
+
+  if (cardioEntries && cardioEntries.length > 0) {
+    // Save full cardio details for agenda display
+    cal[today].cardio_detail = cardioEntries.map(e => ({...e}));
+    cal[today].cardio = cardioEntries.map(e => {
+      let s = `${e.type} ${e.min}min`;
+      if (e.km) s += ` ${e.km}km`;
+      if (e.type === 'Outro' && e.desc) s += ` (${e.desc})`;
+      return s;
+    }).join(', ');
+  }
+  localStorage.setItem('cal_log', JSON.stringify(cal));
+}
+
+// ============================================================
+// HISTORY WITH CHARTS
+// ============================================================
+function openHistory() {
+  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const exercises = WORKOUTS[currentWorkout];
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Histórico - Treino ' + currentWorkout;
+
+  const weeks = [];
+  Object.keys(all).forEach(k => {
+    if (k.startsWith(currentWorkout + '_w')) weeks.push(parseInt(k.split('_w')[1]));
+  });
+  weeks.sort((a, b) => a - b);
+
+  if (weeks.length === 0) {
+    content.innerHTML = '<div class="empty-state">Nenhum treino registrado ainda.<br>Registre seu primeiro treino!</div>';
+    modal.classList.add('open');
+    return;
+  }
+
+  let html = '';
+  exercises.forEach((ex, ei) => {
+    // Chart
+    html += `<div class="chart-container">
+      <div class="chart-title">${ex.name}</div>
+      <canvas class="chart-canvas" id="chart_${ei}"></canvas>
+    </div>`;
+    // Table
+    html += '<table class="history-table"><tr><th>Sem</th>';
+    for (let s = 0; s < ex.sets; s++) html += `<th>S${s+1} kg</th><th>S${s+1} reps</th>`;
+    html += '</tr>';
+    weeks.forEach(wk => {
+      const d = all[currentWorkout + '_w' + wk];
+      html += `<tr><td><b>${wk}</b></td>`;
+      for (let s = 0; s < ex.sets; s++) {
+        const sv = d[ei] && d[ei][s] ? d[ei][s] : { kg: '-', reps: '-' };
+        html += `<td>${sv.kg || '-'}</td><td>${sv.reps || '-'}</td>`;
+      }
+      html += '</tr>';
+    });
+    html += '</table>';
+  });
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+
+  // Draw charts after DOM update
+  requestAnimationFrame(() => {
+    exercises.forEach((ex, ei) => drawChart(ei, ex, weeks, all));
+  });
+}
+
+function drawChart(ei, ex, weeks, allData) {
+  const canvas = document.getElementById('chart_' + ei);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const pad = { top: 20, right: 16, bottom: 30, left: 40 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  // Get max weight across all sets for this exercise
+  const setColors = ['#2b6cb0','#276749','#dd6b20','#6b46c1'];
+  let allVals = [];
+  for (let s = 0; s < ex.sets; s++) {
+    weeks.forEach(wk => {
+      const d = allData[currentWorkout + '_w' + wk];
+      const v = d[ei] && d[ei][s] ? parseFloat(d[ei][s].kg) : NaN;
+      if (!isNaN(v)) allVals.push(v);
+    });
+  }
+  if (allVals.length === 0) { ctx.fillStyle = '#4a5568'; ctx.font = '12px sans-serif'; ctx.fillText('Sem dados', W/2 - 25, H/2); return; }
+
+  const minV = Math.max(0, Math.min(...allVals) - 5);
+  const maxV = Math.max(...allVals) + 5;
+  const range = maxV - minV || 1;
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + plotH - (plotH * i / 4);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#4a5568'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(minV + range * i / 4) + '', pad.left - 4, y + 3);
+  }
+  // X labels
+  ctx.textAlign = 'center'; ctx.fillStyle = '#4a5568';
+  weeks.forEach((wk, i) => {
+    const x = pad.left + (weeks.length === 1 ? plotW / 2 : plotW * i / (weeks.length - 1));
+    ctx.fillText('S' + wk, x, H - 6);
+  });
+
+  // Draw lines per set
+  for (let s = 0; s < Math.min(ex.sets, 4); s++) {
+    ctx.strokeStyle = setColors[s]; ctx.lineWidth = 2; ctx.beginPath();
+    let started = false;
+    weeks.forEach((wk, i) => {
+      const d = allData[currentWorkout + '_w' + wk];
+      const v = d[ei] && d[ei][s] ? parseFloat(d[ei][s].kg) : NaN;
+      if (isNaN(v)) return;
+      const x = pad.left + (weeks.length === 1 ? plotW / 2 : plotW * i / (weeks.length - 1));
+      const y = pad.top + plotH - plotH * (v - minV) / range;
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // Dots
+    ctx.fillStyle = setColors[s];
+    weeks.forEach((wk, i) => {
+      const d = allData[currentWorkout + '_w' + wk];
+      const v = d[ei] && d[ei][s] ? parseFloat(d[ei][s].kg) : NaN;
+      if (isNaN(v)) return;
+      const x = pad.left + (weeks.length === 1 ? plotW / 2 : plotW * i / (weeks.length - 1));
+      const y = pad.top + plotH - plotH * (v - minV) / range;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  // Legend
+  ctx.font = '9px sans-serif';
+  for (let s = 0; s < Math.min(ex.sets, 4); s++) {
+    const lx = pad.left + s * 50;
+    ctx.fillStyle = setColors[s];
+    ctx.fillRect(lx, 4, 10, 8);
+    ctx.fillStyle = '#4a5568';
+    ctx.textAlign = 'left';
+    ctx.fillText('S' + (s+1), lx + 13, 12);
+  }
+}
+
+function closeHistory() { document.getElementById('history-modal').classList.remove('open'); }
+document.getElementById('history-modal').addEventListener('click', function(e) { if (e.target === this) closeHistory(); });
+
+// ============================================================
+// CALENDAR
+// ============================================================
+let calYear, calMonth;
+(function() { const d = new Date(); calYear = d.getFullYear(); calMonth = d.getMonth(); })();
+
+const MONTH_NAMES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DAY_HEADERS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  document.getElementById('cal-month-label').textContent = MONTH_NAMES[calMonth] + ' ' + calYear;
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const grid = document.getElementById('cal-grid');
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0,10);
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  let html = DAY_HEADERS.map(d => `<div class="cal-header">${d}</div>`).join('');
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
+
+  let forcaDays = 0, cardioDays = 0, totalCardioMin = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const entry = cal[dateStr] || {};
+    const hasForca = !!entry.forca;
+    const hasCardio = !!entry.cardio;
+
+    if (hasForca) forcaDays++;
+    if (hasCardio) {
+      cardioDays++;
+      // Extract minutes from cardio string
+      const mins = entry.cardio.match(/(\d+)min/g);
+      if (mins) mins.forEach(m => totalCardioMin += parseInt(m));
+    }
+
+    let dots = '';
+    if (hasForca || hasCardio) {
+      dots = '<div class="cal-dots">';
+      if (hasForca) dots += `<div class="cal-dot forca" style="width:auto;height:auto;border-radius:3px;padding:0 3px;font-size:8px;font-weight:700;color:#fff;background:var(--blue-mid)">${entry.forca}</div>`;
+      if (hasCardio) dots += '<div class="cal-dot cardio"></div>';
+      dots += '</div>';
+    }
+
+    const hasData = hasForca || hasCardio;
+    html += `<div class="cal-cell ${isToday ? 'today' : ''} ${hasData ? 'has-data' : ''}" data-date="${dateStr}" onclick="showDayDetail('${dateStr}')">${d}${dots}</div>`;
+  }
+  grid.innerHTML = html;
+
+  // Summary
+  const summary = document.getElementById('cal-summary');
+  summary.innerHTML = `
+    <h3 style="font-size:15px;color:var(--blue);margin-bottom:10px">${MONTH_NAMES[calMonth]} - Resumo</h3>
+    <div class="stat-row"><span>Dias de treino de força</span><span class="stat-val">${forcaDays}</span></div>
+    <div class="stat-row"><span>Dias de cardio</span><span class="stat-val">${cardioDays}</span></div>
+    <div class="stat-row"><span>Minutos totais de cardio</span><span class="stat-val">${totalCardioMin} min</span></div>
+    <div class="stat-row"><span>Frequência semanal (média)</span><span class="stat-val">${(forcaDays / (daysInMonth / 7)).toFixed(1)}x força | ${(cardioDays / (daysInMonth / 7)).toFixed(1)}x cardio</span></div>
+  `;
+}
+
+// ============================================================
+// DAY DETAIL
+// ============================================================
+function showDayDetail(dateStr) {
+  // Highlight selected cell
+  document.querySelectorAll('.cal-cell.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.cal-cell').forEach(c => {
+    if (c.getAttribute('data-date') === dateStr) c.classList.add('selected');
+  });
+
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const entry = cal[dateStr];
+  const detail = document.getElementById('day-detail');
+
+  // Format date for display
+  const parts = dateStr.split('-');
+  const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  // Check marmitas consumed on this date
+  const consumed = getConsumed();
+  const dayMarmitas = consumed[dateStr];
+  const hasMarmitas = dayMarmitas && ((Array.isArray(dayMarmitas) && dayMarmitas.length > 0) || typeof dayMarmitas === 'string');
+
+  if (!hasMarmitas && (!entry || (!entry.forca && !entry.cardio))) {
+    detail.innerHTML = `
+      <div class="dd-header">
+        <span class="dd-date">${dateDisplay}</span>
+        <button class="dd-close" onclick="closeDayDetail()">&times;</button>
+      </div>
+      <div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:10px 0">
+        Nenhuma atividade registrada neste dia.
+      </div>`;
+    detail.classList.add('open');
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  let html = `
+    <div class="dd-header">
+      <span class="dd-date">${dateDisplay}</span>
+      <button class="dd-close" onclick="closeDayDetail()">&times;</button>
+    </div>`;
+
+  // Marmitas consumed
+  if (hasMarmitas) {
+    const arr = Array.isArray(dayMarmitas) ? dayMarmitas : [dayMarmitas, dayMarmitas];
+    const grouped = {};
+    arr.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
+    html += `<div class="dd-section">
+      <div class="dd-label">Marmitas Consumidas</div>
+      <div class="dd-content">`;
+    Object.entries(grouped).forEach(([type, count]) => {
+      const def = MARMITA_DEFS.find(x => x.id === type);
+      const name = def ? def.name.split(' - ')[1] : type;
+      const macros = def ? `${def.kcal} kcal | ${def.p}g P` : '';
+      html += `<div class="dd-exercise">
+        <span class="dd-ex-name">${count}x ${name}</span>
+        <span class="dd-ex-stats">${macros}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Strength training detail
+  if (entry.forca) {
+    const workoutType = entry.forca;
+    const exercises = WORKOUTS[workoutType];
+
+    // Try to find workout data for this date
+    const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+    let workoutData = null;
+
+    // Search meta for matching date
+    if (allW._meta) {
+      Object.keys(allW._meta).forEach(k => {
+        if (allW._meta[k].date === dateStr && allW._meta[k].type === workoutType) {
+          workoutData = allW[k];
+        }
+      });
+    }
+
+    html += `<div class="dd-section">
+      <div class="dd-label">Treino de Forca - Treino ${workoutType}</div>
+      <div class="dd-content">`;
+
+    if (workoutData && exercises) {
+      exercises.forEach((ex, ei) => {
+        const d = workoutData[ei];
+        if (!d) return;
+        let totalKg = 0, totalReps = 0, count = 0;
+        for (let s = 0; s < ex.sets; s++) {
+          if (d[s] && d[s].kg) {
+            totalKg += parseFloat(d[s].kg) || 0;
+            totalReps += parseInt(d[s].reps) || 0;
+            count++;
+          }
+        }
+        if (count > 0) {
+          const avgKg = (totalKg / count).toFixed(1);
+          const avgReps = Math.round(totalReps / count);
+          html += `<div class="dd-exercise">
+            <span class="dd-ex-name">${ex.name}</span>
+            <span class="dd-ex-stats">${avgKg}kg &times; ${avgReps} reps (m&eacute;dia)</span>
+          </div>`;
+        }
+      });
+    } else {
+      html += `<div style="font-size:13px">Treino ${workoutType} registrado (sem dados detalhados)</div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // Cardio detail
+  if (entry.cardio) {
+    html += `<div class="dd-section">
+      <div class="dd-label">Cardio</div>
+      <div class="dd-content">`;
+    if (entry.cardio_detail && Array.isArray(entry.cardio_detail)) {
+      entry.cardio_detail.forEach(c => {
+        html += `<div class="dd-exercise">
+          <span class="dd-ex-name">${c.type}${c.type === 'Outro' && c.desc ? ': ' + c.desc : ''}</span>
+          <span class="dd-ex-stats">${c.min} min${c.km ? ' | ' + c.km + ' km' : ''}</span>
+        </div>`;
+      });
+    } else {
+      html += `<div style="font-size:13px">${entry.cardio}</div>`;
+    }
+    html += '</div></div>';
+  }
+
+  html += `<button class="dd-delete-btn" onclick="deleteDayData('${dateStr}')">Apagar dados deste dia</button>`;
+
+  detail.innerHTML = html;
+  detail.classList.add('open');
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDayDetail() {
+  document.getElementById('day-detail').classList.remove('open');
+  document.querySelectorAll('.cal-cell.selected').forEach(c => c.classList.remove('selected'));
+}
+
+function deleteDayData(dateStr) {
+  const parts = dateStr.split('-');
+  const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  if (!confirm(`Tem certeza que deseja apagar todos os dados de ${dateDisplay}?\n\nEsta ação não pode ser desfeita.`)) return;
+
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  delete cal[dateStr];
+  localStorage.setItem('cal_log', JSON.stringify(cal));
+
+  closeDayDetail();
+  renderCalendar();
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+const BACKUP_KEYS = ['marmita_plan','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+
+function exportData() {
+  const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
+  BACKUP_KEYS.forEach(k => {
+    const raw = localStorage.getItem(k);
+    if (raw === null) { data[k] = null; return; }
+    try { data[k] = JSON.parse(raw); } catch(e) { data[k] = raw; }
+  });
+  // Include all meals_ keys (daily meal checks)
+  Object.keys(localStorage).forEach(k => { if (k.startsWith('meals_')) data[k] = JSON.parse(localStorage.getItem(k)); });
+
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+
+  // Use share API on mobile if available, otherwise download
+  const file = new File([blob], `dieta-backup-${date}.json`, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: 'Backup Dieta', text: `Backup do app Dieta - ${date}` }).catch(() => {
+      // Fallback to download if share cancelled
+      downloadFile(url, file.name);
+    });
+  } else {
+    downloadFile(url, file.name);
+  }
+}
+
+function downloadFile(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('Importar este backup vai SUBSTITUIR todos os dados atuais do app.\n\nTem certeza que deseja continuar?')) {
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data._app || data._app !== 'dieta-diego') {
+        alert('Arquivo inválido. Selecione um backup gerado por este app.');
+        return;
+      }
+      // Restore all keys
+      BACKUP_KEYS.forEach(k => {
+        if (data[k] !== null && data[k] !== undefined) {
+          localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]));
+        }
+      });
+      // Restore meals_ keys
+      Object.keys(data).forEach(k => {
+        if (k.startsWith('meals_')) localStorage.setItem(k, JSON.stringify(data[k]));
+      });
+
+      alert('Backup importado com sucesso!\n\nData do backup: ' + (data._date || 'desconhecida').slice(0,10));
+
+      // Re-render everything
+      renderMarmitaPlanner();
+      renderMeals();
+      renderShoppingList();
+      renderPrepList();
+      renderExercises();
+      loadTodayCardio();
+      renderCalendar();
+    } catch(err) {
+      alert('Erro ao ler o arquivo. Verifique se é um JSON válido.');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// CLEAR TODAY WORKOUT
+// ============================================================
+function clearTodayWorkout() {
+  if (!confirm('Tem certeza que deseja limpar todos os dados de treino e cardio de hoje?\n\nOs pesos, repetições e cardio registrados hoje serão apagados.\n\nEsta ação não pode ser desfeita.')) return;
+
+  // Clear saved workout data for current week (both A and B)
+  const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+  ['A','B'].forEach(t => {
+    delete allW[t + '_w' + currentWeek];
+    if (allW._meta) delete allW._meta[t + '_w' + currentWeek];
+  });
+  localStorage.setItem('workouts', JSON.stringify(allW));
+
+  // Clear checks and re-render with empty fields
+  exerciseChecks = {};
+  if (currentWorkout !== 'F') {
+    // Render with empty data
+    const container = document.getElementById('exercises-container');
+    const exercises = WORKOUTS[currentWorkout];
+    let html = '';
+    exercises.forEach((ex, ei) => {
+      const isPlank = ex.reps.includes('s');
+      html += `<div class="exercise-card" id="excard_${ei}">
+        <div class="ex-header">
+          <div class="ex-header-info">
+            <div class="ex-name">${ex.name}</div>
+            <div class="ex-target">Meta: ${ex.sets} x ${ex.reps} | ${ex.muscles}</div>
+          </div>
+          <div class="ex-check" onclick="toggleExCheck(${ei})">&#10003;</div>
+        </div>
+        <div class="sets-grid">
+          <div class="hdr"></div><div class="hdr">Peso (kg)</div><div class="hdr">${isPlank ? 'Seg' : 'Reps'}</div>`;
+      for (let s = 0; s < ex.sets; s++) {
+        const kgId = `w_${ei}_${s}_kg`;
+        const repId = `w_${ei}_${s}_reps`;
+        html += `<div class="set-label">S${s+1}</div>
+          <div class="input-stepper">
+            <button class="step-btn minus" onclick="stepVal('${kgId}',-1)">-</button>
+            <input type="number" inputmode="decimal" placeholder="kg" id="${kgId}" value="">
+            <button class="step-btn plus" onclick="stepVal('${kgId}',1)">+</button>
+          </div>
+          <div class="input-stepper">
+            <button class="step-btn minus" onclick="stepVal('${repId}',-1)">-</button>
+            <input type="number" inputmode="numeric" placeholder="${isPlank ? 'seg' : 'reps'}" id="${repId}" value="">
+            <button class="step-btn plus" onclick="stepVal('${repId}',1)">+</button>
+          </div>`;
+      }
+      html += '</div></div>';
+    });
+    container.innerHTML = html;
+  }
+
+  // Clear today's cardio
+  cardioEntries = [];
+  const allC = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  delete allC[getTodayCardioKey()];
+  localStorage.setItem('cardio_log', JSON.stringify(allC));
+  renderCardioEntries();
+
+  // Remove today from calendar
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const today = new Date().toISOString().slice(0,10);
+  delete cal[today];
+  localStorage.setItem('cal_log', JSON.stringify(cal));
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderMarmitaPlanner();
+updateWeekLabel();
+renderMarmitaSelector();
+renderStockCard();
+renderMeals();
+checkSundayPrompt();
+renderShoppingList();
+renderPrepList();
+renderExercises();
+loadTodayCardio();
+renderCalendar();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
