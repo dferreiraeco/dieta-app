@@ -2000,14 +2000,20 @@ function closeDayDetail() {
 function deleteDayData(dateStr) {
   const parts = dateStr.split('-');
   const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
-  if (!confirm(`Tem certeza que deseja apagar todos os dados de ${dateDisplay}?\n\nEsta ação não pode ser desfeita.`)) return;
+  if (!confirm(`Tem certeza que deseja apagar todos os dados de ${dateDisplay}?\n\nMarmitas, treino e cardio deste dia serão apagados.\n\nEsta ação não pode ser desfeita.`)) return;
 
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
   delete cal[dateStr];
   localStorage.setItem('cal_log', JSON.stringify(cal));
 
+  const consumed = getConsumed();
+  delete consumed[dateStr];
+  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+
   closeDayDetail();
   renderCalendar();
+  renderStockCard();
+  renderMarmitaSelector();
 }
 
 // ============================================================
