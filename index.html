@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1a365d">
 <link rel="manifest" href="manifest.json">
-<title>Plano de Recomposição</title>
+<title>PeitudasNOW</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -422,7 +422,12 @@ body {
   display: flex; align-items: center; justify-content: center; font-size: 40px;
   margin-bottom: 20px; backdrop-filter: blur(10px);
 }
-.auth-screen h1 { font-size: 26px; color: #fff; margin-bottom: 6px; font-weight: 800; }
+.auth-screen h1 {
+  font-size: 30px; margin-bottom: 6px; font-weight: 900;
+  background: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #00c853, #2196f3, #9c27b0, #e91e63);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 .auth-screen .auth-subtitle { font-size: 15px; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
 .auth-screen .auth-desc {
   font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 32px;
@@ -493,7 +498,7 @@ body {
 <!-- ==================== AUTH SCREEN ==================== -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-logo">&#127857;</div>
-  <h1>Plano de Recomposição</h1>
+  <h1>PeitudasNOW</h1>
   <p class="auth-subtitle">Dieta + Treino + Marmitas</p>
   <p class="auth-desc">Controle seu plano alimentar, planeje marmitas, registre treinos e acompanhe sua evolução</p>
   <div class="auth-card">
@@ -559,7 +564,7 @@ body {
 <!-- ==================== TAB: DIETA ==================== -->
 <div id="page-dieta" class="page">
   <div class="page-header">
-    <h1>Plano de Recomposição</h1>
+    <h1>PeitudasNOW</h1>
     <p>Diego Ferreira | 118.3 kg | Meta: ~2.100 kcal/dia</p>
   </div>
 
