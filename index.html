@@ -433,7 +433,7 @@ body {
 
   <div id="current-week-label" style="text-align:center;font-size:13px;color:var(--gray-mid);margin-bottom:8px"></div>
   <button class="save-btn" onclick="saveMarmitaPlan()">Salvar e Atualizar Lista de Compras</button>
-  <button class="save-btn" onclick="startNewWeek()" style="margin-top:10px;background:var(--orange)">Iniciar Nova Semana</button>
+  <button class="save-btn" onclick="startNewWeek()" style="margin-top:10px;background:var(--orange)">Novo Planejamento Semanal</button>
 
   <!-- Prep checklist integrado -->
   <div style="margin-top:20px">
@@ -796,7 +796,7 @@ const MARMITA_DEFS = [
     ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 } },
 ];
 
-const DEFAULT_PLAN = {"A":2,"B":2,"C":2,"D":2,"E":2,"F":2};
+const DEFAULT_PLAN = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0};
 
 function getMarmitaPlan() {
   return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
@@ -1059,19 +1059,38 @@ function saveMarmitaPlan() {
 
 function startNewWeek() {
   const currentWeek = getCurrentWeekLabel();
-  const newWeek = getWeekId();
-  if (!confirm(`Iniciar nova semana?\n\nO planejamento da semana ${currentWeek} será arquivado.\nA lista de compras, checklist de preparo e consumo de marmitas serão resetados.\n\nMarmitas não consumidas serão perdidas do estoque.\n\nDeseja continuar?`)) return;
+  const thisWeek = getWeekId();
+  const today = new Date();
+  const isSunday = today.getDay() === 0;
 
-  const plan = getMarmitaPlan();
+  // Check if there's already a saved plan for this week
   const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
-  history[currentWeek] = { ...plan, _saved: new Date().toISOString() };
-  localStorage.setItem('marmita_history', JSON.stringify(history));
+  const hasCurrentWeekPlan = !!history[thisWeek];
 
+  // If not Sunday and there's already a plan for this week, block
+  if (!isSunday && hasCurrentWeekPlan) {
+    alert(`Já existe um planejamento vigente para esta semana (${thisWeek}).\n\nUtilize o botão "Salvar e Atualizar Lista de Compras" para alterar o planejamento atual.\n\nUm novo planejamento só pode ser iniciado no domingo ou quando não houver planejamento salvo para a semana.`);
+    return;
+  }
+
+  if (!confirm(`Iniciar novo planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras, checklist de preparo e consumo de marmitas serão zerados.\n\nDeseja continuar?`)) return;
+
+  // Archive current plan if it exists and is different from new week
+  if (currentWeek !== thisWeek) {
+    const plan = getMarmitaPlan();
+    const totalPlan = Object.values(plan).reduce((a,b) => a+b, 0);
+    if (totalPlan > 0) {
+      history[currentWeek] = { ...plan, _saved: new Date().toISOString() };
+      localStorage.setItem('marmita_history', JSON.stringify(history));
+    }
+  }
+
+  // Reset everything
   localStorage.setItem('marmita_plan', JSON.stringify(DEFAULT_PLAN));
   localStorage.removeItem('shop_checks');
   localStorage.removeItem('prep_checks');
   localStorage.removeItem('marmita_consumed');
-  localStorage.setItem('marmita_current_week', newWeek);
+  localStorage.setItem('marmita_current_week', thisWeek);
 
   renderMarmitaPlanner();
   renderShoppingList();
@@ -1081,9 +1100,9 @@ function startNewWeek() {
   updateWeekLabel();
 
   const btn = document.querySelectorAll('#page-marmitas .save-btn')[1];
-  btn.textContent = 'Nova semana iniciada!';
+  btn.textContent = 'Novo planejamento iniciado!';
   btn.style.background = '#276749';
-  setTimeout(() => { btn.textContent = 'Iniciar Nova Semana'; btn.style.background = 'var(--orange)'; }, 2000);
+  setTimeout(() => { btn.textContent = 'Novo Planejamento Semanal'; btn.style.background = 'var(--orange)'; }, 2000);
 }
 
 function checkSundayPrompt() {
