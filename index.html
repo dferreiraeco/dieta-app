@@ -1858,70 +1858,41 @@ function renderCalendar() {
 // ============================================================
 // DAY DETAIL
 // ============================================================
-let _selectedDate = null;
 function showDayDetail(dateStr) {
-  // Always close previous and re-open (even if same day clicked)
   const detail = document.getElementById('day-detail');
-  detail.classList.remove('open');
 
   // Highlight selected cell
-  _selectedDate = dateStr;
   document.querySelectorAll('.cal-cell.selected').forEach(c => c.classList.remove('selected'));
   document.querySelectorAll('.cal-cell').forEach(c => {
     if (c.getAttribute('data-date') === dateStr) c.classList.add('selected');
   });
 
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
-  const entry = cal[dateStr];
-
-  // Format date for display
-  const parts = dateStr.split('-');
-  const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
-
-  // Check marmitas consumed on this date
+  const entry = cal[dateStr] || {};
   const consumed = getConsumed();
   const dayMarmitas = consumed[dateStr];
   const hasMarmitas = dayMarmitas && ((Array.isArray(dayMarmitas) && dayMarmitas.length > 0) || typeof dayMarmitas === 'string');
-
   const isPast = dateStr < localDateStr();
-
   const isToday = dateStr === localDateStr();
 
-  if (!hasMarmitas && (!entry || (!entry.forca && !entry.cardio))) {
-    let emptyHtml = `
-      <div class="dd-header">
-        <span class="dd-date">${dateDisplay}${isToday ? ' (hoje)' : ''}</span>
-        <button class="dd-close" onclick="closeDayDetail()">&times;</button>
-      </div>
-      <div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:10px 0">
-        Nenhuma atividade registrada neste dia.
-      </div>`;
-    if (isPast) {
-      emptyHtml += `<button class="save-btn" style="margin-top:8px;background:var(--blue-mid)" onclick="openDayEditor('${dateStr}')">Adicionar Dados</button>`;
-    }
-    if (isToday) {
-      emptyHtml += `<div style="text-align:center;font-size:12px;color:var(--gray-mid);margin-top:8px">Selecione marmitas na aba Dieta e registre treinos na aba Treino</div>`;
-    }
-    detail.innerHTML = emptyHtml;
-    detail.classList.add('open');
-    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
+  const parts = dateStr.split('-');
+  const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
+  // Always build full card
   let html = `
     <div class="dd-header">
       <span class="dd-date">${dateDisplay}${isToday ? ' (hoje)' : ''}</span>
       <button class="dd-close" onclick="closeDayDetail()">&times;</button>
     </div>`;
 
-  // Marmitas consumed
+  // -- Marmitas section --
+  html += `<div class="dd-section">
+    <div class="dd-label">Marmitas</div>
+    <div class="dd-content">`;
   if (hasMarmitas) {
     const arr = Array.isArray(dayMarmitas) ? dayMarmitas : [dayMarmitas, dayMarmitas];
     const grouped = {};
     arr.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
-    html += `<div class="dd-section">
-      <div class="dd-label">Marmitas Consumidas</div>
-      <div class="dd-content">`;
     Object.entries(grouped).forEach(([type, count]) => {
       const def = MARMITA_DEFS.find(x => x.id === type);
       const name = def ? def.name.split(' - ')[1] : type;
@@ -1931,19 +1902,21 @@ function showDayDetail(dateStr) {
         <span class="dd-ex-stats">${macros}</span>
       </div>`;
     });
-    html += '</div></div>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--gray-mid)">Nenhuma marmita registrada</div>';
   }
+  html += '</div></div>';
 
-  // Strength training detail
+  // -- Treino section --
+  html += `<div class="dd-section">
+    <div class="dd-label">Treino</div>
+    <div class="dd-content">`;
   if (entry.forca) {
     const workoutType = entry.forca;
+    const wLabel = workoutType === 'F' ? 'Funcional' : 'Treino ' + workoutType;
     const exercises = WORKOUTS[workoutType];
-
-    // Try to find workout data for this date
     const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
     let workoutData = null;
-
-    // Search meta for matching date
     if (allW._meta) {
       Object.keys(allW._meta).forEach(k => {
         if (allW._meta[k].date === dateStr && allW._meta[k].type === workoutType) {
@@ -1951,11 +1924,7 @@ function showDayDetail(dateStr) {
         }
       });
     }
-
-    html += `<div class="dd-section">
-      <div class="dd-label">Treino de Forca - Treino ${workoutType}</div>
-      <div class="dd-content">`;
-
+    html += `<div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:4px">${wLabel}</div>`;
     if (workoutData && exercises) {
       exercises.forEach((ex, ei) => {
         const d = workoutData[ei];
@@ -1969,21 +1938,21 @@ function showDayDetail(dateStr) {
           }
         }
         if (count > 0) {
-          const avgKg = (totalKg / count).toFixed(1);
-          const avgReps = Math.round(totalReps / count);
           html += `<div class="dd-exercise">
             <span class="dd-ex-name">${ex.name}</span>
-            <span class="dd-ex-stats">${avgKg}kg &times; ${avgReps} reps (m&eacute;dia)</span>
+            <span class="dd-ex-stats">${(totalKg/count).toFixed(1)}kg &times; ${Math.round(totalReps/count)} reps</span>
           </div>`;
         }
       });
-    } else {
-      html += `<div style="font-size:13px">Treino ${workoutType} registrado (sem dados detalhados)</div>`;
+    } else if (workoutType === 'F') {
+      html += '<div style="font-size:13px">Sessão de funcional realizada</div>';
     }
-    html += '</div></div>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--gray-mid)">Treino não realizado</div>';
   }
+  html += '</div></div>';
 
-  // Cardio detail
+  // -- Cardio section --
   if (entry.cardio) {
     html += `<div class="dd-section">
       <div class="dd-label">Cardio</div>
@@ -2001,18 +1970,25 @@ function showDayDetail(dateStr) {
     html += '</div></div>';
   }
 
+  // -- Buttons --
   if (isPast) {
     html += `<button class="history-btn" style="margin-top:10px" onclick="openDayEditor('${dateStr}')">Editar Dados</button>`;
   }
-  html += `<button class="dd-delete-btn" onclick="deleteDayData('${dateStr}')">Apagar dados deste dia</button>`;
+  if (hasMarmitas || entry.forca || entry.cardio) {
+    html += `<button class="dd-delete-btn" onclick="deleteDayData('${dateStr}')">Apagar dados deste dia</button>`;
+  }
 
+  // Set content and show
   detail.innerHTML = html;
+  detail.style.display = 'block';
   detail.classList.add('open');
   detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeDayDetail() {
-  document.getElementById('day-detail').classList.remove('open');
+  const d = document.getElementById('day-detail');
+  d.classList.remove('open');
+  d.style.display = 'none';
   document.querySelectorAll('.cal-cell.selected').forEach(c => c.classList.remove('selected'));
 }
 
