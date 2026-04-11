@@ -626,7 +626,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
   document.querySelectorAll('.tab-btn')[TABS.indexOf(tab)].classList.add('active');
-  if (tab === 'calendário') renderCalendar();
+  if (tab === 'calendário') { renderCalendar(); showDayDetail(localDateStr()); }
   window.scrollTo(0, 0);
 }
 
@@ -845,7 +845,25 @@ function stepMarmita(id, delta) {
 
 // ---- STOCK MANAGEMENT ----
 function getConsumed() {
-  return JSON.parse(localStorage.getItem('marmita_consumed') || '{}');
+  const data = JSON.parse(localStorage.getItem('marmita_consumed') || '{}');
+  // Migrate any UTC-format keys to local format (one-time fix)
+  let migrated = false;
+  Object.keys(data).forEach(k => {
+    // Check if key contains T (ISO format) or if it's already YYYY-MM-DD
+    if (k.length === 10 && k.match(/^\d{4}-\d{2}-\d{2}$/)) return; // already correct
+    // Try to parse and convert
+    const d = new Date(k);
+    if (!isNaN(d)) {
+      const localKey = localDateStr(d);
+      if (localKey !== k && !data[localKey]) {
+        data[localKey] = data[k];
+        delete data[k];
+        migrated = true;
+      }
+    }
+  });
+  if (migrated) localStorage.setItem('marmita_consumed', JSON.stringify(data));
+  return data;
 }
 
 function getStock() {
