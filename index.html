@@ -1860,8 +1860,10 @@ function showDayDetail(dateStr) {
   const dayMarmitas = consumed[dateStr];
   const hasMarmitas = dayMarmitas && ((Array.isArray(dayMarmitas) && dayMarmitas.length > 0) || typeof dayMarmitas === 'string');
 
+  const isPast = dateStr < localDateStr();
+
   if (!hasMarmitas && (!entry || (!entry.forca && !entry.cardio))) {
-    detail.innerHTML = `
+    let emptyHtml = `
       <div class="dd-header">
         <span class="dd-date">${dateDisplay}</span>
         <button class="dd-close" onclick="closeDayDetail()">&times;</button>
@@ -1869,6 +1871,10 @@ function showDayDetail(dateStr) {
       <div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:10px 0">
         Nenhuma atividade registrada neste dia.
       </div>`;
+    if (isPast) {
+      emptyHtml += `<button class="save-btn" style="margin-top:8px;background:var(--blue-mid)" onclick="openDayEditor('${dateStr}')">Adicionar Dados</button>`;
+    }
+    detail.innerHTML = emptyHtml;
     detail.classList.add('open');
     detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
@@ -1967,6 +1973,9 @@ function showDayDetail(dateStr) {
     html += '</div></div>';
   }
 
+  if (isPast) {
+    html += `<button class="history-btn" style="margin-top:10px" onclick="openDayEditor('${dateStr}')">Editar Dados</button>`;
+  }
   html += `<button class="dd-delete-btn" onclick="deleteDayData('${dateStr}')">Apagar dados deste dia</button>`;
 
   detail.innerHTML = html;
@@ -2074,6 +2083,115 @@ function importData(event) {
     event.target.value = '';
   };
   reader.readAsText(file);
+}
+
+// ============================================================
+// DAY EDITOR (past dates)
+// ============================================================
+function openDayEditor(dateStr) {
+  const parts = dateStr.split('-');
+  const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  // Load existing data
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const entry = cal[dateStr] || {};
+  const consumed = getConsumed();
+  const dayMarmitas = consumed[dateStr];
+  const currentSelections = Array.isArray(dayMarmitas) ? [...dayMarmitas] : (dayMarmitas ? [dayMarmitas, dayMarmitas] : []);
+  const currentTreino = entry.forca || '';
+
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Editar - ' + dateDisplay;
+
+  // Build editor
+  let html = '';
+
+  // Treino selector
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px">Treino Realizado</div>';
+  ['', 'A', 'B', 'F'].forEach(t => {
+    const label = t === '' ? 'Nenhum' : t === 'F' ? 'Funcional' : 'Treino ' + t;
+    const checked = currentTreino === t ? 'checked' : '';
+    html += `<label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--gray-light)">
+      <input type="radio" name="edit_treino" value="${t}" ${checked} style="width:18px;height:18px;accent-color:var(--blue-mid)"> ${label}
+    </label>`;
+  });
+  html += '</div>';
+
+  // Marmitas selector
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px">Marmitas Consumidas</div>';
+  html += '<div id="editor-marmita-list"></div>';
+  html += `<button class="add-cardio-btn" style="margin-top:6px" onclick="editorAddMarmita()">+ Adicionar Marmita</button>`;
+  html += '</div>';
+
+  html += `<button class="save-btn" onclick="saveDayEditor('${dateStr}')">Confirmar</button>`;
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+
+  // Store selections in a temp global and render
+  window._editorMarmitas = currentSelections;
+  renderEditorMarmitas();
+}
+
+function renderEditorMarmitas() {
+  const container = document.getElementById('editor-marmita-list');
+  if (!container) return;
+  const sels = window._editorMarmitas || [];
+  if (sels.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:6px 0">Nenhuma marmita</div>';
+    return;
+  }
+  let html = '';
+  sels.forEach((type, i) => {
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <select onchange="window._editorMarmitas[${i}]=this.value" style="flex:1;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px">
+        ${MARMITA_DEFS.map(m => `<option value="${m.id}" ${m.id===type?'selected':''}>${m.id} - ${m.name.split(' - ')[1]}</option>`).join('')}
+      </select>
+      <button class="cardio-rm" onclick="window._editorMarmitas.splice(${i},1);renderEditorMarmitas()">&#10005;</button>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function editorAddMarmita() {
+  if (!window._editorMarmitas) window._editorMarmitas = [];
+  window._editorMarmitas.push('A');
+  renderEditorMarmitas();
+}
+
+function saveDayEditor(dateStr) {
+  // Save treino
+  const treinoVal = document.querySelector('input[name="edit_treino"]:checked');
+  const treino = treinoVal ? treinoVal.value : '';
+
+  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  if (!cal[dateStr]) cal[dateStr] = {};
+  if (treino) {
+    cal[dateStr].forca = treino;
+  } else {
+    delete cal[dateStr].forca;
+  }
+  localStorage.setItem('cal_log', JSON.stringify(cal));
+
+  // Save marmitas
+  const consumed = getConsumed();
+  const marmitas = window._editorMarmitas || [];
+  if (marmitas.length > 0) {
+    consumed[dateStr] = marmitas;
+  } else {
+    delete consumed[dateStr];
+  }
+  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+
+  // Close modal, refresh
+  closeHistory();
+  renderCalendar();
+  renderStockCard();
+  renderMarmitaSelector();
+  showDayDetail(dateStr);
 }
 
 // ============================================================
