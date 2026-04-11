@@ -2092,11 +2092,35 @@ function importData(event) {
 // ============================================================
 // DAY EDITOR (past dates)
 // ============================================================
+function isDateInCurrentWeek(dateStr) {
+  const editDate = new Date(dateStr + 'T12:00:00');
+  const currentWeekId = getCurrentWeekLabel();
+  const editWeekId = getWeekId(editDate);
+  return editWeekId === currentWeekId;
+}
+
+function getEditorStock(editingDateStr) {
+  // Stock = plan - all consumed this week, EXCLUDING the date being edited
+  const plan = getMarmitaPlan();
+  const consumed = getConsumed();
+  const stock = {};
+  MARMITA_DEFS.forEach(m => { stock[m.id] = plan[m.id] || 0; });
+
+  const currentWeekId = getCurrentWeekLabel();
+  Object.entries(consumed).forEach(([date, arr]) => {
+    if (date === editingDateStr) return; // Exclude the date being edited
+    const d = new Date(date + 'T12:00:00');
+    if (getWeekId(d) !== currentWeekId) return; // Only count current week
+    const items = Array.isArray(arr) ? arr : [arr, arr];
+    items.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
+  });
+  return stock;
+}
+
 function openDayEditor(dateStr) {
   const parts = dateStr.split('-');
   const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-  // Load existing data
   const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
   const entry = cal[dateStr] || {};
   const consumed = getConsumed();
@@ -2104,11 +2128,14 @@ function openDayEditor(dateStr) {
   const currentSelections = Array.isArray(dayMarmitas) ? [...dayMarmitas] : (dayMarmitas ? [dayMarmitas, dayMarmitas] : []);
   const currentTreino = entry.forca || '';
 
+  // Check if date is in current week (for stock control)
+  window._editorDateStr = dateStr;
+  window._editorIsCurrentWeek = isDateInCurrentWeek(dateStr);
+
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
   document.getElementById('history-title').textContent = 'Editar - ' + dateDisplay;
 
-  // Build editor
   let html = '';
 
   // Treino selector
@@ -2126,8 +2153,11 @@ function openDayEditor(dateStr) {
   // Marmitas selector
   html += '<div style="margin-bottom:16px">';
   html += '<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px">Marmitas Consumidas</div>';
+  if (window._editorIsCurrentWeek) {
+    html += '<div style="font-size:11px;color:var(--gray-mid);margin-bottom:6px">Estoque da semana atual será atualizado</div>';
+  }
   html += '<div id="editor-marmita-list"></div>';
-  html += `<button class="add-cardio-btn" style="margin-top:6px" onclick="editorAddMarmita()">+ Adicionar Marmita</button>`;
+  html += '<div id="editor-add-btn-container"></div>';
   html += '</div>';
 
   html += `<button class="save-btn" onclick="saveDayEditor('${dateStr}')">Confirmar</button>`;
@@ -2135,34 +2165,76 @@ function openDayEditor(dateStr) {
   content.innerHTML = html;
   modal.classList.add('open');
 
-  // Store selections in a temp global and render
   window._editorMarmitas = currentSelections;
   renderEditorMarmitas();
 }
 
 function renderEditorMarmitas() {
   const container = document.getElementById('editor-marmita-list');
+  const addBtnContainer = document.getElementById('editor-add-btn-container');
   if (!container) return;
   const sels = window._editorMarmitas || [];
+
+  // Calculate available stock if current week
+  let stock = null;
+  if (window._editorIsCurrentWeek) {
+    stock = getEditorStock(window._editorDateStr);
+    // Subtract what's currently selected in the editor
+    sels.forEach(t => { if (stock[t] !== undefined) stock[t]--; });
+  }
+
   if (sels.length === 0) {
     container.innerHTML = '<div style="text-align:center;color:var(--gray-mid);font-size:13px;padding:6px 0">Nenhuma marmita</div>';
-    return;
+  } else {
+    let html = '';
+    sels.forEach((type, i) => {
+      // Build options: if current week, only show types with stock (or the currently selected type)
+      const options = MARMITA_DEFS.map(m => {
+        const available = !stock || stock[m.id] > 0 || m.id === type;
+        return `<option value="${m.id}" ${m.id===type?'selected':''} ${!available?'disabled':''}>${m.id} - ${m.name.split(' - ')[1]}${stock && m.id !== type ? ` (${Math.max(0,stock[m.id])} rest.)` : ''}</option>`;
+      }).join('');
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+        <select onchange="editorChangeMarmita(${i},this.value)" style="flex:1;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px">
+          ${options}
+        </select>
+        <button class="cardio-rm" onclick="window._editorMarmitas.splice(${i},1);renderEditorMarmitas()">&#10005;</button>
+      </div>`;
+    });
+    container.innerHTML = html;
   }
-  let html = '';
-  sels.forEach((type, i) => {
-    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <select onchange="window._editorMarmitas[${i}]=this.value" style="flex:1;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px">
-        ${MARMITA_DEFS.map(m => `<option value="${m.id}" ${m.id===type?'selected':''}>${m.id} - ${m.name.split(' - ')[1]}</option>`).join('')}
-      </select>
-      <button class="cardio-rm" onclick="window._editorMarmitas.splice(${i},1);renderEditorMarmitas()">&#10005;</button>
-    </div>`;
-  });
-  container.innerHTML = html;
+
+  // Show/hide add button based on stock
+  if (addBtnContainer) {
+    if (stock) {
+      const anyAvailable = MARMITA_DEFS.some(m => stock[m.id] > 0);
+      if (anyAvailable) {
+        addBtnContainer.innerHTML = `<button class="add-cardio-btn" style="margin-top:6px" onclick="editorAddMarmita()">+ Adicionar Marmita</button>`;
+      } else {
+        addBtnContainer.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--red);margin-top:6px">Estoque esgotado para esta semana</div>';
+      }
+    } else {
+      addBtnContainer.innerHTML = `<button class="add-cardio-btn" style="margin-top:6px" onclick="editorAddMarmita()">+ Adicionar Marmita</button>`;
+    }
+  }
+}
+
+function editorChangeMarmita(i, newVal) {
+  window._editorMarmitas[i] = newVal;
+  renderEditorMarmitas();
 }
 
 function editorAddMarmita() {
   if (!window._editorMarmitas) window._editorMarmitas = [];
-  window._editorMarmitas.push('A');
+  // If current week, find first type with stock
+  if (window._editorIsCurrentWeek) {
+    const stock = getEditorStock(window._editorDateStr);
+    window._editorMarmitas.forEach(t => { if (stock[t] !== undefined) stock[t]--; });
+    const available = MARMITA_DEFS.find(m => stock[m.id] > 0);
+    if (!available) return;
+    window._editorMarmitas.push(available.id);
+  } else {
+    window._editorMarmitas.push('A');
+  }
   renderEditorMarmitas();
 }
 
