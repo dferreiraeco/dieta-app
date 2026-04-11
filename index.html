@@ -2614,7 +2614,11 @@ function logout() {
   if (!confirm('Sair da conta? Seus dados continuam salvos.')) return;
   stopFirestoreSync();
   currentUser = null;
-  auth.signOut();
+  localStorage.removeItem('skip_login');
+  auth.signOut().then(() => {
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+  });
 }
 
 // Auth state listener
