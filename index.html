@@ -372,6 +372,7 @@ body {
 }
 .cal-dot.forca { background: var(--blue-mid); }
 .cal-dot.cardio { background: var(--orange); }
+.cal-dot.marmita { background: var(--green); }
 .cal-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px; color: var(--gray-mid); }
 .cal-legend span { display: flex; align-items: center; gap: 4px; }
 .cal-summary { margin-top: 14px; }
@@ -567,7 +568,8 @@ body {
     </div>
     <div class="cal-grid" id="cal-grid"></div>
     <div class="cal-legend">
-      <span><span class="cal-dot forca" style="display:inline-block"></span> Forca</span>
+      <span><span class="cal-dot marmita" style="display:inline-block"></span> Marmita</span>
+      <span><span class="cal-dot forca" style="display:inline-block"></span> Treino</span>
       <span><span class="cal-dot cardio" style="display:inline-block"></span> Cardio</span>
     </div>
   </div>
@@ -1785,6 +1787,7 @@ function renderCalendar() {
   // Empty cells before first day
   for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
 
+  const consumed = getConsumed();
   let forcaDays = 0, cardioDays = 0, totalCardioMin = 0;
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -1793,24 +1796,26 @@ function renderCalendar() {
     const entry = cal[dateStr] || {};
     const hasForca = !!entry.forca;
     const hasCardio = !!entry.cardio;
+    const dayMarmitas = consumed[dateStr];
+    const hasMarmita = dayMarmitas && ((Array.isArray(dayMarmitas) && dayMarmitas.length > 0) || typeof dayMarmitas === 'string');
 
     if (hasForca) forcaDays++;
     if (hasCardio) {
       cardioDays++;
-      // Extract minutes from cardio string
       const mins = entry.cardio.match(/(\d+)min/g);
       if (mins) mins.forEach(m => totalCardioMin += parseInt(m));
     }
 
     let dots = '';
-    if (hasForca || hasCardio) {
+    if (hasMarmita || hasForca || hasCardio) {
       dots = '<div class="cal-dots">';
+      if (hasMarmita) dots += '<div class="cal-dot marmita"></div>';
       if (hasForca) dots += `<div class="cal-dot forca" style="width:auto;height:auto;border-radius:3px;padding:0 3px;font-size:8px;font-weight:700;color:#fff;background:var(--blue-mid)">${entry.forca}</div>`;
       if (hasCardio) dots += '<div class="cal-dot cardio"></div>';
       dots += '</div>';
     }
 
-    const hasData = hasForca || hasCardio;
+    const hasData = hasMarmita || hasForca || hasCardio;
     html += `<div class="cal-cell ${isToday ? 'today' : ''} ${hasData ? 'has-data' : ''}" data-date="${dateStr}" onclick="showDayDetail('${dateStr}')">${d}${dots}</div>`;
   }
   grid.innerHTML = html;
