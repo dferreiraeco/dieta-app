@@ -653,6 +653,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     <div class="progress-text" id="shop-progress-text">0 de 0 itens</div>
   </div>
   <div class="card" id="shopping-list"></div>
+  <button class="save-btn" onclick="exportShoppingPDF()" style="margin-top:12px;background:var(--blue-mid)">Compartilhar Lista de Compras</button>
   <button class="reset-btn" onclick="resetChecklist('shop')">Limpar Lista (Nova Semana)</button>
 </div>
 
@@ -1405,10 +1406,13 @@ function getStock() {
   const consumed = getConsumed();
   const stock = {};
   MARMITA_DEFS.forEach(m => { stock[m.id] = plan[m.id] || 0; });
-  // Each entry is an array of consumed types
-  Object.values(consumed).forEach(arr => {
+  // Only count current week's consumption
+  const currentWeekId = getCurrentWeekLabel();
+  Object.entries(consumed).forEach(([date, arr]) => {
+    const d = new Date(date + 'T12:00:00');
+    if (getWeekId(d) !== currentWeekId) return;
     if (Array.isArray(arr)) arr.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
-    else if (typeof arr === 'string' && stock[arr] !== undefined) stock[arr] -= 2; // legacy
+    else if (typeof arr === 'string' && stock[arr] !== undefined) stock[arr] -= 2;
   });
   return stock;
 }
@@ -1500,7 +1504,7 @@ function renderMarmitaSelector() {
   const planned = getMarmitaPlan();
   const hasPlanned = Object.values(planned).some(v => v > 0);
   if (!hasPlanned) {
-    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhuma marmita programada na aba Marmitas</div>';
+    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhuma marmita programada na semana</div>';
     container.innerHTML = html;
     return;
   }
@@ -1534,7 +1538,10 @@ function getDinnerStock() {
   const consumed = getDinnerConsumed();
   const stock = {};
   DINNER_DEFS.forEach(m => { stock[m.id] = plan[m.id] || 0; });
-  Object.values(consumed).forEach(arr => {
+  const currentWeekId = getCurrentWeekLabel();
+  Object.entries(consumed).forEach(([date, arr]) => {
+    const d = new Date(date + 'T12:00:00');
+    if (getWeekId(d) !== currentWeekId) return;
     if (Array.isArray(arr)) arr.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
   });
   return stock;
@@ -1611,7 +1618,7 @@ function renderDinnerSelector() {
   const planned = getDinnerPlan();
   const hasPlanned = Object.values(planned).some(v => v > 0);
   if (!hasPlanned) {
-    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhum jantar programado na aba Marmitas</div>';
+    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhum jantar programado na semana</div>';
     container.innerHTML = html;
     return;
   }
@@ -1995,6 +2002,93 @@ function toggleShopRow(key, row) {
   const cb = row.querySelector('input[type="checkbox"]');
   cb.checked = !cb.checked;
   toggleShop(key, cb);
+}
+
+function exportShoppingPDF() {
+  const shopItems = buildShoppingList();
+  const date = localDateStr().split('-').reverse().join('/');
+
+  // Build plain text version
+  let text = `LISTA DE COMPRAS - ${date}\n`;
+  text += 'Plano de Recomposicao (2 pessoas)\n';
+  text += '='.repeat(40) + '\n\n';
+
+  shopItems.forEach(sec => {
+    text += `*${sec.section.toUpperCase()}*\n`;
+    sec.items.forEach(item => {
+      text += `  [ ] ${item.qty.padEnd(22)} ${item.name}\n`;
+    });
+    text += '\n';
+  });
+  text += '--\nGerado em PeitudasNOW';
+
+  // Build HTML version (for PDF via print) - also used for share
+  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lista de Compras</title>
+<style>
+body { font-family: -apple-system, Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; color: #2d3748; }
+h1 { color: #1a365d; font-size: 22px; margin: 0 0 6px; }
+.sub { color: #4a5568; font-size: 13px; margin-bottom: 20px; }
+h2 { color: #276749; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #c6f6d5; padding-bottom: 4px; margin: 18px 0 8px; }
+.item { display: flex; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+.qty { font-weight: 700; color: #1a365d; min-width: 120px; }
+.check { margin-right: 10px; color: #cbd5e0; }
+.footer { margin-top: 30px; font-size: 10px; color: #a0aec0; text-align: center; }
+</style></head><body>
+<h1>Lista de Compras</h1>
+<div class="sub">${date} - Plano de Recomposicao (2 pessoas)</div>`;
+
+  shopItems.forEach(sec => {
+    html += `<h2>${sec.section}</h2>`;
+    sec.items.forEach(item => {
+      html += `<div class="item"><span class="check">&#9744;</span><span class="qty">${item.qty}</span><span>${item.name}</span></div>`;
+    });
+  });
+  html += `<div class="footer">Gerado em PeitudasNOW - ${date}</div></body></html>`;
+
+  // Try Web Share API with text (most mobile-friendly)
+  const blob = new Blob([html], { type: 'text/html' });
+  const file = new File([blob], `lista-compras-${date.replace(/\//g,'-')}.html`, { type: 'text/html' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: 'Lista de Compras',
+      text: text
+    }).catch(() => {
+      // Fallback: share as text
+      shareAsText(text);
+    });
+  } else if (navigator.share) {
+    // Share just the text (works on more devices)
+    navigator.share({
+      title: 'Lista de Compras',
+      text: text
+    }).catch(() => openPrintPDF(html));
+  } else {
+    openPrintPDF(html);
+  }
+}
+
+function shareAsText(text) {
+  if (navigator.share) {
+    navigator.share({ title: 'Lista de Compras', text: text }).catch(() => {});
+  } else {
+    // Copy to clipboard as last resort
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Lista copiada para a área de transferência.');
+    });
+  }
+}
+
+function openPrintPDF(html) {
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Permita pop-ups para exportar a lista.');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 500);
 }
 
 function updateProgress(type, checked, total) {
