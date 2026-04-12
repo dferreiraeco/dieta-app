@@ -3099,7 +3099,7 @@ function getEditorStock(editingDateStr) {
 const GEN_PROTEINS = [
   { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215,
     dinnerAlt: 'S', dinnerRawPerUnit: 134 },
-  { key: 'carne_moida', label: 'Carne moída (patinho)', marmita: 'B', rawPerUnit: 230 },
+  { key: 'carne_moida', label: 'Carne moída', marmita: 'B', rawPerUnit: 230 },
   { key: 'tilapia',     label: 'Filé de tilápia',    marmita: 'C', rawPerUnit: 250 },
   { key: 'lombo',       label: 'Lombo suíno',        marmita: 'D', rawPerUnit: 215 },
   { key: 'sobrecoxa',   label: 'Sobrecoxa sem pele', marmita: 'E', rawPerUnit: 240 },
@@ -3131,11 +3131,11 @@ const GEN_CARBS = [
 
 // Dinner ingredients: generate dinner counts based on unique ingredients
 const GEN_DINNER_PROTEINS = [
-  { key: 'atum_lata',    label: 'Atum em lata (latas)',      dinner: 'A', rawPerUnit: 1,   unit: 'lata' },
-  { key: 'alcatra',      label: 'Alcatra (crua)',            dinner: 'C', rawPerUnit: 175, unit: 'g' },
+  { key: 'atum_lata',    label: 'Atum em lata',              dinner: 'A', rawPerUnit: 1,   unit: 'lata' },
+  { key: 'alcatra',      label: 'Carne bovina (bife ou pedaços; crua)', dinner: 'C', rawPerUnit: 175, unit: 'g' },
   { key: 'peito_peru',   label: 'Peito de peru defumado',    dinner: 'O', rawPerUnit: 50,  unit: 'g' },
   { key: 'goma_tapioca', label: 'Goma de tapioca',           dinner: 'T', rawPerUnit: 50,  unit: 'g' },
-  { key: 'tortilla',     label: 'Tortilla integral (un)',    dinner: 'W', rawPerUnit: 2,   unit: 'un' },
+  { key: 'tortilla',     label: 'Tortilla integral',         dinner: 'W', rawPerUnit: 2,   unit: 'un' },
 ];
 
 // Dinner other ingredients: stock only (shared across dinners)
@@ -3144,12 +3144,12 @@ const GEN_DINNER_OTHERS = [
   { key: 'queijo_minas', label: 'Queijo minas frescal',   unit: 'g' },
   { key: 'mussarela',    label: 'Queijo mussarela',       unit: 'g' },
   { key: 'cottage',      label: 'Queijo cottage',         unit: 'g' },
-  { key: 'pao_integral', label: 'Pão integral (fatias)',  unit: 'fatias' },
+  { key: 'pao_integral', label: 'Pão integral',  unit: 'fatias' },
 ];
 
 // Breakfast/snack ingredients: stock only
 const GEN_SNACKS = [
-  { key: 'ovos',           label: 'Ovos (unidades)',     unit: 'un' },
+  { key: 'ovos',           label: 'Ovos',                unit: 'un' },
   { key: 'iogurte_grego',  label: 'Iogurte grego natural', unit: 'g' },
   { key: 'aveia',          label: 'Aveia em flocos',     unit: 'g' },
 ];
