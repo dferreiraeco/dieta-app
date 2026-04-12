@@ -615,7 +615,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 
   <!-- Marmita selector for today -->
   <div class="card">
-    <h3>Marmita de Hoje (Almoço)</h3>
+    <h3>Almoço de Hoje</h3>
     <div id="marmita-selector"></div>
   </div>
 
@@ -1703,6 +1703,11 @@ function getWeekId(date) {
 function saveMarmitaPlan() {
   const plan = getMarmitaPlan();
   const dinnerPlan = getDinnerPlan();
+
+  // Explicitly save both plans to force sync (defensive)
+  localStorage.setItem('marmita_plan', JSON.stringify(plan));
+  localStorage.setItem('dinner_plan', JSON.stringify(dinnerPlan));
+
   renderShoppingList();
   renderPrepList();
   renderStockCard();
@@ -3509,17 +3514,25 @@ function startFirestoreSync() {
   if (!currentUser) return;
   const unsub = db.collection('users').doc(currentUser.uid).collection('data')
     .onSnapshot(snapshot => {
+      let hasChanges = false;
       snapshot.docChanges().forEach(change => {
         const key = change.doc.id;
         if (change.type === 'removed') {
-          _origRemoveItem(key);
+          if (localStorage.getItem(key) !== null) {
+            _origRemoveItem(key);
+            hasChanges = true;
+          }
         } else {
           const val = change.doc.data().value;
-          if (val !== undefined) _origSetItem(key, val);
+          const currentVal = localStorage.getItem(key);
+          if (val !== undefined && val !== currentVal) {
+            _origSetItem(key, val);
+            hasChanges = true;
+          }
         }
       });
-      // Re-render after sync
-      initApp();
+      // Only re-render if there were actual changes from Firestore
+      if (hasChanges) initApp();
     }, () => {});
   firestoreUnsubscribes.push(unsub);
 }
@@ -3589,6 +3602,9 @@ auth.onAuthStateChanged(user => {
   if (user) {
     authScreen.style.display = 'none';
     appContainer.style.display = 'block';
+
+    // Render immediately with local data to avoid flicker/data loss
+    initApp();
 
     // Check if Firestore has data for this user
     db.collection('users').doc(user.uid).collection('data').doc('marmita_plan').get()
