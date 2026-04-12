@@ -3512,8 +3512,27 @@ localStorage.removeItem = function(key) {
 function startFirestoreSync() {
   stopFirestoreSync();
   if (!currentUser) return;
+  let isInitialSnapshot = true;
   const unsub = db.collection('users').doc(currentUser.uid).collection('data')
     .onSnapshot(snapshot => {
+      if (isInitialSnapshot) {
+        isInitialSnapshot = false;
+        // On initial load: merge - prefer LOCAL over Firestore (local is source of truth)
+        // Only pull from Firestore for keys that don't exist locally
+        snapshot.forEach(doc => {
+          const key = doc.id;
+          if (localStorage.getItem(key) === null) {
+            // Local doesn't have this, pull from Firestore
+            const val = doc.data().value;
+            if (val !== undefined) _origSetItem(key, val);
+          }
+        });
+        // Upload all local data back to Firestore to ensure it has the latest
+        uploadLocalToFirestore();
+        initApp();
+        return;
+      }
+      // Subsequent real-time changes: accept from Firestore (other device edited)
       let hasChanges = false;
       snapshot.docChanges().forEach(change => {
         const key = change.doc.id;
@@ -3531,7 +3550,6 @@ function startFirestoreSync() {
           }
         }
       });
-      // Only re-render if there were actual changes from Firestore
       if (hasChanges) initApp();
     }, () => {});
   firestoreUnsubscribes.push(unsub);
@@ -3603,19 +3621,11 @@ auth.onAuthStateChanged(user => {
     authScreen.style.display = 'none';
     appContainer.style.display = 'block';
 
-    // Render immediately with local data to avoid flicker/data loss
+    // Render immediately with local data
     initApp();
 
-    // Check if Firestore has data for this user
-    db.collection('users').doc(user.uid).collection('data').doc('marmita_plan').get()
-      .then(doc => {
-        if (!doc.exists) {
-          // First login: upload local data
-          uploadLocalToFirestore();
-        }
-        startFirestoreSync();
-      })
-      .catch(() => { startFirestoreSync(); });
+    // Start Firestore sync (it handles upload/merge internally)
+    startFirestoreSync();
   } else {
     // Check if was previously logged in
     if (localStorage.getItem('skip_login')) {
