@@ -1938,10 +1938,12 @@ function buildShoppingList() {
   // Iogurte grego: 130g lanche tarde × 14 pessoas/dias
   const iogurteG = Math.max(0, (14 * 130) - have('iogurte_grego'));
 
-  // Frutas: todas as frutas são perfeitamente substituíveis. Necessidade semanal total
-  // = FRUIT_WEEKLY_NEED (42 porções). Soma o estoque de todas as frutas e calcula o gap.
-  const fruitStockTotal = FRUIT_KEYS.reduce((sum, k) => sum + have(k), 0);
-  const fruitShortfall = Math.max(0, FRUIT_WEEKLY_NEED - fruitStockTotal);
+  // Frutas: todas perfeitamente substituíveis, mas ponderadas pelos carboidratos reais.
+  // Orçamento semanal = FRUIT_WEEKLY_CARB_NEED (g). Cada porção em estoque cobre seu
+  // próprio teor de carbo (f.c). O shortfall é convertido de volta para porções médias.
+  const fruitCarbStock = GEN_FRUITS.reduce((sum, f) => sum + have(f.key) * f.c, 0);
+  const fruitCarbShortfall = Math.max(0, FRUIT_WEEKLY_CARB_NEED - fruitCarbStock);
+  const fruitShortfall = fruitCarbShortfall > 0 ? Math.ceil(fruitCarbShortfall / FRUIT_AVG_CARB) : 0;
 
   // Queijo minas frescal: sanduíche + wrap
   const minasG = Math.max(0, ((dS + dW) * 20) - have('queijo_minas'));
@@ -3113,21 +3115,24 @@ const GEN_SNACKS = [
 ];
 
 // Fruits: perfectly substitutable across meals (breakfast + morning snack + afternoon snack)
-// 1 porção = 1 serving from the table shown in the Marmitas tab
+// 1 porção = 1 serving from the table shown in the Marmitas tab.
+// c = carbs (g) per porção — used to budget the weekly carb target from fruits.
 const GEN_FRUITS = [
-  { key: 'banana',   label: 'Banana prata',  unit: 'porções' },
-  { key: 'maca',     label: 'Maçã',          unit: 'porções' },
-  { key: 'mamao',    label: 'Mamão papaya',  unit: 'porções' },
-  { key: 'uva',      label: 'Uva',           unit: 'porções' },
-  { key: 'morango',  label: 'Morango',       unit: 'porções' },
-  { key: 'abacaxi',  label: 'Abacaxi',       unit: 'porções' },
-  { key: 'melancia', label: 'Melancia',      unit: 'porções' },
-  { key: 'laranja',  label: 'Laranja',       unit: 'porções' },
-  { key: 'pera',     label: 'Pera',          unit: 'porções' },
-  { key: 'kiwi',     label: 'Kiwi',          unit: 'porções' },
+  { key: 'banana',   label: 'Banana prata',  unit: 'porções', c: 16 },
+  { key: 'maca',     label: 'Maçã',          unit: 'porções', c: 20 },
+  { key: 'mamao',    label: 'Mamão papaya',  unit: 'porções', c: 13 },
+  { key: 'uva',      label: 'Uva',           unit: 'porções', c: 18 },
+  { key: 'morango',  label: 'Morango',       unit: 'porções', c: 12 },
+  { key: 'abacaxi',  label: 'Abacaxi',       unit: 'porções', c: 13 },
+  { key: 'melancia', label: 'Melancia',      unit: 'porções', c: 15 },
+  { key: 'laranja',  label: 'Laranja',       unit: 'porções', c: 17 },
+  { key: 'pera',     label: 'Pera',          unit: 'porções', c: 23 },
+  { key: 'kiwi',     label: 'Kiwi',          unit: 'porções', c: 15 },
 ];
 const FRUIT_KEYS = GEN_FRUITS.map(f => f.key);
-const FRUIT_WEEKLY_NEED = 42; // 14 café + 14 lanche manhã + 14 lanche tarde (7 dias × 2 pessoas × 3 porções)
+// Carb budget: 42 porções × avg carbs per porção. Targets grams of fruit-carbs per week.
+const FRUIT_AVG_CARB = GEN_FRUITS.reduce((s, f) => s + f.c, 0) / GEN_FRUITS.length; // ~16.2g
+const FRUIT_WEEKLY_CARB_NEED = Math.round(42 * FRUIT_AVG_CARB); // ~680g C/week
 
 function getHomeStock() {
   return JSON.parse(localStorage.getItem('home_stock') || '{}');
