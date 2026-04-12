@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
   --blue: #1a365d; --blue-mid: #2b6cb0; --blue-light: #bee3f8; --blue-bg: #ebf8ff;
@@ -2012,88 +2013,111 @@ function toggleShopRow(key, row) {
 function exportShoppingPDF() {
   const shopItems = buildShoppingList();
   const date = localDateStr().split('-').reverse().join('/');
+  const fileName = `lista-compras-${date.replace(/\//g, '-')}.pdf`;
 
-  // Build plain text version
-  let text = `LISTA DE COMPRAS - ${date}\n`;
-  text += 'Plano de Recomposicao (2 pessoas)\n';
-  text += '='.repeat(40) + '\n\n';
+  if (typeof window.jspdf === 'undefined') {
+    alert('Biblioteca de PDF não carregada. Recarregue o app e tente novamente.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  let y = margin;
+
+  // Header
+  doc.setFillColor(26, 54, 93);
+  doc.rect(0, 0, pageW, 25, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Lista de Compras', margin, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${date}  |  Plano de Recomposicao (2 pessoas)`, margin, 19);
+
+  y = 35;
+  doc.setTextColor(45, 55, 72);
 
   shopItems.forEach(sec => {
-    text += `*${sec.section.toUpperCase()}*\n`;
+    if (y > pageH - 25) {
+      doc.addPage();
+      y = margin;
+    }
+    // Section header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(39, 103, 73);
+    doc.text(sec.section, margin, y);
+    doc.setDrawColor(198, 246, 213);
+    doc.setLineWidth(0.8);
+    doc.line(margin, y + 1.5, pageW - margin, y + 1.5);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(45, 55, 72);
+
     sec.items.forEach(item => {
-      text += `  [ ] ${item.qty.padEnd(22)} ${item.name}\n`;
+      if (y > pageH - 15) {
+        doc.addPage();
+        y = margin;
+      }
+      // Checkbox
+      doc.setDrawColor(160, 174, 192);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, y - 3, 3, 3);
+      // Qty (bold blue)
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 54, 93);
+      doc.text(item.qty, margin + 6, y);
+      // Name
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(45, 55, 72);
+      doc.text(item.name, margin + 42, y);
+      y += 6;
     });
-    text += '\n';
+    y += 4;
   });
-  text += '--\nGerado em PeitudasNOW';
 
-  // Build HTML version (for PDF via print) - also used for share
-  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lista de Compras</title>
-<style>
-body { font-family: -apple-system, Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; color: #2d3748; }
-h1 { color: #1a365d; font-size: 22px; margin: 0 0 6px; }
-.sub { color: #4a5568; font-size: 13px; margin-bottom: 20px; }
-h2 { color: #276749; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #c6f6d5; padding-bottom: 4px; margin: 18px 0 8px; }
-.item { display: flex; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-.qty { font-weight: 700; color: #1a365d; min-width: 120px; }
-.check { margin-right: 10px; color: #cbd5e0; }
-.footer { margin-top: 30px; font-size: 10px; color: #a0aec0; text-align: center; }
-</style></head><body>
-<h1>Lista de Compras</h1>
-<div class="sub">${date} - Plano de Recomposicao (2 pessoas)</div>`;
+  // Footer on last page
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(160, 174, 192);
+  doc.text(`Gerado em PeitudasNOW - ${date}`, pageW / 2, pageH - 8, { align: 'center' });
 
-  shopItems.forEach(sec => {
-    html += `<h2>${sec.section}</h2>`;
-    sec.items.forEach(item => {
-      html += `<div class="item"><span class="check">&#9744;</span><span class="qty">${item.qty}</span><span>${item.name}</span></div>`;
-    });
-  });
-  html += `<div class="footer">Gerado em PeitudasNOW - ${date}</div></body></html>`;
+  // Generate blob
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type: 'application/pdf' });
 
-  // Try Web Share API with text (most mobile-friendly)
-  const blob = new Blob([html], { type: 'text/html' });
-  const file = new File([blob], `lista-compras-${date.replace(/\//g,'-')}.html`, { type: 'text/html' });
-
+  // Try native share first (iOS supports PDF share to WhatsApp, email, etc.)
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({
       files: [file],
       title: 'Lista de Compras',
-      text: text
-    }).catch(() => {
-      // Fallback: share as text
-      shareAsText(text);
+      text: `Lista de Compras - ${date}`
+    }).catch(err => {
+      if (err.name !== 'AbortError') {
+        downloadPDF(blob, fileName);
+      }
     });
-  } else if (navigator.share) {
-    // Share just the text (works on more devices)
-    navigator.share({
-      title: 'Lista de Compras',
-      text: text
-    }).catch(() => openPrintPDF(html));
   } else {
-    openPrintPDF(html);
+    downloadPDF(blob, fileName);
   }
 }
 
-function shareAsText(text) {
-  if (navigator.share) {
-    navigator.share({ title: 'Lista de Compras', text: text }).catch(() => {});
-  } else {
-    // Copy to clipboard as last resort
-    navigator.clipboard.writeText(text).then(() => {
-      alert('Lista copiada para a área de transferência.');
-    });
-  }
-}
-
-function openPrintPDF(html) {
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Permita pop-ups para exportar a lista.');
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => { w.print(); }, 500);
+function downloadPDF(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function updateProgress(type, checked, total) {
