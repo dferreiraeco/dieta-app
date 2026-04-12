@@ -1496,9 +1496,19 @@ function renderMarmitaSelector() {
     html += '</div>';
   }
 
+  // Only show marmitas that were planned
+  const planned = getMarmitaPlan();
+  const hasPlanned = Object.values(planned).some(v => v > 0);
+  if (!hasPlanned) {
+    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhuma marmita programada na aba Marmitas</div>';
+    container.innerHTML = html;
+    return;
+  }
+
   // Show options to add
   html += '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:6px">Toque para adicionar:</div>';
   MARMITA_DEFS.forEach(m => {
+    if ((planned[m.id] || 0) === 0) return; // só mostrar marmitas programadas
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
     html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
