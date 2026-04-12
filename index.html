@@ -1944,6 +1944,7 @@ function buildShoppingList() {
   const fruitCarbStock = GEN_FRUITS.reduce((sum, f) => sum + have(f.key) * f.c, 0);
   const fruitCarbShortfall = Math.max(0, FRUIT_WEEKLY_CARB_NEED - fruitCarbStock);
   const fruitShortfall = fruitCarbShortfall > 0 ? Math.ceil(fruitCarbShortfall / FRUIT_AVG_CARB) : 0;
+  const fruitBuySuggestions = buildFruitBuySuggestions(fruitCarbShortfall);
 
   // Queijo minas frescal: sanduíche + wrap
   const minasG = Math.max(0, ((dS + dW) * 20) - have('queijo_minas'));
@@ -1991,7 +1992,12 @@ function buildShoppingList() {
       ...(tortillasUn > 0 ? [{ name: 'Tortilla integral', qty: `${tortillasUn} unidades (~40g cada)` }] : []),
     ]},
     { section: 'Frutas', items: [
-      ...(fruitShortfall > 0 ? [{ name: 'Maçã', qty: `${fruitShortfall} porções`, fruitWarning: true }] : []),
+      ...(fruitShortfall > 0 ? [{
+        name: 'Maçã',
+        qty: `${fruitShortfall} porções`,
+        fruitWarning: true,
+        fruitBuySuggestions: fruitBuySuggestions,
+      }] : []),
     ]},
     { section: 'Folhas e Vegetais', items: [
       ...(totalMarmitas + totalDinners > 0 ? [
@@ -2035,8 +2041,17 @@ function renderShoppingList() {
         <label class="check-label"><span class="qty">${item.qty}</span> ${item.name}</label>
       </div>`;
       if (item.fruitWarning) {
-        html += `<div style="background:#fff5f5;border-left:3px solid var(--red);color:var(--red);padding:8px 12px;margin:4px 0 8px;font-size:12px;border-radius:6px">
+        html += `<div style="background:#fff5f5;border-left:3px solid var(--red);color:var(--red);padding:8px 12px;margin:4px 0 6px;font-size:12px;border-radius:6px">
           Você pode comprar outras frutas no lugar da maçã. Consulte a tabela de frutas na aba <b>Marmitas</b> para ver as equivalências de porção.
+        </div>`;
+      }
+      if (item.fruitBuySuggestions && item.fruitBuySuggestions.length > 0) {
+        const bullets = item.fruitBuySuggestions
+          .map(s => `<li style="margin:2px 0"><b>${s.porcoes} porções</b> — ${s.name}</li>`)
+          .join('');
+        html += `<div style="background:#f0fff4;border-left:3px solid var(--green);padding:8px 12px;margin:2px 0 8px;font-size:12px;border-radius:6px">
+          <b style="color:var(--green)">Sugestão de compra (3 frutas variadas):</b>
+          <ul style="margin:4px 0 0 18px;padding:0;color:var(--gray)">${bullets}</ul>
         </div>`;
       }
     });
@@ -2151,6 +2166,27 @@ function exportShoppingPDF() {
         doc.text(lines, margin + 6, y);
         y += lines.length * 4 + 2;
         doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(45, 55, 72);
+      }
+      // Fruit buy suggestions (up to 3 varied fruits)
+      if (item.fruitBuySuggestions && item.fruitBuySuggestions.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(39, 103, 73);
+        doc.text('Sugestao de compra:', margin + 6, y);
+        y += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(74, 85, 104);
+        item.fruitBuySuggestions.forEach(s => {
+          if (y > pageH - 15) { doc.addPage(); y = margin; }
+          const nameNoAccent = s.name.replace(/ã/g,'a').replace(/á/g,'a').replace(/â/g,'a')
+            .replace(/é/g,'e').replace(/ê/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ô/g,'o')
+            .replace(/ú/g,'u').replace(/ç/g,'c');
+          doc.text(`- ${s.porcoes} porcoes: ${nameNoAccent}`, margin + 10, y);
+          y += 4;
+        });
+        y += 2;
         doc.setFontSize(10);
         doc.setTextColor(45, 55, 72);
       }
@@ -3133,6 +3169,38 @@ const FRUIT_KEYS = GEN_FRUITS.map(f => f.key);
 // Carb budget: 42 porções × avg carbs per porção. Targets grams of fruit-carbs per week.
 const FRUIT_AVG_CARB = GEN_FRUITS.reduce((s, f) => s + f.c, 0) / GEN_FRUITS.length; // ~16.2g
 const FRUIT_WEEKLY_CARB_NEED = Math.round(42 * FRUIT_AVG_CARB); // ~680g C/week
+
+// Rotated weekly sets to bring variety to shopping suggestions. Each set favors low/mid
+// tier fruits (cutting diet) and spans tiers for variety.
+const FRUIT_SUGGESTION_SETS = [
+  ['banana',  'mamao',    'morango'],
+  ['banana',  'melancia', 'abacaxi'],
+  ['laranja', 'mamao',    'kiwi'   ],
+  ['banana',  'uva',      'morango'],
+];
+
+function buildFruitBuySuggestions(shortfallCarbsG) {
+  if (shortfallCarbsG <= 0) return [];
+  // Decide how many different fruits based on shortfall size
+  const avgShortfallPorcoes = shortfallCarbsG / FRUIT_AVG_CARB;
+  let count;
+  if (avgShortfallPorcoes <= 2) count = 1;
+  else if (avgShortfallPorcoes <= 5) count = 2;
+  else count = 3;
+  // Pick the set for the current week (rotates to avoid monotony)
+  const weekHash = parseInt(getWeekId().replace(/\D/g, '').slice(-3), 10) || 0;
+  const setKeys = FRUIT_SUGGESTION_SETS[weekHash % FRUIT_SUGGESTION_SETS.length];
+  const chosen = setKeys.slice(0, count)
+    .map(k => GEN_FRUITS.find(f => f.key === k))
+    .filter(Boolean);
+  if (chosen.length === 0) return [];
+  // Split carb budget equally among chosen fruits, convert to porções per fruit (ceil)
+  const perFruit = shortfallCarbsG / chosen.length;
+  return chosen.map(f => ({
+    name: f.label,
+    porcoes: Math.ceil(perFruit / f.c),
+  }));
+}
 
 function getHomeStock() {
   return JSON.parse(localStorage.getItem('home_stock') || '{}');
