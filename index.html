@@ -619,6 +619,12 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     <div id="marmita-selector"></div>
   </div>
 
+  <!-- Dinner selector for today -->
+  <div class="card">
+    <h3>Jantar de Hoje</h3>
+    <div id="dinner-selector"></div>
+  </div>
+
   <!-- Meals rendered by JS -->
   <div class="card">
     <h3>Toque na refeição ao concluir</h3>
@@ -801,6 +807,7 @@ const FIXED_MEALS = [
 ];
 
 function getMeals() {
+  // Build lunch (marmita)
   const selections = getTodaySelections();
   let lunch;
   if (selections.length === 0) {
@@ -808,7 +815,6 @@ function getMeals() {
         desc: 'Selecione acima', foods: 'Escolha a marmita do dia no card acima',
         kcal: 0, p: 0, c: 0, g: 0, color: 'var(--green)' };
   } else {
-    // Average macros across selections (app serves 2 people, show per-person average)
     let kcal = 0, p = 0, c = 0, g = 0;
     const names = [];
     const grouped = {};
@@ -820,15 +826,43 @@ function getMeals() {
       names.push(count > 1 ? `${count}x ${def.name.split(' - ')[1]}` : def.name.split(' - ')[1]);
     });
     const n = selections.length;
-    const avgKcal = Math.round(kcal / n);
-    const avgP = Math.round(p / n);
-    const avgC = Math.round(c / n);
-    const avgG = Math.round(g / n);
     lunch = { id: 'almoco', time: '13h', name: 'Almoço (' + names.join(' + ') + ')',
         desc: 'Média por pessoa', foods: names.join(' + '),
-        kcal: avgKcal, p: avgP, c: avgC, g: avgG, color: 'var(--green)' };
+        kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
+        color: 'var(--green)' };
   }
-  return FIXED_MEALS.map(m => m === null ? lunch : m);
+
+  // Build dinner
+  const dSel = getTodayDinnerSelections();
+  let dinner;
+  if (dSel.length === 0) {
+    dinner = { id: 'jantar', time: '20h', name: 'Jantar',
+        desc: 'Selecione acima', foods: 'Escolha o jantar do dia no card acima',
+        kcal: 0, p: 0, c: 0, g: 0, color: 'var(--purple)' };
+  } else {
+    let kcal = 0, p = 0, c = 0, g = 0;
+    const names = [];
+    const grouped = {};
+    dSel.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
+    Object.entries(grouped).forEach(([type, count]) => {
+      const def = DINNER_DEFS.find(x => x.id === type);
+      if (!def) return;
+      kcal += def.kcal * count; p += def.p * count; c += def.c * count; g += def.g * count;
+      names.push(count > 1 ? `${count}x ${def.name}` : def.name);
+    });
+    const n = dSel.length;
+    dinner = { id: 'jantar', time: '20h', name: 'Jantar (' + names.join(' + ') + ')',
+        desc: 'Média por pessoa', foods: names.join(' + '),
+        kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
+        color: 'var(--purple)' };
+  }
+
+  // Map: null = lunch placeholder, dinner is at index 4 originally
+  return FIXED_MEALS.map((m, i) => {
+    if (m === null) return lunch;
+    if (m.id === 'jantar') return dinner;
+    return m;
+  });
 }
 const GOALS = { kcal: 2000, p: 190, c: 150, g: 70 };
 
@@ -1413,6 +1447,7 @@ function selectTodayMarmita(type) {
   }
   localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
   renderMarmitaSelector();
+  renderDinnerSelector();
   renderMeals();
   renderStockCard();
 }
@@ -1427,6 +1462,7 @@ function removeTodayMarmita(type) {
   else consumed[today] = selections;
   localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
   renderMarmitaSelector();
+  renderDinnerSelector();
   renderMeals();
   renderStockCard();
 }
@@ -1473,6 +1509,116 @@ function renderMarmitaSelector() {
         <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
       </div>
       <div class="msel-stock">${disabled ? 'Esgotada' : remaining + ' rest.'}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ---- DINNER TODAY SELECTOR ----
+function getDinnerConsumed() {
+  return JSON.parse(localStorage.getItem('dinner_consumed') || '{}');
+}
+
+function getDinnerStock() {
+  const plan = getDinnerPlan();
+  const consumed = getDinnerConsumed();
+  const stock = {};
+  DINNER_DEFS.forEach(m => { stock[m.id] = plan[m.id] || 0; });
+  Object.values(consumed).forEach(arr => {
+    if (Array.isArray(arr)) arr.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
+  });
+  return stock;
+}
+
+function getTodayDinnerSelections() {
+  const consumed = getDinnerConsumed();
+  const today = localDateStr();
+  const val = consumed[today];
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return [val];
+}
+
+function selectTodayDinner(type) {
+  const consumed = getDinnerConsumed();
+  const today = localDateStr();
+  let selections = getTodayDinnerSelections();
+
+  const stock = getDinnerStock();
+  if (stock[type] > 0) {
+    selections.push(type);
+  } else {
+    const idx = selections.lastIndexOf(type);
+    if (idx !== -1) selections.splice(idx, 1);
+  }
+
+  if (selections.length === 0) delete consumed[today];
+  else consumed[today] = selections;
+  localStorage.setItem('dinner_consumed', JSON.stringify(consumed));
+  renderDinnerSelector();
+  renderMeals();
+}
+
+function removeTodayDinner(type) {
+  const consumed = getDinnerConsumed();
+  const today = localDateStr();
+  let selections = getTodayDinnerSelections();
+  const idx = selections.lastIndexOf(type);
+  if (idx !== -1) selections.splice(idx, 1);
+  if (selections.length === 0) delete consumed[today];
+  else consumed[today] = selections;
+  localStorage.setItem('dinner_consumed', JSON.stringify(consumed));
+  renderDinnerSelector();
+  renderMeals();
+}
+
+function renderDinnerSelector() {
+  const stock = getDinnerStock();
+  const selections = getTodayDinnerSelections();
+  const container = document.getElementById('dinner-selector');
+  if (!container) return;
+
+  let html = '';
+
+  // Current selections
+  if (selections.length > 0) {
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:12px;color:var(--purple);font-weight:600;margin-bottom:6px">Selecionados hoje:</div>';
+    const grouped = {};
+    selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
+    Object.entries(grouped).forEach(([type, count]) => {
+      const m = DINNER_DEFS.find(x => x.id === type);
+      if (!m) return;
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--purple-light);border-radius:8px;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:600;color:var(--purple)">${count}x ${m.name} (${m.kcal} kcal | ${m.p}g P)</span>
+        <button onclick="removeTodayDinner('${type}')" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Available options
+  const planned = getDinnerPlan();
+  const hasPlanned = Object.values(planned).some(v => v > 0);
+  if (!hasPlanned) {
+    html += '<div style="text-align:center;font-size:12px;color:var(--gray-mid);padding:10px 0">Nenhum jantar programado na aba Marmitas</div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  html += '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:6px">Toque para adicionar:</div>';
+  DINNER_DEFS.forEach(m => {
+    if ((planned[m.id] || 0) === 0) return; // só mostrar jantares programados
+    const remaining = stock[m.id] || 0;
+    const disabled = remaining <= 0;
+    html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
+      onclick="selectTodayDinner('${m.id}')">
+      <div class="msel-icon" style="background:var(--purple-light);color:var(--purple)">${m.id}</div>
+      <div class="msel-info">
+        <div class="msel-name">${m.name}</div>
+        <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      </div>
+      <div class="msel-stock">${disabled ? 'Esgotado' : remaining + ' rest.'}</div>
     </div>`;
   });
   container.innerHTML = html;
@@ -1544,6 +1690,7 @@ function saveMarmitaPlan() {
   renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
+  renderDinnerSelector();
 
   const weekId = getCurrentWeekLabel();
   localStorage.setItem('marmita_current_week', weekId);
@@ -1592,6 +1739,7 @@ function startNewWeek() {
   localStorage.removeItem('shop_checks');
   localStorage.removeItem('prep_checks');
   localStorage.removeItem('marmita_consumed');
+  localStorage.removeItem('dinner_consumed');
   localStorage.setItem('marmita_current_week', thisWeek);
 
   renderMarmitaPlanner();
@@ -1600,6 +1748,7 @@ function startNewWeek() {
   renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
+  renderDinnerSelector();
   updateWeekLabel();
 
   const btn = document.querySelectorAll('#page-marmitas .save-btn')[1];
@@ -1699,7 +1848,6 @@ function buildShoppingList() {
   const have = (k) => stock[k] || 0;
 
   // Proteínas cruas (necessárias - estoque)
-  // Frango cru: marmitas A + jantar tapioca + sanduíche + wrap
   const frangoG = Math.max(0, (qA * 215 + dT * 175 + dS * 134 + dW * 134) - have('frango'));
   const carneG = Math.max(0, (qB * 230) - have('carne_moida'));
   const tilapiaG = Math.max(0, (qC * 250) - have('tilapia'));
@@ -1707,8 +1855,8 @@ function buildShoppingList() {
   const sobrecoxaG = Math.max(0, (qE * 240) - have('sobrecoxa'));
   const coxaoG = Math.max(0, (qF * 215) - have('coxao_mole'));
   const alcatraG = Math.max(0, (dC * 175) - have('alcatra'));
-  const peruG = dO * 50;
-  const atumLatas = dA; // 1 lata por jantar
+  const peruG = Math.max(0, (dO * 50) - have('peito_peru'));
+  const atumLatas = Math.max(0, dA - have('atum_lata'));
 
   // Carboidratos crus (necessárias - estoque)
   const arrozBrancoG = Math.max(0, ((qA + qD) * 56 + dC * 40) - have('arroz_branco'));
@@ -1716,26 +1864,27 @@ function buildShoppingList() {
   const batataDoceG = Math.max(0, (qB * 180) - have('batata_doce'));
   const mandiocaG = Math.max(0, (qE * 145) - have('mandioca'));
   const macarraoG = Math.max(0, (qF * 52) - have('macarrao_integral'));
-  const gomaTapiocaG = dT * 50;
-  const tortillasUn = dW * 2;
-  // Pão fatias: café (14) + omelete (dO * 2) + atum (dA * 2) + sanduíche (dS * 3)
-  const paoFatias = 14 + dO * 2 + dA * 2 + dS * 3;
+  const gomaTapiocaG = Math.max(0, (dT * 50) - have('goma_tapioca'));
+  const tortillasUn = Math.max(0, (dW * 2) - have('tortilla'));
+  // Pão fatias: café (14) + omelete + atum + sanduíche
+  const paoTotalFatias = 14 + dO * 2 + dA * 2 + dS * 3;
+  const paoFatias = Math.max(0, paoTotalFatias - have('pao_integral'));
 
-  // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes (3 cada) + atum (2 cada)
+  // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes + atum
   const ovosTotal = 56 + dO * 3 + dA * 2;
   const ovosDuzias = Math.ceil(ovosTotal / 12);
 
   // Mussarela: 20g café × 14 + 20g omelete × dO
-  const mussarelaG = 14 * 20 + dO * 20;
+  const mussarelaG = Math.max(0, (14 * 20 + dO * 20) - have('mussarela'));
 
   // Queijo minas frescal: sanduíche + wrap
-  const minasG = (dS + dW) * 20;
+  const minasG = Math.max(0, ((dS + dW) * 20) - have('queijo_minas'));
 
-  // Requeijão cremoso: atum (15g) + sanduíche (15g)
-  const requeijaoG = (dA + dS) * 15;
+  // Requeijão cremoso: atum + sanduíche
+  const requeijaoG = Math.max(0, ((dA + dS) * 15) - have('requeijao'));
 
-  // Cottage: jantar tapioca (30g) + wrap (30g)
-  const cottageG = dT * 30 + dW * 30;
+  // Cottage: jantar tapioca + wrap
+  const cottageG = Math.max(0, (dT * 30 + dW * 30) - have('cottage'));
   const cottagePotes = cottageG > 0 ? Math.ceil(cottageG / 400) : 0;
 
   // Vegetais
@@ -2579,12 +2728,13 @@ function deleteDayData(dateStr) {
   renderCalendar();
   renderStockCard();
   renderMarmitaSelector();
+  renderDinnerSelector();
 }
 
 // ============================================================
 // EXPORT / IMPORT
 // ============================================================
-const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 function exportData() {
   const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
@@ -2715,6 +2865,24 @@ const GEN_CARBS = [
   { key: 'macarrao_integral', label: 'Macarrão integral (cru)' },
 ];
 
+// Dinner ingredients: generate dinner counts based on unique ingredients
+const GEN_DINNER_PROTEINS = [
+  { key: 'atum_lata',    label: 'Atum em lata (latas)',      dinner: 'A', rawPerUnit: 1,   unit: 'lata' },
+  { key: 'alcatra',      label: 'Alcatra (crua)',            dinner: 'C', rawPerUnit: 175, unit: 'g' },
+  { key: 'peito_peru',   label: 'Peito de peru defumado',    dinner: 'O', rawPerUnit: 50,  unit: 'g' },
+  { key: 'goma_tapioca', label: 'Goma de tapioca',           dinner: 'T', rawPerUnit: 50,  unit: 'g' },
+  { key: 'tortilla',     label: 'Tortilla integral (un)',    dinner: 'W', rawPerUnit: 2,   unit: 'un' },
+];
+
+// Dinner other ingredients: stock only (shared across dinners)
+const GEN_DINNER_OTHERS = [
+  { key: 'requeijao',    label: 'Requeijão cremoso',      unit: 'g' },
+  { key: 'queijo_minas', label: 'Queijo minas frescal',   unit: 'g' },
+  { key: 'mussarela',    label: 'Queijo mussarela',       unit: 'g' },
+  { key: 'cottage',      label: 'Queijo cottage',         unit: 'g' },
+  { key: 'pao_integral', label: 'Pão integral (fatias)',  unit: 'fatias' },
+];
+
 function getHomeStock() {
   return JSON.parse(localStorage.getItem('home_stock') || '{}');
 }
@@ -2742,7 +2910,7 @@ function openMenuGenerator() {
     </div>`;
   });
 
-  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Carboidratos</div>';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Carboidratos (Marmitas)</div>';
   GEN_CARBS.forEach(ing => {
     const existing = stock[ing.key] || '';
     html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
@@ -2752,6 +2920,33 @@ function openMenuGenerator() {
       <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
         style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
       <span style="font-size:12px;color:var(--gray-mid)">g</span>
+    </div>`;
+  });
+
+  html += '<div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;margin:14px 0 6px">Proteínas (Jantares)</div>';
+  GEN_DINNER_PROTEINS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+        <div style="font-size:11px;color:var(--gray-mid)">Jantar ${ing.dinner} (${ing.rawPerUnit}${ing.unit}/jantar)</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
+    </div>`;
+  });
+
+  html += '<div style="font-size:12px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;margin:14px 0 6px">Outros (Jantares)</div>';
+  GEN_DINNER_OTHERS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
     </div>`;
   });
 
@@ -2766,67 +2961,117 @@ function openMenuGenerator() {
 
 function readGenInputs() {
   const stock = {};
-  const result = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  const marmitaResult = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  const dinnerResult = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
+
   GEN_PROTEINS.forEach(ing => {
     const el = document.getElementById('gen_' + ing.key);
     const qty = parseFloat(el.value) || 0;
     if (qty > 0) stock[ing.key] = qty;
-    result[ing.marmita] = Math.floor(qty / ing.rawPerUnit);
+    marmitaResult[ing.marmita] = Math.floor(qty / ing.rawPerUnit);
   });
   GEN_CARBS.forEach(ing => {
     const el = document.getElementById('gen_' + ing.key);
     const qty = parseFloat(el.value) || 0;
     if (qty > 0) stock[ing.key] = qty;
   });
-  return { stock, result };
+  GEN_DINNER_PROTEINS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    if (qty > 0) stock[ing.key] = qty;
+    dinnerResult[ing.dinner] = Math.floor(qty / ing.rawPerUnit);
+  });
+  GEN_DINNER_OTHERS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    if (qty > 0) stock[ing.key] = qty;
+  });
+  return { stock, marmitaResult, dinnerResult };
 }
 
 function generateMenu() {
-  const { stock, result } = readGenInputs();
-  let totalMarmitas = 0;
-  let html = '<div style="background:var(--green-bg);border-radius:10px;padding:12px"><b style="color:var(--green);font-size:13px">Cardápio Gerado:</b><div style="margin-top:8px">';
+  const { stock, marmitaResult, dinnerResult } = readGenInputs();
+  let totalMarmitas = 0, totalDinners = 0;
+  let html = '';
 
+  // Marmitas section
+  let hasMarmitas = false;
+  let marmitaHtml = '<div style="background:var(--green-bg);border-radius:10px;padding:12px;margin-bottom:8px"><b style="color:var(--green);font-size:13px">Marmitas Geradas:</b><div style="margin-top:8px">';
   GEN_PROTEINS.forEach(ing => {
-    const units = result[ing.marmita];
+    const units = marmitaResult[ing.marmita];
     totalMarmitas += units;
     const qty = stock[ing.key] || 0;
     if (qty > 0) {
+      hasMarmitas = true;
       const leftover = qty - (units * ing.rawPerUnit);
-      html += `<div style="font-size:13px;padding:4px 0">
+      marmitaHtml += `<div style="font-size:13px;padding:4px 0">
         <b>Marmita ${ing.marmita}</b>: ${units} un
         <span style="color:var(--gray-mid);font-size:11px"> (${qty}g → ${units * ing.rawPerUnit}g usado, ${leftover}g sobra)</span>
       </div>`;
     }
   });
+  if (totalMarmitas > 0) {
+    marmitaHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--green);font-size:12px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias)</div>`;
+  }
+  marmitaHtml += '</div></div>';
+  if (hasMarmitas) html += marmitaHtml;
 
-  if (totalMarmitas === 0) {
-    html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades de proteínas para gerar o cardápio</div>';
+  // Dinners section
+  let hasDinners = false;
+  let dinnerHtml = '<div style="background:var(--purple-light);border-radius:10px;padding:12px"><b style="color:var(--purple);font-size:13px">Jantares Gerados:</b><div style="margin-top:8px">';
+  GEN_DINNER_PROTEINS.forEach(ing => {
+    const units = dinnerResult[ing.dinner];
+    totalDinners += units;
+    const qty = stock[ing.key] || 0;
+    if (qty > 0) {
+      hasDinners = true;
+      const leftover = qty - (units * ing.rawPerUnit);
+      dinnerHtml += `<div style="font-size:13px;padding:4px 0">
+        <b>Jantar ${ing.dinner}</b>: ${units} un
+        <span style="color:var(--gray-mid);font-size:11px"> (${qty}${ing.unit} → ${units * ing.rawPerUnit}${ing.unit} usado, ${leftover}${ing.unit} sobra)</span>
+      </div>`;
+    }
+  });
+  if (totalDinners > 0) {
+    dinnerHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--purple);font-size:12px;font-weight:700;color:var(--purple)">Total: ${totalDinners} jantares (${totalDinners / 2} dias)</div>`;
+  }
+  dinnerHtml += '</div></div>';
+  if (hasDinners) html += dinnerHtml;
+
+  if (totalMarmitas === 0 && totalDinners === 0) {
+    html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades para gerar o cardápio</div>';
     document.getElementById('gen-apply-btn').disabled = true;
   } else {
-    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--green);font-size:13px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias para 2 pessoas)</div>`;
-    html += '</div></div>';
     document.getElementById('gen-apply-btn').disabled = false;
   }
 
   document.getElementById('gen-result').innerHTML = html;
   window._genStock = stock;
-  window._genResult = result;
+  window._genMarmitaResult = marmitaResult;
+  window._genDinnerResult = dinnerResult;
 }
 
 function applyGeneratedMenu() {
-  if (!window._genResult) return;
-  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento de marmitas será substituído pelas quantidades calculadas.\nAs quantidades informadas serão salvas como "estoque em casa" e descontadas da lista de compras.')) return;
+  if (!window._genMarmitaResult && !window._genDinnerResult) return;
+  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas.\nAs quantidades informadas serão salvas como "estoque em casa" e descontadas da lista de compras.')) return;
 
-  const newPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-  Object.assign(newPlan, window._genResult);
-  localStorage.setItem('marmita_plan', JSON.stringify(newPlan));
+  const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  Object.assign(newMarmitaPlan, window._genMarmitaResult || {});
+  localStorage.setItem('marmita_plan', JSON.stringify(newMarmitaPlan));
+
+  const newDinnerPlan = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
+  Object.assign(newDinnerPlan, window._genDinnerResult || {});
+  localStorage.setItem('dinner_plan', JSON.stringify(newDinnerPlan));
+
   localStorage.setItem('home_stock', JSON.stringify(window._genStock || {}));
 
   renderMarmitaPlanner();
+  renderDinnerPlanner();
   renderShoppingList();
   renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
+  renderDinnerSelector();
 
   closeHistory();
 }
@@ -2988,6 +3233,7 @@ function saveDayEditor(dateStr) {
   renderCalendar();
   renderStockCard();
   renderMarmitaSelector();
+  renderDinnerSelector();
   showDayDetail(dateStr);
 }
 
@@ -3113,7 +3359,7 @@ let currentUser = null;
 let firestoreUnsubscribes = [];
 
 // Data keys we sync
-const SYNC_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed',
+const SYNC_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed',
   'shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 // Save to localStorage AND Firestore (if logged in)
@@ -3266,6 +3512,7 @@ function initApp() {
   renderFruitSuggestions();
   updateWeekLabel();
   renderMarmitaSelector();
+  renderDinnerSelector();
   renderStockCard();
   renderMeals();
   renderShoppingList();
