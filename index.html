@@ -2076,6 +2076,8 @@ function buildShoppingList() {
       ...(limaoUn > 0 ? [{ name: 'Limão', qty: `${limaoUn} unidade${limaoUn > 1 ? 's' : ''}` }] : []),
       ...(tomateUn > 0 ? [{ name: 'Tomate fresco', qty: `${tomateUn} unidade${tomateUn > 1 ? 's' : ''}` }] : []),
       ...(polpaSaches > 0 ? [{ name: 'Polpa de tomate', qty: `${polpaSaches} sachê${polpaSaches > 1 ? 's' : ''} (~200g cada)` }] : []),
+      ...(qD > 0 ? [{ name: 'Mostarda dijon', qty: '1 frasco' }] : []),
+      ...(qD > 0 ? [{ name: 'Mel', qty: '1 frasco' }] : []),
       { name: 'Páprica doce/defumada', qty: '1 pote' },
       { name: 'Ervas finas', qty: '1 pote' },
       { name: 'Café em pó', qty: '2 pacotes' },
