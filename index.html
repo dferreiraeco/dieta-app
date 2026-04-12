@@ -545,6 +545,11 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 
   <div class="planner-summary" id="planner-summary"></div>
 
+  <!-- Dinner planner -->
+  <h3 style="font-size:16px;color:var(--purple);margin:20px 0 10px">Jantares da Semana</h3>
+  <div id="dinner-status"></div>
+  <div id="dinner-cards"></div>
+
   <!-- Stock card -->
   <div class="card stock-card" id="stock-card" style="display:none"></div>
 
@@ -916,8 +921,33 @@ const MARMITA_DEFS = [
 
 const DEFAULT_PLAN = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0};
 
+// Dinner options
+const DINNER_DEFS = [
+  { id: 'O', name: 'Omelete Reforçada',
+    desc: '3 ovos + peito de peru + mussarela + pão integral',
+    kcal: 440, p: 37, c: 28, g: 20,
+    // raw ingredients PER UNIT (per 1 person, per 1 dinner)
+    ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_fatias: 2 } },
+  { id: 'T', name: 'Tapioca de Frango',
+    desc: 'Goma de tapioca + frango desfiado + cottage',
+    kcal: 430, p: 42, c: 36, g: 8,
+    // frango cozido 130g → ~175g cru (×1.34)
+    ingredients: { goma_tapioca: 50, frango_cru: 175, cottage: 30 } },
+  { id: 'C', name: 'Carne com Arroz',
+    desc: 'Alcatra grelhada + arroz branco + salada',
+    kcal: 450, p: 36, c: 28, g: 17,
+    // alcatra cozida 130g → ~175g cru; arroz cozido 100g → ~40g cru
+    ingredients: { alcatra_cru: 175, arroz_branco: 40 } },
+];
+
+const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0};
+
 function getMarmitaPlan() {
   return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
+}
+
+function getDinnerPlan() {
+  return JSON.parse(localStorage.getItem('dinner_plan') || JSON.stringify(DEFAULT_DINNER_PLAN));
 }
 
 function getCurrentWeekLabel() {
@@ -959,6 +989,53 @@ function stepMarmita(id, delta) {
   localStorage.setItem('marmita_plan', JSON.stringify(plan));
   document.getElementById('mq_' + id).textContent = plan[id];
   updatePlannerSummary();
+}
+
+function renderDinnerPlanner() {
+  const plan = getDinnerPlan();
+  const container = document.getElementById('dinner-cards');
+  if (!container) return;
+  let html = '';
+  DINNER_DEFS.forEach(m => {
+    const qty = plan[m.id] || 0;
+    html += `<div class="planner-card">
+      <div class="planner-info">
+        <div class="pl-name">${m.name}</div>
+        <div class="pl-desc">${m.desc}</div>
+        <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      </div>
+      <div class="planner-stepper">
+        <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
+        <div class="qty-display" id="dq_${m.id}">${qty}</div>
+        <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+  updateDinnerSummary();
+}
+
+function stepDinner(id, delta) {
+  const plan = getDinnerPlan();
+  plan[id] = Math.max(0, (plan[id] || 0) + delta);
+  localStorage.setItem('dinner_plan', JSON.stringify(plan));
+  document.getElementById('dq_' + id).textContent = plan[id];
+  updateDinnerSummary();
+}
+
+function updateDinnerSummary() {
+  const plan = getDinnerPlan();
+  let total = 0;
+  DINNER_DEFS.forEach(m => { total += plan[m.id] || 0; });
+  const el = document.getElementById('dinner-status');
+  if (el) {
+    const target = 14; // 7 dias x 2 pessoas
+    if (total === target) {
+      el.innerHTML = `<div class="planner-ok">${total} jantares planejados (7 dias x 2 pessoas)</div>`;
+    } else {
+      el.innerHTML = `<div class="planner-warning">${total} jantares planejados</div>`;
+    }
+  }
 }
 
 // ---- STOCK MANAGEMENT ----
@@ -1157,6 +1234,7 @@ function getWeekId(date) {
 
 function saveMarmitaPlan() {
   const plan = getMarmitaPlan();
+  const dinnerPlan = getDinnerPlan();
   renderShoppingList();
   renderPrepList();
   renderStockCard();
@@ -1165,7 +1243,7 @@ function saveMarmitaPlan() {
   const weekId = getCurrentWeekLabel();
   localStorage.setItem('marmita_current_week', weekId);
   const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
-  history[weekId] = { ...plan, _saved: new Date().toISOString() };
+  history[weekId] = { ...plan, dinners: dinnerPlan, _saved: new Date().toISOString() };
   localStorage.setItem('marmita_history', JSON.stringify(history));
   updateWeekLabel();
 
@@ -1205,12 +1283,14 @@ function startNewWeek() {
 
   // Reset everything
   localStorage.setItem('marmita_plan', JSON.stringify(DEFAULT_PLAN));
+  localStorage.setItem('dinner_plan', JSON.stringify(DEFAULT_DINNER_PLAN));
   localStorage.removeItem('shop_checks');
   localStorage.removeItem('prep_checks');
   localStorage.removeItem('marmita_consumed');
   localStorage.setItem('marmita_current_week', thisWeek);
 
   renderMarmitaPlanner();
+  renderDinnerPlanner();
   renderShoppingList();
   renderPrepList();
   renderStockCard();
@@ -1300,24 +1380,46 @@ function buildShoppingList() {
   const plan = getMarmitaPlan();
   const qA = plan.A||0, qB = plan.B||0, qC = plan.C||0, qD = plan.D||0, qE = plan.E||0, qF = plan.F||0;
 
-  // Proteínas cruas (com fator de conversão cru→cozido)
-  const frangoG = qA * 215 + 280; // +280g para frango desfiado jantar
+  // Dinner plan
+  const dinnerPlan = getDinnerPlan();
+  const dO = dinnerPlan.O || 0; // Omelete
+  const dT = dinnerPlan.T || 0; // Tapioca
+  const dC = dinnerPlan.C || 0; // Carne
+
+  // Proteínas cruas (marmitas + jantares)
+  const frangoG = qA * 215 + dT * 175; // marmita A + jantar tapioca
   const carneG = qB * 230;
   const tilapiaG = qC * 250;
   const lomboG = qD * 215;
-  const sobrecoxaG = qE * 240; // 180g cozida = 240g crua (~25% perda)
-  const coxaoG = qF * 215;     // 160g cozido = 215g cru (~25% perda)
+  const sobrecoxaG = qE * 240;
+  const coxaoG = qF * 215;
+  const alcatraG = dC * 175; // só para jantar
+  const peruG = dO * 50;     // só para jantar omelete
 
   // Carboidratos crus
-  const arrozBrancoG = (qA + qD) * 56 + 200; // +200g para jantar
+  const arrozBrancoG = (qA + qD) * 56 + dC * 40; // marmitas A/D + jantar carne
   const arrozIntegralG = qC * 52;
   const batataDoceG = qB * 180;
-  const mandiocaG = qE * 145;   // 130g cozida = 145g crua (~10% perda)
-  const macarraoG = qF * 52;    // 130g cozido = 52g cru (~2.5x)
+  const mandiocaG = qE * 145;
+  const macarraoG = qF * 52;
+  const gomaTapiocaG = dT * 50;
+  const paoFatias = dO * 2; // fatias de pão para omelete
+
+  // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes (3 ovos cada)
+  const ovosTotal = 56 + dO * 3;
+  const ovosDuzias = Math.ceil(ovosTotal / 12);
+
+  // Mussarela: 20g café × 14 + 20g omelete × dO
+  const mussarelaG = 14 * 20 + dO * 20;
+
+  // Cottage: 200g pré-sono × 14 + 30g jantar tapioca × dT
+  const cottageG = 14 * 200 + dT * 30;
+  const cottagePotes = Math.ceil(cottageG / 400);
 
   // Vegetais
   const totalMarmitas = qA + qB + qC + qD + qE + qF;
-  const pepinos = Math.ceil((totalMarmitas * 75 + 320) / 150);
+  const totalDinners = dO + dT + dC;
+  const pepinos = Math.ceil((totalMarmitas * 75 + totalDinners * 50) / 150);
 
   const fmt = (g) => g >= 1000 ? `~${(g/1000).toFixed(1)} kg` : `~${Math.round(g/10)*10} g`;
 
@@ -1329,11 +1431,11 @@ function buildShoppingList() {
       ...(coxaoG > 0 ? [{ name: 'Coxão mole (cru)', qty: fmt(coxaoG) }] : []),
       ...(tilapiaG > 0 ? [{ name: 'Filé de tilápia (cru)', qty: fmt(tilapiaG) }] : []),
       ...(lomboG > 0 ? [{ name: 'Lombo suíno (cru)', qty: fmt(lomboG) }] : []),
-      { name: 'Alcatra (crua)', qty: '~800 g' },
-      { name: 'Ovos', qty: '6 duzias (72 un)' },
-      { name: 'Peito de peru defumado', qty: '~400 g' },
-      { name: 'Queijo mussarela fatiado', qty: '~500 g' },
-      { name: 'Queijo cottage', qty: '4 potes (400g cada)' },
+      ...(alcatraG > 0 ? [{ name: 'Alcatra (crua)', qty: fmt(alcatraG) }] : []),
+      { name: 'Ovos', qty: `${ovosDuzias} dúzia${ovosDuzias > 1 ? 's' : ''} (${ovosTotal} un)` },
+      ...(peruG > 0 ? [{ name: 'Peito de peru defumado', qty: fmt(peruG) }] : []),
+      { name: 'Queijo mussarela fatiado', qty: fmt(mussarelaG) },
+      { name: 'Queijo cottage', qty: `${cottagePotes} pote${cottagePotes > 1 ? 's' : ''} (400g cada)` },
       { name: 'Iogurte grego natural', qty: '~2.4 kg (~12 potes)' },
     ]},
     { section: 'Carboidratos', items: [
@@ -1342,8 +1444,8 @@ function buildShoppingList() {
       ...(batataDoceG > 0 ? [{ name: 'Batata doce', qty: fmt(batataDoceG) }] : []),
       ...(mandiocaG > 0 ? [{ name: 'Mandioca (crua)', qty: fmt(mandiocaG) }] : []),
       ...(macarraoG > 0 ? [{ name: 'Macarrão integral (cru)', qty: fmt(macarraoG) }] : []),
-      { name: 'Pão integral', qty: '4 pacotes' },
-      { name: 'Goma de tapioca', qty: '~300 g' },
+      { name: 'Pão integral', qty: `${Math.ceil((28 + paoFatias) / 20)} pacote${Math.ceil((28 + paoFatias) / 20) > 1 ? 's' : ''}` },
+      ...(gomaTapiocaG > 0 ? [{ name: 'Goma de tapioca', qty: fmt(gomaTapiocaG) }] : []),
       { name: 'Aveia em flocos (opcional)', qty: '~400 g' },
     ]},
     { section: 'Frutas', items: [
@@ -2156,7 +2258,7 @@ function deleteDayData(dateStr) {
 // ============================================================
 // EXPORT / IMPORT
 // ============================================================
-const BACKUP_KEYS = ['marmita_plan','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+const BACKUP_KEYS = ['marmita_plan','dinner_plan','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 function exportData() {
   const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
@@ -2506,7 +2608,7 @@ let currentUser = null;
 let firestoreUnsubscribes = [];
 
 // Data keys we sync
-const SYNC_KEYS = ['marmita_plan','marmita_history','marmita_current_week','marmita_consumed',
+const SYNC_KEYS = ['marmita_plan','dinner_plan','marmita_history','marmita_current_week','marmita_consumed',
   'shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 // Save to localStorage AND Firestore (if logged in)
@@ -2655,6 +2757,7 @@ auth.onAuthStateChanged(user => {
 
 function initApp() {
   renderMarmitaPlanner();
+  renderDinnerPlanner();
   updateWeekLabel();
   renderMarmitaSelector();
   renderStockCard();
