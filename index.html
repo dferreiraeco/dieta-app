@@ -910,21 +910,27 @@ function resetDailyMeals() {
 // ============================================================
 const MARMITA_DEFS = [
   { id: 'A', name: 'Marmita A - Frango', desc: 'Peito de frango grelhado + arroz branco',
+    cooked: '160g frango grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 510, p: 52, c: 40, g: 11,
     ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
   { id: 'B', name: 'Marmita B - Carne Moída', desc: 'Patinho moído + batata doce',
+    cooked: '160g carne moída refogada | 160g batata doce cozida | 60g salada (alface + rúcula) | 60g pepino | 5ml azeite',
     kcal: 530, p: 46, c: 35, g: 18,
     ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 } },
   { id: 'C', name: 'Marmita C - Tilápia', desc: 'Filé de tilápia + arroz integral',
+    cooked: '200g tilápia grelhada | 130g arroz integral cozido | 50g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 490, p: 52, c: 34, g: 11,
     ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 } },
   { id: 'D', name: 'Marmita D - Lombo Suíno', desc: 'Lombo suíno grelhado + arroz branco',
+    cooked: '160g lombo suíno grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 520, p: 50, c: 40, g: 15,
     ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
   { id: 'E', name: 'Marmita E - Sobrecoxa', desc: 'Sobrecoxa sem pele + mandioca cozida',
+    cooked: '180g sobrecoxa sem pele grelhada | 130g mandioca cozida | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 540, p: 48, c: 40, g: 19,
     ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 } },
   { id: 'F', name: 'Marmita F - Coxão Mole', desc: 'Coxão mole grelhado + macarrão integral',
+    cooked: '160g coxão mole grelhado | 130g macarrão integral cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 500, p: 50, c: 32, g: 16,
     ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 } },
 ];
@@ -976,16 +982,21 @@ function renderMarmitaPlanner() {
   let html = '';
   MARMITA_DEFS.forEach(m => {
     const qty = plan[m.id] || 0;
-    html += `<div class="planner-card">
-      <div class="planner-info">
-        <div class="pl-name">${m.name}</div>
-        <div class="pl-desc">${m.desc}</div>
-        <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+    html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="planner-info">
+          <div class="pl-name">${m.name}</div>
+          <div class="pl-desc">${m.desc}</div>
+          <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+        </div>
+        <div class="planner-stepper">
+          <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
+          <div class="qty-display" id="mq_${m.id}">${qty}</div>
+          <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
+        </div>
       </div>
-      <div class="planner-stepper">
-        <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
-        <div class="qty-display" id="mq_${m.id}">${qty}</div>
-        <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
+      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
+        <b style="color:var(--green)">Composição (cozido):</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
       </div>
     </div>`;
   });

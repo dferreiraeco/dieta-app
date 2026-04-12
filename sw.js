@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dieta-v54';
+const CACHE_NAME = 'dieta-v55';
 const ASSETS = ['/dieta-app/', '/dieta-app/index.html'];
 
 self.addEventListener('install', e => {
