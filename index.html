@@ -708,6 +708,14 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
       <input type="file" accept=".json,application/json" onchange="importData(event)" style="display:none">
     </label>
   </div>
+
+  <div class="card" style="margin-top:16px;border:2px solid var(--red)">
+    <h3 style="font-size:14px;color:var(--red);margin-bottom:10px">Zona de Perigo</h3>
+    <button class="reset-btn" style="margin-top:0" onclick="resetAllData()">Resetar Todas as Informações</button>
+    <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;text-align:center">
+      Apaga todos os dados do app: marmitas, treinos, cardio, lista de compras, histórico, refeições e calendário.
+    </div>
+  </div>
 </div>
 
 <!-- ==================== HISTORY MODAL ==================== -->
@@ -778,8 +786,8 @@ const FIXED_MEALS = [
   { id: 'jantar',  time: '20h', name: 'Jantar',                desc: 'Omelete / Tapioca / Carne',
     foods: '<b>Op.1:</b> 3 ovos + 50g peru + mussarela + 2 fatias pão<br><b>Op.2:</b> Tapioca (50g) + 130g frango desfiado + cottage<br><b>Op.3:</b> 130g alcatra + 100g arroz + salada + azeite',
     kcal: 440, p: 38, c: 31, g: 15, color: 'var(--purple)' },
-  { id: 'presono', time: '22h', name: 'Pré-Sono',              desc: 'Proteína Lenta',
-    foods: '200g cottage | OU caseína | OU iogurte grego | OU minas + peru | OU whey | OU omelete (1 ovo + 2 claras)',
+  { id: 'presono', time: '22h', name: 'Pré-Sono',              desc: 'Proteína Lenta (1 opção)',
+    foods: '<b>Opções (escolha 1):</b><br>&bull; 200g queijo cottage<br>&bull; OU 1 scoop (30g) caseína em água<br>&bull; OU 200g iogurte grego natural<br>&bull; OU 60g queijo minas frescal + 30g peito de peru<br>&bull; OU 1 scoop (30g) whey em água<br>&bull; OU omelete (1 ovo inteiro + 2 claras)',
     kcal: 170, p: 24, c: 5, g: 7, color: '' },
 ];
 
@@ -1412,9 +1420,9 @@ function buildShoppingList() {
   // Mussarela: 20g café × 14 + 20g omelete × dO
   const mussarelaG = 14 * 20 + dO * 20;
 
-  // Cottage: 200g pré-sono × 14 + 30g jantar tapioca × dT
-  const cottageG = 14 * 200 + dT * 30;
-  const cottagePotes = Math.ceil(cottageG / 400);
+  // Cottage: apenas para jantar tapioca (pré-sono usa o que tem em casa)
+  const cottageG = dT * 30;
+  const cottagePotes = cottageG > 0 ? Math.ceil(cottageG / 400) : 0;
 
   // Vegetais
   const totalMarmitas = qA + qB + qC + qD + qE + qF;
@@ -1435,7 +1443,7 @@ function buildShoppingList() {
       { name: 'Ovos', qty: `${ovosDuzias} dúzia${ovosDuzias > 1 ? 's' : ''} (${ovosTotal} un)` },
       ...(peruG > 0 ? [{ name: 'Peito de peru defumado', qty: fmt(peruG) }] : []),
       { name: 'Queijo mussarela fatiado', qty: fmt(mussarelaG) },
-      { name: 'Queijo cottage', qty: `${cottagePotes} pote${cottagePotes > 1 ? 's' : ''} (400g cada)` },
+      ...(cottagePotes > 0 ? [{ name: 'Queijo cottage', qty: `${cottagePotes} pote${cottagePotes > 1 ? 's' : ''} (400g cada)` }] : []),
       { name: 'Iogurte grego natural', qty: '~2.4 kg (~12 potes)' },
     ]},
     { section: 'Carboidratos', items: [
@@ -2518,6 +2526,40 @@ function saveDayEditor(dateStr) {
   renderStockCard();
   renderMarmitaSelector();
   showDayDetail(dateStr);
+}
+
+// ============================================================
+// RESET ALL DATA
+// ============================================================
+function resetAllData() {
+  if (!confirm('ATENÇÃO!\n\nIsso vai apagar TODAS as informações do app:\n\n• Planejamento de marmitas\n• Planejamento de jantares\n• Histórico de semanas\n• Lista de compras\n• Checklist de preparo\n• Treinos e cardio registrados\n• Calendário (agenda)\n• Refeições marcadas\n• Consumo de marmitas\n\nTem CERTEZA que deseja continuar?\n\nEsta ação NÃO pode ser desfeita.')) return;
+  if (!confirm('Última confirmação!\n\nTodos os dados serão apagados permanentemente.\n\nDeseja continuar mesmo assim?')) return;
+
+  // Clear all sync keys
+  SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+
+  // Clear meals_ daily keys
+  Object.keys(localStorage).filter(k => k.startsWith('meals_')).forEach(k => localStorage.removeItem(k));
+
+  // Clear cardio_ daily keys
+  Object.keys(localStorage).filter(k => k.startsWith('cardio_')).forEach(k => localStorage.removeItem(k));
+
+  // Clear other misc keys
+  localStorage.removeItem('sunday_prompt_date');
+
+  // If logged in, also clear Firestore
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).collection('data').get()
+      .then(snapshot => {
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        return batch.commit();
+      })
+      .catch(() => {});
+  }
+
+  alert('Todos os dados foram apagados com sucesso.');
+  location.reload();
 }
 
 // ============================================================
