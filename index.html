@@ -1939,9 +1939,10 @@ function buildShoppingList() {
   const iogurteG = Math.max(0, (14 * 130) - have('iogurte_grego'));
 
   // Frutas: todas perfeitamente substituíveis, mas ponderadas pelos carboidratos reais.
-  // Orçamento semanal = FRUIT_WEEKLY_CARB_NEED (g). Cada porção em estoque cobre seu
-  // próprio teor de carbo (f.c). O shortfall é convertido de volta para porções médias.
-  const fruitCarbStock = GEN_FRUITS.reduce((sum, f) => sum + have(f.key) * f.c, 0);
+  // Estoque é informado em GRAMAS. Converte para carbo: carbs = grams × (c / gPerPorcao).
+  // Orçamento semanal = FRUIT_WEEKLY_CARB_NEED (g). O shortfall é convertido de volta
+  // para porções médias apenas para exibição na lista de compras.
+  const fruitCarbStock = GEN_FRUITS.reduce((sum, f) => sum + have(f.key) * (f.c / f.gPerPorcao), 0);
   const fruitCarbShortfall = Math.max(0, FRUIT_WEEKLY_CARB_NEED - fruitCarbStock);
   const fruitShortfall = fruitCarbShortfall > 0 ? Math.ceil(fruitCarbShortfall / FRUIT_AVG_CARB) : 0;
   const fruitBuySuggestions = buildFruitBuySuggestions(fruitCarbShortfall);
@@ -3151,19 +3152,21 @@ const GEN_SNACKS = [
 ];
 
 // Fruits: perfectly substitutable across meals (breakfast + morning snack + afternoon snack)
-// 1 porção = 1 serving from the table shown in the Marmitas tab.
-// c = carbs (g) per porção — used to budget the weekly carb target from fruits.
+// User inputs stock in GRAMS. System converts internally:
+//   porções = grams / gPerPorcao    (1 porção = 1 serving from the Marmitas tab table)
+//   carbs   = grams * (c / gPerPorcao)
+// c = carbs (g) per porção (used to budget the weekly carb target from fruits).
 const GEN_FRUITS = [
-  { key: 'banana',   label: 'Banana prata',  unit: 'porções', c: 16 },
-  { key: 'maca',     label: 'Maçã',          unit: 'porções', c: 20 },
-  { key: 'mamao',    label: 'Mamão papaya',  unit: 'porções', c: 13 },
-  { key: 'uva',      label: 'Uva',           unit: 'porções', c: 18 },
-  { key: 'morango',  label: 'Morango',       unit: 'porções', c: 12 },
-  { key: 'abacaxi',  label: 'Abacaxi',       unit: 'porções', c: 13 },
-  { key: 'melancia', label: 'Melancia',      unit: 'porções', c: 15 },
-  { key: 'laranja',  label: 'Laranja',       unit: 'porções', c: 17 },
-  { key: 'pera',     label: 'Pera',          unit: 'porções', c: 23 },
-  { key: 'kiwi',     label: 'Kiwi',          unit: 'porções', c: 15 },
+  { key: 'banana',   label: 'Banana prata',  unit: 'g', c: 16, gPerPorcao: 70  },
+  { key: 'maca',     label: 'Maçã',          unit: 'g', c: 20, gPerPorcao: 150 },
+  { key: 'mamao',    label: 'Mamão papaya',  unit: 'g', c: 13, gPerPorcao: 120 },
+  { key: 'uva',      label: 'Uva',           unit: 'g', c: 18, gPerPorcao: 100 },
+  { key: 'morango',  label: 'Morango',       unit: 'g', c: 12, gPerPorcao: 150 },
+  { key: 'abacaxi',  label: 'Abacaxi',       unit: 'g', c: 13, gPerPorcao: 100 },
+  { key: 'melancia', label: 'Melancia',      unit: 'g', c: 15, gPerPorcao: 200 },
+  { key: 'laranja',  label: 'Laranja',       unit: 'g', c: 17, gPerPorcao: 150 },
+  { key: 'pera',     label: 'Pera',          unit: 'g', c: 23, gPerPorcao: 150 },
+  { key: 'kiwi',     label: 'Kiwi',          unit: 'g', c: 15, gPerPorcao: 100 },
 ];
 const FRUIT_KEYS = GEN_FRUITS.map(f => f.key);
 // Carb budget: 42 porções × avg carbs per porção. Targets grams of fruit-carbs per week.
@@ -3282,15 +3285,18 @@ function openMenuGenerator() {
     </div>`;
   });
 
-  html += '<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;margin:14px 0 6px">Frutas (porções)</div>';
-  html += '<div style="font-size:11px;color:var(--gray-mid);margin-bottom:6px">1 porção = 1 serving da tabela de frutas. São perfeitamente substituíveis entre si.</div>';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;margin:14px 0 6px">Frutas (gramas)</div>';
+  html += '<div style="font-size:11px;color:var(--gray-mid);margin-bottom:6px">Informe a quantidade em <b>gramas</b> de cada fruta. O sistema converte em porções automaticamente pela referência ao lado.</div>';
   GEN_FRUITS.forEach(ing => {
     const existing = stock[ing.key] || '';
+    const porcoes = existing ? (existing / ing.gPerPorcao).toFixed(1).replace(/\.0$/, '') : '0';
     html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+        <div style="font-size:11px;color:var(--gray-mid)">1 porção ≈ ${ing.gPerPorcao}g <span id="gen_por_${ing.key}" style="color:var(--green)">(${porcoes} porções)</span></div>
       </div>
       <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        oninput="updateFruitPorcoes('${ing.key}', ${ing.gPerPorcao})"
         style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
       <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
     </div>`;
@@ -3303,6 +3309,16 @@ function openMenuGenerator() {
 
   content.innerHTML = html;
   modal.classList.add('open');
+}
+
+function updateFruitPorcoes(key, gPerPorcao) {
+  const input = document.getElementById('gen_' + key);
+  const display = document.getElementById('gen_por_' + key);
+  if (!input || !display) return;
+  const grams = parseFloat(input.value) || 0;
+  const porcoes = grams / gPerPorcao;
+  const rounded = porcoes.toFixed(1).replace(/\.0$/, '');
+  display.textContent = `(${rounded} porções)`;
 }
 
 function readGenInputs() {
