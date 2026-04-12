@@ -540,6 +540,8 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     <p>Monte sua semana (para 2 pessoas)</p>
   </div>
 
+  <button class="history-btn" style="margin:0 0 14px" onclick="openMenuGenerator()">Gerador de Cardápio (do que tenho em casa)</button>
+
   <div id="planner-status"></div>
   <div id="planner-cards"></div>
 
@@ -2373,6 +2375,100 @@ function getEditorStock(editingDateStr) {
     items.forEach(type => { if (stock[type] !== undefined) stock[type]--; });
   });
   return stock;
+}
+
+// ============================================================
+// MENU GENERATOR (from home stock)
+// ============================================================
+// Map ingredient -> marmita type + raw grams per unit
+const GENERATOR_INGREDIENTS = [
+  { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215 },
+  { key: 'carne_moida', label: 'Carne moída (patinho)', marmita: 'B', rawPerUnit: 230 },
+  { key: 'tilapia',     label: 'Filé de tilápia',    marmita: 'C', rawPerUnit: 250 },
+  { key: 'lombo',       label: 'Lombo suíno',        marmita: 'D', rawPerUnit: 215 },
+  { key: 'sobrecoxa',   label: 'Sobrecoxa sem pele', marmita: 'E', rawPerUnit: 240 },
+  { key: 'coxao_mole',  label: 'Coxão mole',         marmita: 'F', rawPerUnit: 215 },
+];
+
+function openMenuGenerator() {
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Gerador de Cardápio';
+
+  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas de cada ingrediente que você tem em casa. O app vai calcular quantas marmitas de cada tipo pode ser feita (arredondando para baixo).</div>';
+
+  GENERATOR_INGREDIENTS.forEach(ing => {
+    const existing = (window._genInputs || {})[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+        <div style="font-size:11px;color:var(--gray-mid)">Marmita ${ing.marmita} (${ing.rawPerUnit}g por marmita)</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:90px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">g</span>
+    </div>`;
+  });
+
+  html += '<div id="gen-result" style="margin-top:14px"></div>';
+  html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()">Gerar Cardápio</button>';
+  html += '<button class="history-btn" style="margin-top:10px" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function generateMenu() {
+  const inputs = {};
+  const result = {};
+  let totalMarmitas = 0;
+  let html = '<div style="background:var(--green-bg);border-radius:10px;padding:12px"><b style="color:var(--green);font-size:13px">Cardápio Gerado:</b><div style="margin-top:8px">';
+
+  GENERATOR_INGREDIENTS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    inputs[ing.key] = qty;
+    const units = Math.floor(qty / ing.rawPerUnit);
+    result[ing.marmita] = units;
+    totalMarmitas += units;
+    if (qty > 0) {
+      const leftover = qty - (units * ing.rawPerUnit);
+      html += `<div style="font-size:13px;padding:4px 0">
+        <b>Marmita ${ing.marmita}</b>: ${units} un
+        <span style="color:var(--gray-mid);font-size:11px"> (${qty}g → ${units * ing.rawPerUnit}g usado, ${leftover}g sobra)</span>
+      </div>`;
+    }
+  });
+
+  if (totalMarmitas === 0) {
+    html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades para gerar o cardápio</div>';
+    document.getElementById('gen-apply-btn').disabled = true;
+  } else {
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--green);font-size:13px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias para 2 pessoas)</div>`;
+    html += '</div></div>';
+    document.getElementById('gen-apply-btn').disabled = false;
+  }
+
+  document.getElementById('gen-result').innerHTML = html;
+  window._genInputs = inputs;
+  window._genResult = result;
+}
+
+function applyGeneratedMenu() {
+  if (!window._genResult) return;
+  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento atual de marmitas será substituído pelas quantidades calculadas.')) return;
+
+  const newPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  Object.assign(newPlan, window._genResult);
+  localStorage.setItem('marmita_plan', JSON.stringify(newPlan));
+
+  renderMarmitaPlanner();
+  renderShoppingList();
+  renderPrepList();
+  renderStockCard();
+  renderMarmitaSelector();
+
+  closeHistory();
 }
 
 function openDayEditor(dateStr) {
