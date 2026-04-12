@@ -783,8 +783,8 @@ const FIXED_MEALS = [
     kcal: 200, p: 24, c: 23, g: 2, color: '' },
   null, // placeholder for dynamic lunch
   { id: 'lanche2', time: '16h', name: 'Lanche / Pré-Treino',  desc: 'Iogurte + Whey + Banana',
-    foods: '170g iogurte grego natural | 1/2 scoop whey (15g) | 1 banana prata (~70g)',
-    kcal: 270, p: 27, c: 24, g: 9, color: '' },
+    foods: '130g iogurte grego natural | 1/2 scoop whey (15g) | 1 banana prata (~70g)',
+    kcal: 240, p: 25, c: 23, g: 7, color: '' },
   { id: 'jantar',  time: '20h', name: 'Jantar',                desc: 'Omelete / Tapioca / Carne',
     foods: '<b>Op.1:</b> 3 ovos inteiros (~150g) + 50g peito de peru + 1 fatia mussarela (20g) + 2 fatias pão integral (~50g)<br><b>Op.2:</b> Goma de tapioca (50g) + 130g frango desfiado cozido + 30g queijo cottage<br><b>Op.3:</b> 130g alcatra grelhada + 100g arroz branco cozido + salada de folhas + 5ml azeite (1 col. chá)',
     kcal: 440, p: 38, c: 31, g: 15, color: 'var(--purple)' },
@@ -1020,20 +1020,63 @@ const DEFAULT_PLAN = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0};
 // Dinner options
 const DINNER_DEFS = [
   { id: 'O', name: 'Omelete Reforçada',
-    desc: '3 ovos + peito de peru + mussarela + pão integral',
-    kcal: 440, p: 37, c: 28, g: 20,
-    // raw ingredients PER UNIT (per 1 person, per 1 dinner)
-    ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_fatias: 2 } },
+    desc: 'Omelete de peru ao queijo e ervas + torrada',
+    kcal: 470, p: 37, c: 28, g: 23,
+    ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_fatias: 2 },
+    cooked: '3 ovos inteiros (~150g) | 50g peito de peru | 1 fatia mussarela (20g) | 2 fatias pão integral (~50g) | 5ml azeite',
+    recipe: {
+      title: 'Omelete de Peru ao Queijo e Ervas + Torrada com Alho',
+      items: [
+        '<b>Omelete:</b>',
+        'Corte 50g de peito de peru defumado em tirinhas. Refogue brevemente em frigideira antiaderente com 1 dente de alho picado, até perfumar.',
+        'Bata 3 ovos inteiros com sal, pimenta-do-reino, salsinha picada e uma pitada de orégano.',
+        'Despeje os ovos sobre o peru, abaixe o fogo e deixe firmar (~2 min).',
+        'Adicione 1 fatia de mussarela (20g), tampe por 30 segundos até derreter. Dobre ao meio e sirva.',
+        '<b>Torrada com alho:</b>',
+        'Toste 2 fatias de pão integral. Esfregue com 1 dente de alho e pincele 2-3ml de azeite. Salpique orégano.',
+        '<b>Acompanhamento:</b> Salada de folhas (alface + rúcula) com pepino fatiado, azeite e limão.'
+      ]
+    }
+  },
   { id: 'T', name: 'Tapioca de Frango',
-    desc: 'Goma de tapioca + frango desfiado + cottage',
-    kcal: 430, p: 42, c: 36, g: 8,
-    // frango cozido 130g → ~175g cru (×1.34)
-    ingredients: { goma_tapioca: 50, frango_cru: 175, cottage: 30 } },
+    desc: 'Tapioca recheada com frango cremoso',
+    kcal: 460, p: 42, c: 39, g: 11,
+    ingredients: { goma_tapioca: 50, frango_cru: 175, cottage: 30 },
+    cooked: '50g goma de tapioca | 130g frango desfiado cozido | 30g queijo cottage | Salada de folhas + pepino',
+    recipe: {
+      title: 'Tapioca Cremosa de Frango com Alho e Ervas',
+      items: [
+        '<b>Frango cremoso:</b>',
+        'Cozinhe 175g de peito de frango (cru) em água com sal, 1 dente de alho e 1 folha de louro. Desfie.',
+        'Em frigideira antiaderente, refogue 1/4 de cebola picada e 1 dente de alho amassado com um fio de azeite (~3ml).',
+        'Adicione o frango desfiado, 1 tomate picado sem sementes, páprica defumada, sal, pimenta-do-reino e cheiro-verde. Cozinhe por 5 minutos.',
+        'Misture 30g de queijo cottage para dar cremosidade e desligue o fogo.',
+        '<b>Tapioca:</b>',
+        'Em frigideira antiaderente quente, espalhe 50g de goma de tapioca hidratada. Aguarde firmar por 1 minuto.',
+        'Vire com cuidado e recheie com o frango cremoso. Dobre ao meio.',
+        '<b>Acompanhamento:</b> Folhas de alface + rúcula + pepino fatiado ao lado.'
+      ]
+    }
+  },
   { id: 'C', name: 'Carne com Arroz',
-    desc: 'Alcatra grelhada + arroz branco + salada',
-    kcal: 450, p: 36, c: 28, g: 17,
-    // alcatra cozida 130g → ~175g cru; arroz cozido 100g → ~40g cru
-    ingredients: { alcatra_cru: 175, arroz_branco: 40 } },
+    desc: 'Alcatra grelhada ao alho + arroz perfumado',
+    kcal: 480, p: 36, c: 30, g: 20,
+    ingredients: { alcatra_cru: 175, arroz_branco: 40 },
+    cooked: '130g alcatra grelhada | 100g arroz branco cozido | Salada de folhas + pepino | 5ml azeite',
+    recipe: {
+      title: 'Alcatra Grelhada ao Alho com Arroz Perfumado',
+      items: [
+        '<b>Alcatra grelhada:</b>',
+        'Tempere 175g de alcatra (cru) com 2 dentes de alho amassado, sal, pimenta-do-reino, 1 colher de chá de molho inglês e uma pitada de ervas finas. Deixe 10 minutos.',
+        'Aqueça uma frigideira antiaderente em fogo alto. Grelhe a carne por 2-3 minutos de cada lado, sem mexer, até selar e ficar suculenta.',
+        'Finalize com flor de sal e um toque de azeite.',
+        '<b>Arroz perfumado:</b>',
+        'Refogue 1 dente de alho picado e 1/4 de cebola em 3ml de azeite. Adicione 40g de arroz branco lavado e doure por 1 minuto.',
+        'Acrescente água quente, sal e 1 folha de louro. Cozinhe tampado em fogo baixo até secar. Finalize com salsinha.',
+        '<b>Salada:</b> Mix de folhas + pepino fatiado, temperado com limão e 2ml de azeite.'
+      ]
+    }
+  },
 ];
 
 const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0};
@@ -1128,21 +1171,55 @@ function renderDinnerPlanner() {
   let html = '';
   DINNER_DEFS.forEach(m => {
     const qty = plan[m.id] || 0;
-    html += `<div class="planner-card">
-      <div class="planner-info">
-        <div class="pl-name">${m.name}</div>
-        <div class="pl-desc">${m.desc}</div>
-        <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+    html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="planner-info" onclick="showDinnerRecipe('${m.id}')" style="cursor:pointer">
+          <div class="pl-name">${m.name}</div>
+          <div class="pl-desc">${m.desc}</div>
+          <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+        </div>
+        <div class="planner-stepper">
+          <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
+          <div class="qty-display" id="dq_${m.id}">${qty}</div>
+          <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
+        </div>
       </div>
-      <div class="planner-stepper">
-        <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
-        <div class="qty-display" id="dq_${m.id}">${qty}</div>
-        <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
+      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
+        <b style="color:var(--purple)">Composição:</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
       </div>
+      <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showDinnerRecipe('${m.id}')">Ver Receita</button>
     </div>`;
   });
   container.innerHTML = html;
   updateDinnerSummary();
+}
+
+function showDinnerRecipe(id) {
+  const m = DINNER_DEFS.find(x => x.id === id);
+  if (!m || !m.recipe) return;
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Receita - ' + m.name;
+
+  let html = `<div style="font-size:15px;font-weight:700;color:var(--purple);margin-bottom:12px">${m.recipe.title}</div>`;
+  html += '<div style="font-size:13px;line-height:1.7;color:var(--gray)">';
+  m.recipe.items.forEach(item => {
+    if (item.startsWith('<b>')) {
+      html += `<div style="margin-top:10px">${item}</div>`;
+    } else {
+      html += `<div style="padding:4px 0 4px 14px;position:relative"><span style="position:absolute;left:0;color:var(--purple)">&bull;</span>${item}</div>`;
+    }
+  });
+  html += '</div>';
+  html += `<div style="margin-top:16px;padding:10px;background:var(--gray-bg);border-radius:8px;font-size:12px;color:var(--gray-mid)">
+    <b>Composição final:</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
+  </div>`;
+  html += `<div style="margin-top:10px;padding:10px;background:var(--purple-light);border-radius:8px;font-size:12px;color:var(--purple);font-weight:600">
+    ${m.kcal} kcal | ${m.p}g Proteína | ${m.c}g Carboidrato | ${m.g}g Gordura
+  </div>`;
+
+  content.innerHTML = html;
+  modal.classList.add('open');
 }
 
 function stepDinner(id, delta) {
