@@ -3093,9 +3093,11 @@ function getEditorStock(editingDateStr) {
 // ============================================================
 // Proteins: used to generate marmitas AND saved as home stock
 // Ingredients with dinnerAlt can also generate a specific dinner (shared ingredient)
+// dinnerAlt: use the dinner that consumes the LEAST of the shared ingredient so the
+// generator has maximum flexibility (e.g. S and W use 134g frango vs T which uses 175g).
 const GEN_PROTEINS = [
   { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215,
-    dinnerAlt: 'T', dinnerRawPerUnit: 175 },
+    dinnerAlt: 'S', dinnerRawPerUnit: 134 },
   { key: 'carne_moida', label: 'Carne moída (patinho)', marmita: 'B', rawPerUnit: 230 },
   { key: 'tilapia',     label: 'Filé de tilápia',    marmita: 'C', rawPerUnit: 250 },
   { key: 'lombo',       label: 'Lombo suíno',        marmita: 'D', rawPerUnit: 215 },
@@ -3404,16 +3406,12 @@ function computeAndRenderMenu(sharedMode) {
       } else if (sharedMode === 'dinner') {
         dinnerResult[ing.dinnerAlt] += Math.floor(qty / ing.dinnerRawPerUnit);
       } else {
-        // Balanced: same number of marmitas and dinners, then squeeze leftover
-        const N = Math.floor(qty / (ing.rawPerUnit + ing.dinnerRawPerUnit));
-        marmitaResult[ing.marmita] += N;
-        dinnerResult[ing.dinnerAlt] += N;
-        let leftover = qty - N * (ing.rawPerUnit + ing.dinnerRawPerUnit);
-        if (leftover >= ing.rawPerUnit) {
-          marmitaResult[ing.marmita] += 1;
-        } else if (leftover >= ing.dinnerRawPerUnit) {
-          dinnerResult[ing.dinnerAlt] += 1;
-        }
+        // Priority marmita: maximize marmita count first, then fit dinners with what's left.
+        // Ex: 600g frango, M=215, D=134 -> 2M (430g used) -> 170g left -> 1D (134g) = 2M + 1D.
+        const mCount = Math.floor(qty / ing.rawPerUnit);
+        marmitaResult[ing.marmita] += mCount;
+        const rem = qty - mCount * ing.rawPerUnit;
+        dinnerResult[ing.dinnerAlt] += Math.floor(rem / ing.dinnerRawPerUnit);
       }
     } else {
       marmitaResult[ing.marmita] += Math.floor(qty / ing.rawPerUnit);
