@@ -3509,7 +3509,7 @@ function renderGeneratedMenu(stock, marmitaResult, dinnerResult) {
 
 function applyGeneratedMenu() {
   if (!window._genMarmitaResult && !window._genDinnerResult) return;
-  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas.\nAs quantidades informadas serão salvas como "estoque em casa" e descontadas da lista de compras.')) return;
+  if (!confirm('Atenção: o Gerador de Cardápio é apenas uma sugestão.\n\nConfira a seleção gerada conforme sua necessidade antes de aplicar. Você pode ajustar quantidades manualmente nas abas Marmitas e Dieta depois.\n\nDeseja continuar e aplicar o cardápio gerado?\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas e as quantidades informadas serão salvas como "estoque em casa".')) return;
 
   const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   Object.assign(newMarmitaPlan, window._genMarmitaResult || {});
