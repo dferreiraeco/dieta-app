@@ -1392,28 +1392,32 @@ function buildShoppingList() {
 
   // Dinner plan
   const dinnerPlan = getDinnerPlan();
-  const dO = dinnerPlan.O || 0; // Omelete
-  const dT = dinnerPlan.T || 0; // Tapioca
-  const dC = dinnerPlan.C || 0; // Carne
+  const dO = dinnerPlan.O || 0;
+  const dT = dinnerPlan.T || 0;
+  const dC = dinnerPlan.C || 0;
 
-  // Proteínas cruas (marmitas + jantares)
-  const frangoG = qA * 215 + dT * 175; // marmita A + jantar tapioca
-  const carneG = qB * 230;
-  const tilapiaG = qC * 250;
-  const lomboG = qD * 215;
-  const sobrecoxaG = qE * 240;
-  const coxaoG = qF * 215;
-  const alcatraG = dC * 175; // só para jantar
-  const peruG = dO * 50;     // só para jantar omelete
+  // Home stock (to subtract from needed quantities)
+  const stock = getHomeStock();
+  const have = (k) => stock[k] || 0;
 
-  // Carboidratos crus
-  const arrozBrancoG = (qA + qD) * 56 + dC * 40; // marmitas A/D + jantar carne
-  const arrozIntegralG = qC * 52;
-  const batataDoceG = qB * 180;
-  const mandiocaG = qE * 145;
-  const macarraoG = qF * 52;
+  // Proteínas cruas (necessárias - estoque)
+  const frangoG = Math.max(0, (qA * 215 + dT * 175) - have('frango'));
+  const carneG = Math.max(0, (qB * 230) - have('carne_moida'));
+  const tilapiaG = Math.max(0, (qC * 250) - have('tilapia'));
+  const lomboG = Math.max(0, (qD * 215) - have('lombo'));
+  const sobrecoxaG = Math.max(0, (qE * 240) - have('sobrecoxa'));
+  const coxaoG = Math.max(0, (qF * 215) - have('coxao_mole'));
+  const alcatraG = Math.max(0, (dC * 175) - have('alcatra'));
+  const peruG = dO * 50;
+
+  // Carboidratos crus (necessárias - estoque)
+  const arrozBrancoG = Math.max(0, ((qA + qD) * 56 + dC * 40) - have('arroz_branco'));
+  const arrozIntegralG = Math.max(0, (qC * 52) - have('arroz_integral'));
+  const batataDoceG = Math.max(0, (qB * 180) - have('batata_doce'));
+  const mandiocaG = Math.max(0, (qE * 145) - have('mandioca'));
+  const macarraoG = Math.max(0, (qF * 52) - have('macarrao_integral'));
   const gomaTapiocaG = dT * 50;
-  const paoFatias = dO * 2; // fatias de pão para omelete
+  const paoFatias = dO * 2;
 
   // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes (3 ovos cada)
   const ovosTotal = 56 + dO * 3;
@@ -2268,7 +2272,7 @@ function deleteDayData(dateStr) {
 // ============================================================
 // EXPORT / IMPORT
 // ============================================================
-const BACKUP_KEYS = ['marmita_plan','dinner_plan','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 function exportData() {
   const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
@@ -2380,8 +2384,8 @@ function getEditorStock(editingDateStr) {
 // ============================================================
 // MENU GENERATOR (from home stock)
 // ============================================================
-// Map ingredient -> marmita type + raw grams per unit
-const GENERATOR_INGREDIENTS = [
+// Proteins: used to generate marmitas AND saved as home stock
+const GEN_PROTEINS = [
   { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215 },
   { key: 'carne_moida', label: 'Carne moída (patinho)', marmita: 'B', rawPerUnit: 230 },
   { key: 'tilapia',     label: 'Filé de tilápia',    marmita: 'C', rawPerUnit: 250 },
@@ -2390,22 +2394,51 @@ const GENERATOR_INGREDIENTS = [
   { key: 'coxao_mole',  label: 'Coxão mole',         marmita: 'F', rawPerUnit: 215 },
 ];
 
+// Carbs: only tracked as home stock (don't generate marmitas)
+const GEN_CARBS = [
+  { key: 'arroz_branco',      label: 'Arroz branco (cru)' },
+  { key: 'arroz_integral',    label: 'Arroz integral (cru)' },
+  { key: 'batata_doce',       label: 'Batata doce' },
+  { key: 'mandioca',          label: 'Mandioca (crua)' },
+  { key: 'macarrao_integral', label: 'Macarrão integral (cru)' },
+];
+
+function getHomeStock() {
+  return JSON.parse(localStorage.getItem('home_stock') || '{}');
+}
+
 function openMenuGenerator() {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
   document.getElementById('history-title').textContent = 'Gerador de Cardápio';
 
-  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas de cada ingrediente que você tem em casa. O app vai calcular quantas marmitas de cada tipo pode ser feita (arredondando para baixo).</div>';
+  const stock = getHomeStock();
 
-  GENERATOR_INGREDIENTS.forEach(ing => {
-    const existing = (window._genInputs || {})[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-light)">
+  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas do que você tem em casa. As proteínas são usadas para calcular o número de marmitas (arredondando para baixo). Os demais ingredientes são salvos como estoque e descontados da lista de compras.</div>';
+
+  html += '<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;margin:12px 0 6px">Proteínas</div>';
+  GEN_PROTEINS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">Marmita ${ing.marmita} (${ing.rawPerUnit}g por marmita)</div>
+        <div style="font-size:11px;color:var(--gray-mid)">Marmita ${ing.marmita} (${ing.rawPerUnit}g/marmita)</div>
       </div>
       <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:90px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">g</span>
+    </div>`;
+  });
+
+  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Carboidratos</div>';
+  GEN_CARBS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
       <span style="font-size:12px;color:var(--gray-mid)">g</span>
     </div>`;
   });
@@ -2413,24 +2446,38 @@ function openMenuGenerator() {
   html += '<div id="gen-result" style="margin-top:14px"></div>';
   html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()">Gerar Cardápio</button>';
   html += '<button class="history-btn" style="margin-top:10px" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
+  html += '<button class="reset-btn" style="margin-top:10px" onclick="clearHomeStock()">Limpar Estoque em Casa</button>';
 
   content.innerHTML = html;
   modal.classList.add('open');
 }
 
+function readGenInputs() {
+  const stock = {};
+  const result = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  GEN_PROTEINS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    if (qty > 0) stock[ing.key] = qty;
+    result[ing.marmita] = Math.floor(qty / ing.rawPerUnit);
+  });
+  GEN_CARBS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    if (qty > 0) stock[ing.key] = qty;
+  });
+  return { stock, result };
+}
+
 function generateMenu() {
-  const inputs = {};
-  const result = {};
+  const { stock, result } = readGenInputs();
   let totalMarmitas = 0;
   let html = '<div style="background:var(--green-bg);border-radius:10px;padding:12px"><b style="color:var(--green);font-size:13px">Cardápio Gerado:</b><div style="margin-top:8px">';
 
-  GENERATOR_INGREDIENTS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    inputs[ing.key] = qty;
-    const units = Math.floor(qty / ing.rawPerUnit);
-    result[ing.marmita] = units;
+  GEN_PROTEINS.forEach(ing => {
+    const units = result[ing.marmita];
     totalMarmitas += units;
+    const qty = stock[ing.key] || 0;
     if (qty > 0) {
       const leftover = qty - (units * ing.rawPerUnit);
       html += `<div style="font-size:13px;padding:4px 0">
@@ -2441,7 +2488,7 @@ function generateMenu() {
   });
 
   if (totalMarmitas === 0) {
-    html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades para gerar o cardápio</div>';
+    html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades de proteínas para gerar o cardápio</div>';
     document.getElementById('gen-apply-btn').disabled = true;
   } else {
     html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--green);font-size:13px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias para 2 pessoas)</div>`;
@@ -2450,17 +2497,18 @@ function generateMenu() {
   }
 
   document.getElementById('gen-result').innerHTML = html;
-  window._genInputs = inputs;
+  window._genStock = stock;
   window._genResult = result;
 }
 
 function applyGeneratedMenu() {
   if (!window._genResult) return;
-  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento atual de marmitas será substituído pelas quantidades calculadas.')) return;
+  if (!confirm('Aplicar o cardápio gerado?\n\nO planejamento de marmitas será substituído pelas quantidades calculadas.\nAs quantidades informadas serão salvas como "estoque em casa" e descontadas da lista de compras.')) return;
 
   const newPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   Object.assign(newPlan, window._genResult);
   localStorage.setItem('marmita_plan', JSON.stringify(newPlan));
+  localStorage.setItem('home_stock', JSON.stringify(window._genStock || {}));
 
   renderMarmitaPlanner();
   renderShoppingList();
@@ -2469,6 +2517,13 @@ function applyGeneratedMenu() {
   renderMarmitaSelector();
 
   closeHistory();
+}
+
+function clearHomeStock() {
+  if (!confirm('Limpar o estoque em casa?\n\nA lista de compras voltará a considerar que você não tem nenhum ingrediente guardado.')) return;
+  localStorage.removeItem('home_stock');
+  closeHistory();
+  renderShoppingList();
 }
 
 function openDayEditor(dateStr) {
@@ -2746,7 +2801,7 @@ let currentUser = null;
 let firestoreUnsubscribes = [];
 
 // Data keys we sync
-const SYNC_KEYS = ['marmita_plan','dinner_plan','marmita_history','marmita_current_week','marmita_consumed',
+const SYNC_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed',
   'shop_checks','prep_checks','workouts','cardio_log','cal_log'];
 
 // Save to localStorage AND Firestore (if logged in)
