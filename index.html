@@ -3407,12 +3407,42 @@ function computeAndRenderMenu(sharedMode) {
       } else if (sharedMode === 'dinner') {
         dinnerResult[ing.dinnerAlt] += Math.floor(qty / ing.dinnerRawPerUnit);
       } else {
-        // Priority marmita: maximize marmita count first, then fit dinners with what's left.
-        // Ex: 600g frango, M=215, D=134 -> 2M (430g used) -> 170g left -> 1D (134g) = 2M + 1D.
-        const mCount = Math.floor(qty / ing.rawPerUnit);
-        marmitaResult[ing.marmita] += mCount;
-        const rem = qty - mCount * ing.rawPerUnit;
-        dinnerResult[ing.dinnerAlt] += Math.floor(rem / ing.dinnerRawPerUnit);
+        // Sequential alternating: marmita -> dinner -> marmita -> dinner ...
+        // Each turn, if the preferred side can't be produced, fall back to the other side.
+        // If neither fits, stop and reserve the rest as home stock.
+        // Ex: 600g frango (M=215, D=134):
+        //   M (215) -> D (134) -> M (215) -> D? no, fallback M? no -> stop. = 2M + 1D, 36g sobra.
+        let rem = qty;
+        let preferM = true; // start with marmita per user spec
+        // Safety cap on iterations to prevent runaway loops
+        for (let i = 0; i < 500; i++) {
+          let acted = false;
+          if (preferM) {
+            if (rem >= ing.rawPerUnit) {
+              marmitaResult[ing.marmita] += 1;
+              rem -= ing.rawPerUnit;
+              acted = true;
+            } else if (rem >= ing.dinnerRawPerUnit) {
+              // Fallback: can't do marmita, try dinner
+              dinnerResult[ing.dinnerAlt] += 1;
+              rem -= ing.dinnerRawPerUnit;
+              acted = true;
+            }
+          } else {
+            if (rem >= ing.dinnerRawPerUnit) {
+              dinnerResult[ing.dinnerAlt] += 1;
+              rem -= ing.dinnerRawPerUnit;
+              acted = true;
+            } else if (rem >= ing.rawPerUnit) {
+              // Fallback: can't do dinner, try marmita
+              marmitaResult[ing.marmita] += 1;
+              rem -= ing.rawPerUnit;
+              acted = true;
+            }
+          }
+          if (!acted) break;
+          preferM = !preferM;
+        }
       }
     } else {
       marmitaResult[ing.marmita] += Math.floor(qty / ing.rawPerUnit);
