@@ -1885,8 +1885,20 @@ function buildShoppingList() {
   const atumLatas = Math.max(0, dA - have('atum_lata'));
 
   // Carboidratos crus (necessárias - estoque)
-  const arrozBrancoG = Math.max(0, ((qA + qD) * 56 + dC * 40) - have('arroz_branco'));
-  const arrozIntegralG = Math.max(0, (qC * 52) - have('arroz_integral'));
+  // Arroz: branco e integral são perfeitamente substituíveis no estoque.
+  // Cada tipo cobre sua própria necessidade primeiro; o excedente cobre a necessidade do outro.
+  const arrozBrancoNeed = (qA + qD) * 56 + dC * 40;
+  const arrozIntegralNeed = qC * 52;
+  const arrozBrancoStock = have('arroz_branco');
+  const arrozIntegralStock = have('arroz_integral');
+  let _wGap = Math.max(0, arrozBrancoNeed - arrozBrancoStock);
+  let _iGap = Math.max(0, arrozIntegralNeed - arrozIntegralStock);
+  let _wSurplus = Math.max(0, arrozBrancoStock - arrozBrancoNeed);
+  let _iSurplus = Math.max(0, arrozIntegralStock - arrozIntegralNeed);
+  const _subW = Math.min(_iSurplus, _wGap); _wGap -= _subW;
+  const _subI = Math.min(_wSurplus, _iGap); _iGap -= _subI;
+  const arrozBrancoG = _wGap;
+  const arrozIntegralG = _iGap;
   const batataDoceG = Math.max(0, (qB * 180) - have('batata_doce'));
   const mandiocaG = Math.max(0, (qE * 145) - have('mandioca'));
   const macarraoG = Math.max(0, (qF * 52) - have('macarrao_integral'));
@@ -3267,6 +3279,30 @@ function computeAndRenderMenu(sharedMode) {
 function renderGeneratedMenu(stock, marmitaResult, dinnerResult) {
   let totalMarmitas = 0, totalDinners = 0;
   let html = '';
+
+  // Rice substitution warning (perfect substitutability between branco and integral)
+  const hasWhite = (stock.arroz_branco || 0) > 0;
+  const hasIntegral = (stock.arroz_integral || 0) > 0;
+  const marmitasNeedingWhite = [];
+  const marmitasNeedingIntegral = [];
+  Object.keys(marmitaResult).forEach(id => {
+    if ((marmitaResult[id] || 0) <= 0) return;
+    const m = MARMITA_DEFS.find(x => x.id === id);
+    if (!m) return;
+    if (m.ingredients.arroz_branco) marmitasNeedingWhite.push(getMarmitaTypeName(id));
+    if (m.ingredients.arroz_integral) marmitasNeedingIntegral.push(getMarmitaTypeName(id));
+  });
+  let riceWarning = '';
+  if (hasWhite && !hasIntegral && marmitasNeedingIntegral.length > 0) {
+    riceWarning = `Considerando <b>arroz branco</b> no lugar de integral em: ${marmitasNeedingIntegral.join(', ')}.`;
+  } else if (hasIntegral && !hasWhite && marmitasNeedingWhite.length > 0) {
+    riceWarning = `Considerando <b>arroz integral</b> no lugar de branco em: ${marmitasNeedingWhite.join(', ')}.`;
+  }
+  if (riceWarning) {
+    html += `<div style="background:#fffbeb;border:1.5px solid var(--orange);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--gray)">
+      <b style="color:var(--orange)">Aviso sobre arroz:</b> ${riceWarning}
+    </div>`;
+  }
 
   // Marmitas section
   let marmitaRows = '';
