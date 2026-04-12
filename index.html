@@ -1818,7 +1818,7 @@ function startNewWeek() {
     return;
   }
 
-  if (!confirm(`Iniciar novo planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras, checklist de preparo e consumo de marmitas serão zerados.\n\nDeseja continuar?`)) return;
+  if (!confirm(`Iniciar novo planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras, checklist de preparo e consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.\n\nDeseja continuar?`)) return;
 
   // Archive current plan if it exists and is different from new week
   if (currentWeek !== thisWeek) {
@@ -1837,6 +1837,7 @@ function startNewWeek() {
   localStorage.removeItem('prep_checks');
   localStorage.removeItem('marmita_consumed');
   localStorage.removeItem('dinner_consumed');
+  localStorage.removeItem('home_stock');
   localStorage.setItem('marmita_current_week', thisWeek);
 
   renderMarmitaPlanner();
