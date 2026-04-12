@@ -575,7 +575,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 <div id="page-dieta" class="page">
   <div class="page-header">
     <h1>PeitudasNOW</h1>
-    <p>Diego Ferreira | 118.3 kg | Meta: ~1.950 kcal/dia</p>
+    <p>Diego Ferreira | 118.3 kg | Meta: ~2.000 kcal/dia</p>
   </div>
 
   <!-- Daily macro tracker -->
@@ -586,7 +586,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     </div>
     <div class="macro-progress">
       <div class="macro-prog-item">
-        <div class="label"><span>Kcal</span><span id="prog-kcal">0/1950</span></div>
+        <div class="label"><span>Kcal</span><span id="prog-kcal">0/2000</span></div>
         <div class="bar"><div class="bar-fill kcal-f" id="bar-kcal" style="width:0%"></div></div>
       </div>
       <div class="macro-prog-item">
@@ -598,7 +598,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
         <div class="bar"><div class="bar-fill carb-f" id="bar-carb" style="width:0%"></div></div>
       </div>
       <div class="macro-prog-item">
-        <div class="label"><span>Gord</span><span id="prog-fat">0/65g</span></div>
+        <div class="label"><span>Gord</span><span id="prog-fat">0/70g</span></div>
         <div class="bar"><div class="bar-fill fat-f" id="bar-fat" style="width:0%"></div></div>
       </div>
     </div>
@@ -823,7 +823,7 @@ function getMeals() {
   }
   return FIXED_MEALS.map(m => m === null ? lunch : m);
 }
-const GOALS = { kcal: 1950, p: 190, c: 150, g: 65 };
+const GOALS = { kcal: 2000, p: 190, c: 150, g: 70 };
 
 // Helper: local date string YYYY-MM-DD (avoids UTC timezone issues)
 function localDateStr(date) {
@@ -911,7 +911,7 @@ function resetDailyMeals() {
 const MARMITA_DEFS = [
   { id: 'A', name: 'Marmita A - Frango', desc: 'Peito de frango grelhado + arroz branco',
     cooked: '160g frango grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
-    kcal: 510, p: 52, c: 40, g: 11,
+    kcal: 540, p: 52, c: 40, g: 14,
     ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 },
     recipe: {
       title: 'Frango Grelhado com Alho e Limão + Arroz à Grega',
@@ -927,7 +927,7 @@ const MARMITA_DEFS = [
   },
   { id: 'B', name: 'Marmita B - Carne Moída', desc: 'Patinho moído + batata doce',
     cooked: '160g carne moída refogada | 160g batata doce cozida | 60g salada (alface + rúcula) | 60g pepino | 5ml azeite',
-    kcal: 530, p: 46, c: 35, g: 18,
+    kcal: 580, p: 46, c: 35, g: 24,
     ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 },
     recipe: {
       title: 'Carne Moída Refogada com Alho e Cebola + Batata Doce Assada ao Alecrim',
@@ -944,7 +944,7 @@ const MARMITA_DEFS = [
   },
   { id: 'C', name: 'Marmita C - Tilápia', desc: 'Filé de tilápia + arroz integral',
     cooked: '200g tilápia grelhada | 130g arroz integral cozido | 50g salada (alface + rúcula) | 80g pepino | 5ml azeite',
-    kcal: 490, p: 52, c: 34, g: 11,
+    kcal: 530, p: 52, c: 34, g: 15,
     ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 },
     recipe: {
       title: 'Tilápia ao Molho de Limão e Ervas + Arroz Integral Perfumado',
@@ -961,7 +961,7 @@ const MARMITA_DEFS = [
   },
   { id: 'D', name: 'Marmita D - Lombo Suíno', desc: 'Lombo suíno grelhado + arroz branco',
     cooked: '160g lombo suíno grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
-    kcal: 520, p: 50, c: 40, g: 15,
+    kcal: 570, p: 50, c: 44, g: 18,
     ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 },
     recipe: {
       title: 'Lombo Suíno com Mostarda, Mel e Ervas + Arroz ao Alho',
@@ -978,7 +978,7 @@ const MARMITA_DEFS = [
   },
   { id: 'E', name: 'Marmita E - Sobrecoxa', desc: 'Sobrecoxa sem pele + mandioca cozida',
     cooked: '180g sobrecoxa sem pele grelhada | 130g mandioca cozida | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
-    kcal: 540, p: 48, c: 40, g: 19,
+    kcal: 600, p: 48, c: 40, g: 26,
     ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 },
     recipe: {
       title: 'Sobrecoxa Desossada ao Alho e Páprica Defumada + Mandioca Dourada',
@@ -995,7 +995,7 @@ const MARMITA_DEFS = [
   },
   { id: 'F', name: 'Marmita F - Coxão Mole', desc: 'Coxão mole grelhado + macarrão integral',
     cooked: '160g coxão mole grelhado | 130g macarrão integral cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
-    kcal: 500, p: 50, c: 32, g: 16,
+    kcal: 580, p: 50, c: 39, g: 25,
     ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 },
     recipe: {
       title: 'Coxão Mole Grelhado ao Molho de Tomate + Macarrão ao Alho e Óleo',
