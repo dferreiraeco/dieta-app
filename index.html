@@ -3117,7 +3117,7 @@ function getMarmitaTypeName(id) {
 
 function getDinnerTypeName(id) {
   const d = DINNER_DEFS.find(x => x.id === id);
-  return d ? d.name : 'Jantar ' + id;
+  return d ? 'Jantar de ' + d.name : 'Jantar ' + id;
 }
 
 // Carbs: only tracked as home stock (don't generate marmitas)
@@ -3227,7 +3227,7 @@ function openMenuGenerator() {
     html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">Marmita ${ing.marmita} (${ing.rawPerUnit}g/marmita)</div>
+        <div style="font-size:11px;color:var(--gray-mid)">${getMarmitaTypeName(ing.marmita)} (${ing.rawPerUnit}g/marmita)</div>
       </div>
       <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
         style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
@@ -3254,7 +3254,7 @@ function openMenuGenerator() {
     html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">Jantar ${ing.dinner} (${ing.rawPerUnit}${ing.unit}/jantar)</div>
+        <div style="font-size:11px;color:var(--gray-mid)">${getDinnerTypeName(ing.dinner)} (${ing.rawPerUnit}${ing.unit}/jantar)</div>
       </div>
       <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
         style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
