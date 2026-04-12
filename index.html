@@ -9,6 +9,9 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="192x192" href="apple-icon.png">
 <title>PeitudasNOW</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -2015,12 +2018,23 @@ function exportShoppingPDF() {
   const date = localDateStr().split('-').reverse().join('/');
   const fileName = `lista-compras-${date.replace(/\//g, '-')}.pdf`;
 
-  if (typeof window.jspdf === 'undefined') {
-    alert('Biblioteca de PDF não carregada. Recarregue o app e tente novamente.');
+  // Wait for jsPDF to load if not ready
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    // Try to load dynamically
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = () => exportShoppingPDF();
+    script.onerror = () => alert('Não foi possível carregar a biblioteca de PDF. Verifique sua conexão.');
+    document.head.appendChild(script);
     return;
   }
 
-  const { jsPDF } = window.jspdf;
+  const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFLib) {
+    alert('Biblioteca de PDF não disponível.');
+    return;
+  }
+  const jsPDF = jsPDFLib;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
   const pageW = doc.internal.pageSize.getWidth();

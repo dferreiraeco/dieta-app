@@ -1,27 +1,31 @@
-const CACHE_NAME = 'dieta-v66';
-const ASSETS = ['/dieta-app/', '/dieta-app/index.html'];
+const CACHE_NAME = 'dieta-v67';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
-  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
-  // Always fetch from network first, use cache only as fallback
+  // Network-first, no cache at all for HTML/JS
+  const url = new URL(e.request.url);
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' }).catch(() =>
+        caches.match(e.request)
+      )
+    );
+    return;
+  }
+  // For other assets: network first, fallback to cache
   e.respondWith(
     fetch(e.request).then(response => {
-      // Update cache with fresh response
       if (response.ok) {
         const clone = response.clone();
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
