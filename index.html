@@ -3006,14 +3006,29 @@ function getEditorStock(editingDateStr) {
 // MENU GENERATOR (from home stock)
 // ============================================================
 // Proteins: used to generate marmitas AND saved as home stock
+// Ingredients with dinnerAlt can also generate a specific dinner (shared ingredient)
 const GEN_PROTEINS = [
-  { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215 },
+  { key: 'frango',      label: 'Peito de frango',    marmita: 'A', rawPerUnit: 215,
+    dinnerAlt: 'T', dinnerRawPerUnit: 175 },
   { key: 'carne_moida', label: 'Carne moída (patinho)', marmita: 'B', rawPerUnit: 230 },
   { key: 'tilapia',     label: 'Filé de tilápia',    marmita: 'C', rawPerUnit: 250 },
   { key: 'lombo',       label: 'Lombo suíno',        marmita: 'D', rawPerUnit: 215 },
   { key: 'sobrecoxa',   label: 'Sobrecoxa sem pele', marmita: 'E', rawPerUnit: 240 },
   { key: 'coxao_mole',  label: 'Coxão mole',         marmita: 'F', rawPerUnit: 215 },
 ];
+
+// Return the "type" portion of a marmita name, e.g. "Marmita A - Frango" -> "Frango"
+function getMarmitaTypeName(id) {
+  const m = MARMITA_DEFS.find(x => x.id === id);
+  if (!m) return 'Marmita ' + id;
+  const parts = m.name.split(' - ');
+  return parts.length > 1 ? parts[1] : m.name;
+}
+
+function getDinnerTypeName(id) {
+  const d = DINNER_DEFS.find(x => x.id === id);
+  return d ? d.name : 'Jantar ' + id;
+}
 
 // Carbs: only tracked as home stock (don't generate marmitas)
 const GEN_CARBS = [
@@ -3142,87 +3157,148 @@ function openMenuGenerator() {
 
 function readGenInputs() {
   const stock = {};
-  const marmitaResult = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-  const dinnerResult = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
-
-  GEN_PROTEINS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    if (qty > 0) stock[ing.key] = qty;
-    marmitaResult[ing.marmita] = Math.floor(qty / ing.rawPerUnit);
+  const allLists = [GEN_PROTEINS, GEN_CARBS, GEN_DINNER_PROTEINS, GEN_DINNER_OTHERS, GEN_SNACKS];
+  allLists.forEach(list => {
+    list.forEach(ing => {
+      const el = document.getElementById('gen_' + ing.key);
+      if (!el) return;
+      const qty = parseFloat(el.value) || 0;
+      if (qty > 0) stock[ing.key] = qty;
+    });
   });
-  GEN_CARBS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    if (qty > 0) stock[ing.key] = qty;
-  });
-  GEN_DINNER_PROTEINS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    if (qty > 0) stock[ing.key] = qty;
-    dinnerResult[ing.dinner] = Math.floor(qty / ing.rawPerUnit);
-  });
-  GEN_DINNER_OTHERS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    if (qty > 0) stock[ing.key] = qty;
-  });
-  GEN_SNACKS.forEach(ing => {
-    const el = document.getElementById('gen_' + ing.key);
-    const qty = parseFloat(el.value) || 0;
-    if (qty > 0) stock[ing.key] = qty;
-  });
-  return { stock, marmitaResult, dinnerResult };
+  return stock;
 }
 
 function generateMenu() {
-  const { stock, marmitaResult, dinnerResult } = readGenInputs();
+  const stock = readGenInputs();
+  // Detect shared ingredients (can generate both marmitas and dinners)
+  const shared = GEN_PROTEINS.filter(ing => ing.dinnerAlt && (stock[ing.key] || 0) > 0);
+
+  if (shared.length > 0) {
+    showSharedIngredientDialog(shared);
+  } else {
+    computeAndRenderMenu('both');
+  }
+}
+
+function showSharedIngredientDialog(shared) {
+  const list = shared.map(ing => {
+    const mName = getMarmitaTypeName(ing.marmita);
+    const dName = getDinnerTypeName(ing.dinnerAlt);
+    return `<li style="margin:2px 0"><b>${ing.label}</b> <span style="color:var(--gray-mid)">(${mName} / ${dName})</span></li>`;
+  }).join('');
+
+  const html = `
+    <div style="background:var(--blue-bg);border:2px solid var(--blue-mid);border-radius:12px;padding:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--blue);margin-bottom:6px">Ingrediente compartilhado detectado</div>
+      <div style="font-size:12px;color:var(--gray-mid);margin-bottom:8px">
+        Os ingredientes abaixo podem ser usados tanto em marmitas quanto em jantares:
+        <ul style="margin:6px 0 0 18px;padding:0;font-size:12px;color:var(--blue)">${list}</ul>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--blue);margin:12px 0 4px">Como deseja utilizá-los?</div>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:#fff;border-radius:8px;margin-bottom:6px;border:1.5px solid var(--gray-light)">
+        <input type="checkbox" id="share_marmita" checked style="width:18px;height:18px;accent-color:var(--green)">
+        <span>Gerar Marmita</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:#fff;border-radius:8px;border:1.5px solid var(--gray-light)">
+        <input type="checkbox" id="share_dinner" checked style="width:18px;height:18px;accent-color:var(--purple)">
+        <span>Gerar Jantar</span>
+      </label>
+      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;font-style:italic">Se marcar os dois, a distribuição gera o mesmo número de marmitas e jantares.</div>
+      <button class="save-btn" style="margin-top:12px" onclick="confirmSharedAllocation()">Confirmar</button>
+    </div>
+  `;
+  document.getElementById('gen-result').innerHTML = html;
+  document.getElementById('gen-apply-btn').disabled = true;
+}
+
+function confirmSharedAllocation() {
+  const useM = document.getElementById('share_marmita').checked;
+  const useD = document.getElementById('share_dinner').checked;
+  if (!useM && !useD) {
+    alert('Selecione ao menos uma opção (Marmita ou Jantar).');
+    return;
+  }
+  const mode = (useM && useD) ? 'both' : (useM ? 'marmita' : 'dinner');
+  computeAndRenderMenu(mode);
+}
+
+function computeAndRenderMenu(sharedMode) {
+  const stock = readGenInputs();
+  const marmitaResult = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  const dinnerResult  = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
+
+  // Marmita proteins (with possible shared allocation)
+  GEN_PROTEINS.forEach(ing => {
+    const qty = stock[ing.key] || 0;
+    if (qty <= 0) return;
+    if (ing.dinnerAlt) {
+      if (sharedMode === 'marmita') {
+        marmitaResult[ing.marmita] += Math.floor(qty / ing.rawPerUnit);
+      } else if (sharedMode === 'dinner') {
+        dinnerResult[ing.dinnerAlt] += Math.floor(qty / ing.dinnerRawPerUnit);
+      } else {
+        // Balanced: same number of marmitas and dinners
+        const N = Math.floor(qty / (ing.rawPerUnit + ing.dinnerRawPerUnit));
+        marmitaResult[ing.marmita] += N;
+        dinnerResult[ing.dinnerAlt] += N;
+      }
+    } else {
+      marmitaResult[ing.marmita] += Math.floor(qty / ing.rawPerUnit);
+    }
+  });
+
+  // Dinner proteins (non-shared)
+  GEN_DINNER_PROTEINS.forEach(ing => {
+    const qty = stock[ing.key] || 0;
+    if (qty <= 0) return;
+    dinnerResult[ing.dinner] += Math.floor(qty / ing.rawPerUnit);
+  });
+
+  renderGeneratedMenu(stock, marmitaResult, dinnerResult);
+}
+
+function renderGeneratedMenu(stock, marmitaResult, dinnerResult) {
   let totalMarmitas = 0, totalDinners = 0;
   let html = '';
 
   // Marmitas section
-  let hasMarmitas = false;
-  let marmitaHtml = '<div style="background:var(--green-bg);border-radius:10px;padding:12px;margin-bottom:8px"><b style="color:var(--green);font-size:13px">Marmitas Geradas:</b><div style="margin-top:8px">';
-  GEN_PROTEINS.forEach(ing => {
-    const units = marmitaResult[ing.marmita];
+  let marmitaRows = '';
+  Object.keys(marmitaResult).forEach(id => {
+    const units = marmitaResult[id] || 0;
+    if (units <= 0) return;
     totalMarmitas += units;
-    const qty = stock[ing.key] || 0;
-    if (qty > 0) {
-      hasMarmitas = true;
-      const leftover = qty - (units * ing.rawPerUnit);
-      marmitaHtml += `<div style="font-size:13px;padding:4px 0">
-        <b>Marmita ${ing.marmita}</b>: ${units} un
-        <span style="color:var(--gray-mid);font-size:11px"> (${qty}g → ${units * ing.rawPerUnit}g usado, ${leftover}g sobra)</span>
-      </div>`;
-    }
+    const typeName = getMarmitaTypeName(id);
+    marmitaRows += `<div style="font-size:13px;padding:4px 0">
+      <b style="color:var(--blue)">${typeName}</b>: <b>${units}</b> un
+    </div>`;
   });
-  if (totalMarmitas > 0) {
-    marmitaHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--green);font-size:12px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias)</div>`;
+  if (marmitaRows) {
+    html += `<div style="background:var(--green-bg);border-radius:10px;padding:12px;margin-bottom:8px">
+      <b style="color:var(--green);font-size:13px">Marmitas Geradas:</b>
+      <div style="margin-top:8px">${marmitaRows}</div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--green);font-size:12px;font-weight:700;color:var(--green)">Total: ${totalMarmitas} marmitas (${totalMarmitas / 2} dias)</div>
+    </div>`;
   }
-  marmitaHtml += '</div></div>';
-  if (hasMarmitas) html += marmitaHtml;
 
   // Dinners section
-  let hasDinners = false;
-  let dinnerHtml = '<div style="background:var(--purple-light);border-radius:10px;padding:12px"><b style="color:var(--purple);font-size:13px">Jantares Gerados:</b><div style="margin-top:8px">';
-  GEN_DINNER_PROTEINS.forEach(ing => {
-    const units = dinnerResult[ing.dinner];
+  let dinnerRows = '';
+  Object.keys(dinnerResult).forEach(id => {
+    const units = dinnerResult[id] || 0;
+    if (units <= 0) return;
     totalDinners += units;
-    const qty = stock[ing.key] || 0;
-    if (qty > 0) {
-      hasDinners = true;
-      const leftover = qty - (units * ing.rawPerUnit);
-      dinnerHtml += `<div style="font-size:13px;padding:4px 0">
-        <b>Jantar ${ing.dinner}</b>: ${units} un
-        <span style="color:var(--gray-mid);font-size:11px"> (${qty}${ing.unit} → ${units * ing.rawPerUnit}${ing.unit} usado, ${leftover}${ing.unit} sobra)</span>
-      </div>`;
-    }
+    const typeName = getDinnerTypeName(id);
+    dinnerRows += `<div style="font-size:13px;padding:4px 0">
+      <b style="color:var(--blue)">${typeName}</b>: <b>${units}</b> un
+    </div>`;
   });
-  if (totalDinners > 0) {
-    dinnerHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--purple);font-size:12px;font-weight:700;color:var(--purple)">Total: ${totalDinners} jantares (${totalDinners / 2} dias)</div>`;
+  if (dinnerRows) {
+    html += `<div style="background:var(--purple-light);border-radius:10px;padding:12px">
+      <b style="color:var(--purple);font-size:13px">Jantares Gerados:</b>
+      <div style="margin-top:8px">${dinnerRows}</div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--purple);font-size:12px;font-weight:700;color:var(--purple)">Total: ${totalDinners} jantares (${totalDinners / 2} dias)</div>
+    </div>`;
   }
-  dinnerHtml += '</div></div>';
-  if (hasDinners) html += dinnerHtml;
 
   if (totalMarmitas === 0 && totalDinners === 0) {
     html = '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades para gerar o cardápio</div>';
