@@ -1336,28 +1336,47 @@ function stepDinner(id, delta) {
   updateDinnerSummary();
 }
 
+// tier: 'low' (<60 kcal, <15g C), 'mid' (60-75 kcal, 15-18g C), 'high' (>75 kcal, >18g C)
 const FRUIT_SUGGESTIONS = [
-  { name: 'Banana prata', qty: '1 un. (~70g)',       kcal: 62, c: 16 },
-  { name: 'Maçã',         qty: '1 un. média (~150g)', kcal: 78, c: 20 },
-  { name: 'Mamão papaya', qty: '1 fatia (~120g)',    kcal: 51, c: 13 },
-  { name: 'Uva',          qty: '1 cacho peq. (~100g)',kcal: 69, c: 18 },
-  { name: 'Morango',      qty: '1 xícara (~150g)',    kcal: 48, c: 12 },
-  { name: 'Abacaxi',      qty: '1 fatia (~100g)',    kcal: 50, c: 13 },
-  { name: 'Melancia',     qty: '1 fatia (~200g)',    kcal: 60, c: 15 },
-  { name: 'Laranja',      qty: '1 un. (~150g)',      kcal: 68, c: 17 },
-  { name: 'Pera',         qty: '1 un. (~150g)',      kcal: 87, c: 23 },
-  { name: 'Kiwi',         qty: '2 un. (~100g)',      kcal: 61, c: 15 },
+  { name: 'Morango',      qty: '1 xícara (~150g)',    kcal: 48, c: 12, tier: 'low'  },
+  { name: 'Abacaxi',      qty: '1 fatia (~100g)',    kcal: 50, c: 13, tier: 'low'  },
+  { name: 'Mamão papaya', qty: '1 fatia (~120g)',    kcal: 51, c: 13, tier: 'low'  },
+  { name: 'Melancia',     qty: '1 fatia (~200g)',    kcal: 60, c: 15, tier: 'mid'  },
+  { name: 'Kiwi',         qty: '2 un. (~100g)',      kcal: 61, c: 15, tier: 'mid'  },
+  { name: 'Banana prata', qty: '1 un. (~70g)',       kcal: 62, c: 16, tier: 'mid'  },
+  { name: 'Laranja',      qty: '1 un. (~150g)',      kcal: 68, c: 17, tier: 'mid'  },
+  { name: 'Uva',          qty: '1 cacho peq. (~100g)',kcal: 69, c: 18, tier: 'mid'  },
+  { name: 'Maçã',         qty: '1 un. média (~150g)', kcal: 78, c: 20, tier: 'high' },
+  { name: 'Pera',         qty: '1 un. (~150g)',      kcal: 87, c: 23, tier: 'high' },
 ];
+
+const FRUIT_TIER_META = {
+  low:  { label: 'Leve',     bg: '#c6f6d5', fg: '#276749', desc: '<60 kcal, <15g C' },
+  mid:  { label: 'Moderada', bg: '#feebc8', fg: '#9c4221', desc: '60-75 kcal, 15-18g C' },
+  high: { label: 'Densa',    bg: '#fed7d7', fg: '#9b2c2c', desc: '>75 kcal, >18g C' },
+};
 
 function renderFruitSuggestions() {
   const container = document.getElementById('fruit-suggestions');
   if (!container) return;
   let html = '';
+  // Legend
+  html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:10px">`;
+  Object.entries(FRUIT_TIER_META).forEach(([k, m]) => {
+    html += `<span style="background:${m.bg};color:${m.fg};padding:3px 8px;border-radius:10px;font-weight:700">${m.label}</span>
+      <span style="color:var(--gray-mid);align-self:center;margin-right:4px">${m.desc}</span>`;
+  });
+  html += `</div>`;
+
   FRUIT_SUGGESTIONS.forEach(f => {
+    const meta = FRUIT_TIER_META[f.tier] || FRUIT_TIER_META.mid;
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-light);font-size:13px">
-      <div>
-        <div style="font-weight:600;color:var(--blue)">${f.name}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">${f.qty}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1">
+        <span style="background:${meta.bg};color:${meta.fg};font-size:9px;font-weight:700;padding:3px 6px;border-radius:8px;white-space:nowrap">${meta.label}</span>
+        <div>
+          <div style="font-weight:600;color:var(--blue)">${f.name}</div>
+          <div style="font-size:11px;color:var(--gray-mid)">${f.qty}</div>
+        </div>
       </div>
       <div style="text-align:right;font-size:11px;color:var(--orange);font-weight:600">
         ${f.kcal} kcal<br><span style="color:var(--gray-mid)">${f.c}g C</span>
