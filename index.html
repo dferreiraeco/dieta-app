@@ -3663,6 +3663,9 @@ function initApp() {
     document.body.classList.remove('logged-in');
     userBar.style.display = 'none';
   }
+
+  // Sunday prompt - only after app is loaded (logged in or skipped login)
+  setTimeout(checkSundayPrompt, 500);
 }
 
 // Block pinch-to-zoom and double-tap zoom on iOS
@@ -3673,8 +3676,7 @@ document.addEventListener('touchstart', function(e) {
   if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
 
-// Sunday prompt (delayed to not conflict with auth)
-setTimeout(checkSundayPrompt, 2000);
+// Sunday prompt is now called inside initApp (only after login/skip)
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
