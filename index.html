@@ -2020,7 +2020,7 @@ function buildShoppingList() {
   // com base no rendimento de cada receita e nas quantidades planejadas.
   const aromaticsRaw = computeAromatics(plan, dinnerPlan);
   const alhoDentes   = Math.ceil(aromaticsRaw.alho);
-  const alhoCabecas  = alhoDentes > 0 ? Math.ceil(alhoDentes / 10) : 0; // ~10 dentes/cabeça
+  const alhoCabecas  = alhoDentes > 0 ? Math.ceil(alhoDentes / 10) : 0; // 1 cabeça = 10 dentes
   const cebolaUn     = Math.ceil(aromaticsRaw.cebola);
   const limaoUn      = Math.ceil(aromaticsRaw.limao);
   const tomateUn     = Math.ceil(aromaticsRaw.tomate);
@@ -2071,7 +2071,7 @@ function buildShoppingList() {
     ]},
     { section: 'Temperos e Outros', items: [
       { name: 'Azeite de oliva extra virgem', qty: '1 garrafa (500ml)' },
-      ...(alhoCabecas > 0 ? [{ name: 'Alho fresco', qty: `${alhoCabecas} cabeça${alhoCabecas > 1 ? 's' : ''} (~${alhoDentes} dentes)` }] : []),
+      ...(alhoCabecas > 0 ? [{ name: 'Alho fresco', qty: `${alhoCabecas} cabeça${alhoCabecas > 1 ? 's' : ''} (${alhoDentes} dentes)` }] : []),
       ...(cebolaUn > 0 ? [{ name: 'Cebola', qty: `${cebolaUn} unidade${cebolaUn > 1 ? 's' : ''}` }] : []),
       ...(limaoUn > 0 ? [{ name: 'Limão', qty: `${limaoUn} unidade${limaoUn > 1 ? 's' : ''}` }] : []),
       ...(tomateUn > 0 ? [{ name: 'Tomate fresco', qty: `${tomateUn} unidade${tomateUn > 1 ? 's' : ''}` }] : []),
