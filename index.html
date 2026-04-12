@@ -552,6 +552,13 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   <div id="dinner-status"></div>
   <div id="dinner-cards"></div>
 
+  <!-- Fruit suggestions -->
+  <h3 style="font-size:16px;color:var(--orange);margin:20px 0 10px">Sugestões de Frutas (lanches)</h3>
+  <div class="card">
+    <div style="font-size:12px;color:var(--gray-mid);margin-bottom:10px">Frutas para variar os lanches da manhã e tarde. Todas entre 50-90 kcal por porção.</div>
+    <div id="fruit-suggestions"></div>
+  </div>
+
   <!-- Stock card -->
   <div class="card stock-card" id="stock-card" style="display:none"></div>
 
@@ -1077,9 +1084,69 @@ const DINNER_DEFS = [
       ]
     }
   },
+  { id: 'A', name: 'Atum com Ovos',
+    desc: 'Atum com ovos cozidos + torrada',
+    kcal: 470, p: 51, c: 23, g: 17,
+    ingredients: { atum_lata: 120, ovos: 2, pao_fatias: 2, requeijao: 15 },
+    cooked: '120g atum em água drenado (1 lata) | 2 ovos cozidos (~100g) | 2 fatias pão integral (~50g) | 15g requeijão cremoso | Folhas + pepino',
+    recipe: {
+      title: 'Atum com Ovos Cozidos e Torradas (prático e rápido)',
+      items: [
+        '<b>Atum com ovos:</b>',
+        'Cozinhe 2 ovos por 8-9 minutos em água fervente. Resfrie em água gelada, descasque e fatie ou corte em quartos.',
+        'Escorra bem 1 lata de atum em água. Coloque em um prato e tempere com gotas de limão, sal, pimenta-do-reino e cebolinha picada.',
+        'Misture o atum com os ovos fatiados. Opcional: adicionar 1 colher de iogurte natural sem açúcar para cremosidade.',
+        '<b>Torradas:</b>',
+        'Toste 2 fatias de pão integral na torradeira ou frigideira antiaderente.',
+        'Passe 15g de requeijão cremoso em cada fatia (~7g por fatia).',
+        '<b>Acompanhamento:</b>',
+        'Salada de folhas (alface + rúcula) e pepino fatiado ao lado, temperado com limão e uma pitada de sal.'
+      ]
+    }
+  },
+  { id: 'S', name: 'Sanduíche Natural de Frango',
+    desc: 'Pão integral + frango desfiado + queijo',
+    kcal: 450, p: 45, c: 33, g: 13,
+    ingredients: { frango_cru: 134, pao_fatias: 3, queijo_minas: 20, requeijao: 15 },
+    cooked: '100g frango desfiado cozido | 3 fatias pão integral (~75g) | 20g queijo minas frescal | 15g requeijão cremoso | Folhas + pepino',
+    recipe: {
+      title: 'Sanduíche Natural Cremoso de Frango',
+      items: [
+        '<b>Frango desfiado:</b>',
+        'Cozinhe 134g de peito de frango (cru) em água com sal, 1 dente de alho e 1 folha de louro por ~15 minutos.',
+        'Desfie e tempere com sal, pimenta-do-reino, cebolinha picada e 1 colher de iogurte natural ou 10g de requeijão para cremosidade.',
+        '<b>Montagem:</b>',
+        'Toste levemente 3 fatias de pão integral (forma ou artesanal).',
+        'Passe os 15g restantes de requeijão cremoso em uma das fatias.',
+        'Monte: pão + frango desfiado + 20g de queijo minas fatiado + folhas de alface + pepino em rodelas finas + outra fatia.',
+        'Pode ser feito em sanduíche duplo (2 andares) com a 3ª fatia no meio para mais saciedade.',
+        'Finalize com um fio de azeite e pimenta-do-reino.'
+      ]
+    }
+  },
+  { id: 'W', name: 'Wrap de Frango',
+    desc: 'Tortilla integral + frango cremoso + queijo',
+    kcal: 475, p: 44, c: 38, g: 12,
+    ingredients: { frango_cru: 134, tortilla: 80, cottage: 30, queijo_minas: 20 },
+    cooked: '2 tortillas integrais (~80g) | 100g frango desfiado cozido | 30g queijo cottage | 20g queijo minas frescal | Folhas + pepino',
+    recipe: {
+      title: 'Wrap Cremoso de Frango ao Limão',
+      items: [
+        '<b>Frango cremoso:</b>',
+        'Cozinhe 134g de peito de frango (cru) em água com sal, alho e 1 folha de louro. Desfie.',
+        'Em frigideira antiaderente, refogue 1 dente de alho picado e 1/4 de cebola em 3ml de azeite.',
+        'Adicione o frango desfiado, páprica defumada, sal, pimenta-do-reino e suco de 1/2 limão. Cozinhe por 5 minutos.',
+        'Desligue o fogo e misture 30g de cottage para dar cremosidade. Finalize com cheiro-verde picado.',
+        '<b>Montagem:</b>',
+        'Aqueça 2 tortillas integrais levemente em frigideira antiaderente seca (30 segundos de cada lado), para ficarem maleáveis.',
+        'Recheie cada uma com metade do frango cremoso, 10g de queijo minas frescal ralado ou em cubinhos, folhas de alface e pepino em palitos finos.',
+        'Enrole firmemente, dobrando as laterais para dentro primeiro. Corte ao meio na diagonal para servir.'
+      ]
+    }
+  },
 ];
 
-const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0};
+const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0,"A":0,"S":0,"W":0};
 
 function getMarmitaPlan() {
   return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
@@ -1228,6 +1295,37 @@ function stepDinner(id, delta) {
   localStorage.setItem('dinner_plan', JSON.stringify(plan));
   document.getElementById('dq_' + id).textContent = plan[id];
   updateDinnerSummary();
+}
+
+const FRUIT_SUGGESTIONS = [
+  { name: 'Banana prata', qty: '1 un. (~70g)',       kcal: 62, c: 16 },
+  { name: 'Maçã',         qty: '1 un. média (~150g)', kcal: 78, c: 20 },
+  { name: 'Mamão papaya', qty: '1 fatia (~120g)',    kcal: 51, c: 13 },
+  { name: 'Uva',          qty: '1 cacho peq. (~100g)',kcal: 69, c: 18 },
+  { name: 'Morango',      qty: '1 xícara (~150g)',    kcal: 48, c: 12 },
+  { name: 'Abacaxi',      qty: '1 fatia (~100g)',    kcal: 50, c: 13 },
+  { name: 'Melancia',     qty: '1 fatia (~200g)',    kcal: 60, c: 15 },
+  { name: 'Laranja',      qty: '1 un. (~150g)',      kcal: 68, c: 17 },
+  { name: 'Pera',         qty: '1 un. (~150g)',      kcal: 87, c: 23 },
+  { name: 'Kiwi',         qty: '2 un. (~100g)',      kcal: 61, c: 15 },
+];
+
+function renderFruitSuggestions() {
+  const container = document.getElementById('fruit-suggestions');
+  if (!container) return;
+  let html = '';
+  FRUIT_SUGGESTIONS.forEach(f => {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-light);font-size:13px">
+      <div>
+        <div style="font-weight:600;color:var(--blue)">${f.name}</div>
+        <div style="font-size:11px;color:var(--gray-mid)">${f.qty}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--orange);font-weight:600">
+        ${f.kcal} kcal<br><span style="color:var(--gray-mid)">${f.c}g C</span>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
 }
 
 function updateDinnerSummary() {
@@ -1592,13 +1690,17 @@ function buildShoppingList() {
   const dO = dinnerPlan.O || 0;
   const dT = dinnerPlan.T || 0;
   const dC = dinnerPlan.C || 0;
+  const dA = dinnerPlan.A || 0; // Atum com ovos
+  const dS = dinnerPlan.S || 0; // Sanduíche natural
+  const dW = dinnerPlan.W || 0; // Wrap
 
   // Home stock (to subtract from needed quantities)
   const stock = getHomeStock();
   const have = (k) => stock[k] || 0;
 
   // Proteínas cruas (necessárias - estoque)
-  const frangoG = Math.max(0, (qA * 215 + dT * 175) - have('frango'));
+  // Frango cru: marmitas A + jantar tapioca + sanduíche + wrap
+  const frangoG = Math.max(0, (qA * 215 + dT * 175 + dS * 134 + dW * 134) - have('frango'));
   const carneG = Math.max(0, (qB * 230) - have('carne_moida'));
   const tilapiaG = Math.max(0, (qC * 250) - have('tilapia'));
   const lomboG = Math.max(0, (qD * 215) - have('lombo'));
@@ -1606,6 +1708,7 @@ function buildShoppingList() {
   const coxaoG = Math.max(0, (qF * 215) - have('coxao_mole'));
   const alcatraG = Math.max(0, (dC * 175) - have('alcatra'));
   const peruG = dO * 50;
+  const atumLatas = dA; // 1 lata por jantar
 
   // Carboidratos crus (necessárias - estoque)
   const arrozBrancoG = Math.max(0, ((qA + qD) * 56 + dC * 40) - have('arroz_branco'));
@@ -1614,22 +1717,30 @@ function buildShoppingList() {
   const mandiocaG = Math.max(0, (qE * 145) - have('mandioca'));
   const macarraoG = Math.max(0, (qF * 52) - have('macarrao_integral'));
   const gomaTapiocaG = dT * 50;
-  const paoFatias = dO * 2;
+  const tortillasUn = dW * 2;
+  // Pão fatias: café (14) + omelete (dO * 2) + atum (dA * 2) + sanduíche (dS * 3)
+  const paoFatias = 14 + dO * 2 + dA * 2 + dS * 3;
 
-  // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes (3 ovos cada)
-  const ovosTotal = 56 + dO * 3;
+  // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes (3 cada) + atum (2 cada)
+  const ovosTotal = 56 + dO * 3 + dA * 2;
   const ovosDuzias = Math.ceil(ovosTotal / 12);
 
   // Mussarela: 20g café × 14 + 20g omelete × dO
   const mussarelaG = 14 * 20 + dO * 20;
 
-  // Cottage: apenas para jantar tapioca (pré-sono usa o que tem em casa)
-  const cottageG = dT * 30;
+  // Queijo minas frescal: sanduíche + wrap
+  const minasG = (dS + dW) * 20;
+
+  // Requeijão cremoso: atum (15g) + sanduíche (15g)
+  const requeijaoG = (dA + dS) * 15;
+
+  // Cottage: jantar tapioca (30g) + wrap (30g)
+  const cottageG = dT * 30 + dW * 30;
   const cottagePotes = cottageG > 0 ? Math.ceil(cottageG / 400) : 0;
 
   // Vegetais
   const totalMarmitas = qA + qB + qC + qD + qE + qF;
-  const totalDinners = dO + dT + dC;
+  const totalDinners = dO + dT + dC + dA + dS + dW;
   const pepinos = Math.ceil((totalMarmitas * 75 + totalDinners * 50) / 150);
 
   const fmt = (g) => g >= 1000 ? `~${(g/1000).toFixed(1)} kg` : `~${Math.round(g/10)*10} g`;
@@ -1644,10 +1755,13 @@ function buildShoppingList() {
       ...(lomboG > 0 ? [{ name: 'Lombo suíno (cru)', qty: fmt(lomboG) }] : []),
       ...(alcatraG > 0 ? [{ name: 'Alcatra (crua)', qty: fmt(alcatraG) }] : []),
       { name: 'Ovos', qty: `${ovosDuzias} dúzia${ovosDuzias > 1 ? 's' : ''} (${ovosTotal} un)` },
+      ...(atumLatas > 0 ? [{ name: 'Atum em água (lata)', qty: `${atumLatas} lata${atumLatas > 1 ? 's' : ''} (~120g drenado/lata)` }] : []),
       ...(peruG > 0 ? [{ name: 'Peito de peru defumado', qty: fmt(peruG) }] : []),
       { name: 'Queijo mussarela fatiado', qty: fmt(mussarelaG) },
+      ...(minasG > 0 ? [{ name: 'Queijo minas frescal', qty: fmt(minasG) }] : []),
       ...(cottagePotes > 0 ? [{ name: 'Queijo cottage', qty: `${cottagePotes} pote${cottagePotes > 1 ? 's' : ''} (400g cada)` }] : []),
-      { name: 'Iogurte grego natural', qty: '~2.4 kg (~12 potes)' },
+      ...(requeijaoG > 0 ? [{ name: 'Requeijão cremoso', qty: fmt(requeijaoG) }] : []),
+      { name: 'Iogurte grego natural', qty: '~1.8 kg (~9 potes 200g)' },
     ]},
     { section: 'Carboidratos', items: [
       ...(arrozBrancoG > 0 ? [{ name: 'Arroz branco (cru)', qty: fmt(arrozBrancoG) }] : []),
@@ -1655,8 +1769,9 @@ function buildShoppingList() {
       ...(batataDoceG > 0 ? [{ name: 'Batata doce', qty: fmt(batataDoceG) }] : []),
       ...(mandiocaG > 0 ? [{ name: 'Mandioca (crua)', qty: fmt(mandiocaG) }] : []),
       ...(macarraoG > 0 ? [{ name: 'Macarrão integral (cru)', qty: fmt(macarraoG) }] : []),
-      { name: 'Pão integral', qty: `${Math.ceil((28 + paoFatias) / 20)} pacote${Math.ceil((28 + paoFatias) / 20) > 1 ? 's' : ''}` },
+      { name: 'Pão integral', qty: `${Math.ceil(paoFatias / 20)} pacote${Math.ceil(paoFatias / 20) > 1 ? 's' : ''} (${paoFatias} fatias)` },
       ...(gomaTapiocaG > 0 ? [{ name: 'Goma de tapioca', qty: fmt(gomaTapiocaG) }] : []),
+      ...(tortillasUn > 0 ? [{ name: 'Tortilla integral', qty: `${tortillasUn} unidades (~40g cada)` }] : []),
       { name: 'Aveia em flocos (opcional)', qty: '~400 g' },
     ]},
     { section: 'Frutas', items: [
@@ -3148,6 +3263,7 @@ auth.onAuthStateChanged(user => {
 function initApp() {
   renderMarmitaPlanner();
   renderDinnerPlanner();
+  renderFruitSuggestions();
   updateWeekLabel();
   renderMarmitaSelector();
   renderStockCard();
