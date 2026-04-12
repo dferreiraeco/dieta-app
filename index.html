@@ -3238,10 +3238,16 @@ function computeAndRenderMenu(sharedMode) {
       } else if (sharedMode === 'dinner') {
         dinnerResult[ing.dinnerAlt] += Math.floor(qty / ing.dinnerRawPerUnit);
       } else {
-        // Balanced: same number of marmitas and dinners
+        // Balanced: same number of marmitas and dinners, then squeeze leftover
         const N = Math.floor(qty / (ing.rawPerUnit + ing.dinnerRawPerUnit));
         marmitaResult[ing.marmita] += N;
         dinnerResult[ing.dinnerAlt] += N;
+        let leftover = qty - N * (ing.rawPerUnit + ing.dinnerRawPerUnit);
+        if (leftover >= ing.rawPerUnit) {
+          marmitaResult[ing.marmita] += 1;
+        } else if (leftover >= ing.dinnerRawPerUnit) {
+          dinnerResult[ing.dinnerAlt] += 1;
+        }
       }
     } else {
       marmitaResult[ing.marmita] += Math.floor(qty / ing.rawPerUnit);
