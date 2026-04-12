@@ -575,7 +575,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 <div id="page-dieta" class="page">
   <div class="page-header">
     <h1>PeitudasNOW</h1>
-    <p>Diego Ferreira | 118.3 kg | Meta: ~2.100 kcal/dia</p>
+    <p>Diego Ferreira | 118.3 kg | Meta: ~1.950 kcal/dia</p>
   </div>
 
   <!-- Daily macro tracker -->
@@ -586,7 +586,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     </div>
     <div class="macro-progress">
       <div class="macro-prog-item">
-        <div class="label"><span>Kcal</span><span id="prog-kcal">0/2100</span></div>
+        <div class="label"><span>Kcal</span><span id="prog-kcal">0/1950</span></div>
         <div class="bar"><div class="bar-fill kcal-f" id="bar-kcal" style="width:0%"></div></div>
       </div>
       <div class="macro-prog-item">
@@ -594,11 +594,11 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
         <div class="bar"><div class="bar-fill prot-f" id="bar-prot" style="width:0%"></div></div>
       </div>
       <div class="macro-prog-item">
-        <div class="label"><span>Carb</span><span id="prog-carb">0/170g</span></div>
+        <div class="label"><span>Carb</span><span id="prog-carb">0/150g</span></div>
         <div class="bar"><div class="bar-fill carb-f" id="bar-carb" style="width:0%"></div></div>
       </div>
       <div class="macro-prog-item">
-        <div class="label"><span>Gord</span><span id="prog-fat">0/70g</span></div>
+        <div class="label"><span>Gord</span><span id="prog-fat">0/65g</span></div>
         <div class="bar"><div class="bar-fill fat-f" id="bar-fat" style="width:0%"></div></div>
       </div>
     </div>
@@ -823,7 +823,7 @@ function getMeals() {
   }
   return FIXED_MEALS.map(m => m === null ? lunch : m);
 }
-const GOALS = { kcal: 2100, p: 190, c: 170, g: 70 };
+const GOALS = { kcal: 1950, p: 190, c: 150, g: 65 };
 
 // Helper: local date string YYYY-MM-DD (avoids UTC timezone issues)
 function localDateStr(date) {
