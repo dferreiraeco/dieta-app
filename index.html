@@ -912,27 +912,107 @@ const MARMITA_DEFS = [
   { id: 'A', name: 'Marmita A - Frango', desc: 'Peito de frango grelhado + arroz branco',
     cooked: '160g frango grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 510, p: 52, c: 40, g: 11,
-    ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
+    ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 },
+    recipe: {
+      title: 'Frango Grelhado com Alho e Limão + Arroz à Grega',
+      items: [
+        '<b>Frango grelhado:</b>',
+        'Tempere o peito de frango com 2 dentes de alho amassado, suco de 1/2 limão, páprica defumada, sal, pimenta-do-reino e um fio de azeite. Deixe marinar por 15-20 minutos.',
+        'Grelhe em frigideira antiaderente bem quente por 4 minutos de cada lado, até dourar bem. Finalize com salsinha picada.',
+        '<b>Arroz à grega:</b>',
+        'Refogue 1/2 cebola picada em azeite até dourar. Acrescente 1 dente de alho amassado e o arroz lavado. Doure por 1 minuto.',
+        'Adicione água quente, sal e 1 folha de louro. Cozinhe em fogo baixo tampado até secar. Finalize com cebolinha picada.'
+      ]
+    }
+  },
   { id: 'B', name: 'Marmita B - Carne Moída', desc: 'Patinho moído + batata doce',
     cooked: '160g carne moída refogada | 160g batata doce cozida | 60g salada (alface + rúcula) | 60g pepino | 5ml azeite',
     kcal: 530, p: 46, c: 35, g: 18,
-    ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 } },
+    ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 },
+    recipe: {
+      title: 'Carne Moída Refogada com Alho e Cebola + Batata Doce Assada ao Alecrim',
+      items: [
+        '<b>Carne moída:</b>',
+        'Refogue 1 cebola picada em azeite até ficar translúcida. Adicione 3 dentes de alho amassado e mexa por 30 segundos.',
+        'Acrescente o patinho moído e deixe dourar bem, quebrando com uma colher. Tempere com cominho, páprica defumada, sal, pimenta-do-reino e uma pitada de orégano.',
+        'Finalize com cheiro-verde picado e um fio de molho inglês (opcional).',
+        '<b>Batata doce assada:</b>',
+        'Corte a batata doce em cubos médios. Tempere com azeite, alho picado, alecrim fresco, sal e pimenta.',
+        'Asse em forno pré-aquecido a 200°C por 25-30 minutos, virando na metade do tempo, até dourar.'
+      ]
+    }
+  },
   { id: 'C', name: 'Marmita C - Tilápia', desc: 'Filé de tilápia + arroz integral',
     cooked: '200g tilápia grelhada | 130g arroz integral cozido | 50g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 490, p: 52, c: 34, g: 11,
-    ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 } },
+    ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 },
+    recipe: {
+      title: 'Tilápia ao Molho de Limão e Ervas + Arroz Integral Perfumado',
+      items: [
+        '<b>Tilápia:</b>',
+        'Tempere os filés com 2 dentes de alho amassado, suco de 1 limão, sal, pimenta-do-reino, ervas finas e um fio de azeite. Deixe marinar por 10 minutos.',
+        'Grelhe em frigideira antiaderente bem quente por 3-4 minutos de cada lado, com cuidado para não quebrar.',
+        'Finalize com azeite, alho frito crocante e salsinha picada. Esprema mais limão na hora de servir.',
+        '<b>Arroz integral perfumado:</b>',
+        'Refogue em azeite 1 dente de alho e 1/4 de cebola picada. Adicione o arroz integral lavado e doure por 1 minuto.',
+        'Acrescente água quente, sal e 1 folha de louro. Cozinhe em fogo baixo por ~40 minutos até secar. Finalize com cebolinha.'
+      ]
+    }
+  },
   { id: 'D', name: 'Marmita D - Lombo Suíno', desc: 'Lombo suíno grelhado + arroz branco',
     cooked: '160g lombo suíno grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 520, p: 50, c: 40, g: 15,
-    ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 } },
+    ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 },
+    recipe: {
+      title: 'Lombo Suíno com Mostarda, Mel e Ervas + Arroz ao Alho',
+      items: [
+        '<b>Lombo suíno:</b>',
+        'Misture 1 colher de mostarda dijon, 1 colher de mel, 3 dentes de alho amassado, alecrim fresco, sal, pimenta-do-reino e azeite. Pincele generosamente no lombo.',
+        'Deixe marinar por 30 minutos (ou até 2 horas para mais sabor).',
+        'Asse em forno pré-aquecido a 180°C por 15-20 minutos, regando com o próprio caldo. Fatie contra as fibras antes de servir.',
+        '<b>Arroz ao alho:</b>',
+        'Doure 3 dentes de alho picado em azeite (cuidado para não queimar). Adicione o arroz lavado e refogue por 1 minuto.',
+        'Acrescente água quente e sal. Cozinhe tampado em fogo baixo até secar. Finalize com salsinha picada.'
+      ]
+    }
+  },
   { id: 'E', name: 'Marmita E - Sobrecoxa', desc: 'Sobrecoxa sem pele + mandioca cozida',
     cooked: '180g sobrecoxa sem pele grelhada | 130g mandioca cozida | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 540, p: 48, c: 40, g: 19,
-    ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 } },
+    ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 },
+    recipe: {
+      title: 'Sobrecoxa Desossada ao Alho e Páprica Defumada + Mandioca Dourada',
+      items: [
+        '<b>Sobrecoxa:</b>',
+        'Tempere a sobrecoxa desossada com 3 dentes de alho amassado, páprica defumada, cominho, suco de 1/2 limão, sal, pimenta-do-reino e azeite. Marine por 30 minutos.',
+        'Grelhe em frigideira antiaderente bem quente, 5-6 minutos de cada lado, até dourar e cozinhar por completo.',
+        'Finalize com folhas de coentro ou salsinha.',
+        '<b>Mandioca dourada:</b>',
+        'Cozinhe a mandioca em água com sal até ficar macia (cerca de 20 minutos). Escorra.',
+        'Em uma frigideira, aqueça azeite e refogue 2 dentes de alho picado até dourar. Adicione a mandioca cozida e salteie até pegar cor dourada. Finalize com cebolinha picada.'
+      ]
+    }
+  },
   { id: 'F', name: 'Marmita F - Coxão Mole', desc: 'Coxão mole grelhado + macarrão integral',
     cooked: '160g coxão mole grelhado | 130g macarrão integral cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 500, p: 50, c: 32, g: 16,
-    ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 } },
+    ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 },
+    recipe: {
+      title: 'Coxão Mole Grelhado ao Molho de Tomate + Macarrão ao Alho e Óleo',
+      items: [
+        '<b>Coxão mole grelhado:</b>',
+        'Fatie o coxão mole em bifes finos (~1cm). Tempere com 2 dentes de alho amassado, sal, pimenta-do-reino e um toque de shoyu light. Deixe pegar tempero por 15 minutos.',
+        'Grelhe em frigideira bem quente por 1-2 minutos de cada lado, até selar e ficar suculento.',
+        '<b>Molho de tomate caseiro:</b>',
+        'Refogue 1/2 cebola picada no azeite até dourar. Acrescente 2 dentes de alho amassado.',
+        'Adicione tomates maduros picados (ou 200g de polpa de tomate), manjericão fresco, orégano, sal e pimenta. Cozinhe em fogo baixo por 15 minutos mexendo ocasionalmente.',
+        '<b>Macarrão ao alho e óleo:</b>',
+        'Cozinhe o macarrão integral em água fervente com sal até ficar al dente. Reserve 1/2 xícara da água do cozimento.',
+        'Em uma frigideira, aqueça azeite e doure 4 dentes de alho laminado em fogo baixo (cuidado para não queimar). Adicione pimenta calabresa a gosto.',
+        'Acrescente o macarrão escorrido, um pouco da água do cozimento e mexa bem. Finalize com salsinha picada e cubra com o molho de tomate e o coxão mole fatiado.'
+      ]
+    }
+  },
 ];
 
 const DEFAULT_PLAN = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0};
@@ -984,7 +1064,7 @@ function renderMarmitaPlanner() {
     const qty = plan[m.id] || 0;
     html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
       <div style="display:flex;align-items:center;gap:12px">
-        <div class="planner-info">
+        <div class="planner-info" onclick="showMarmitaRecipe('${m.id}')" style="cursor:pointer">
           <div class="pl-name">${m.name}</div>
           <div class="pl-desc">${m.desc}</div>
           <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
@@ -998,10 +1078,39 @@ function renderMarmitaPlanner() {
       <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
         <b style="color:var(--green)">Composição (cozido):</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
       </div>
+      <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showMarmitaRecipe('${m.id}')">Ver Receita</button>
     </div>`;
   });
   container.innerHTML = html;
   updatePlannerSummary();
+}
+
+function showMarmitaRecipe(id) {
+  const m = MARMITA_DEFS.find(x => x.id === id);
+  if (!m || !m.recipe) return;
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Receita - ' + m.name;
+
+  let html = `<div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:12px">${m.recipe.title}</div>`;
+  html += '<div style="font-size:13px;line-height:1.7;color:var(--gray)">';
+  m.recipe.items.forEach(item => {
+    if (item.startsWith('<b>')) {
+      html += `<div style="margin-top:10px">${item}</div>`;
+    } else {
+      html += `<div style="padding:4px 0 4px 14px;position:relative"><span style="position:absolute;left:0;color:var(--green)">&bull;</span>${item}</div>`;
+    }
+  });
+  html += '</div>';
+  html += `<div style="margin-top:16px;padding:10px;background:var(--gray-bg);border-radius:8px;font-size:12px;color:var(--gray-mid)">
+    <b>Composição final (cozido):</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
+  </div>`;
+  html += `<div style="margin-top:10px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green);font-weight:600">
+    ${m.kcal} kcal | ${m.p}g Proteína | ${m.c}g Carboidrato | ${m.g}g Gordura
+  </div>`;
+
+  content.innerHTML = html;
+  modal.classList.add('open');
 }
 
 function stepMarmita(id, delta) {
