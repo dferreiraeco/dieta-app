@@ -962,6 +962,8 @@ const MARMITA_DEFS = [
     ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 },
     recipe: {
       title: 'Frango Grelhado com Alho e Limão + Arroz à Grega',
+      yield: 2,
+      aromatics: { alho: 3, cebola: 0.5, limao: 0.5 },
       items: [
         '<b>Frango grelhado:</b>',
         'Tempere o peito de frango com 2 dentes de alho amassado, suco de 1/2 limão, páprica defumada, sal, pimenta-do-reino e um fio de azeite. Deixe marinar por 15-20 minutos.',
@@ -978,6 +980,8 @@ const MARMITA_DEFS = [
     ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 },
     recipe: {
       title: 'Carne Moída Refogada com Alho e Cebola + Batata Doce Assada ao Alecrim',
+      yield: 3,
+      aromatics: { alho: 3, cebola: 1 },
       items: [
         '<b>Carne moída:</b>',
         'Refogue 1 cebola picada em azeite até ficar translúcida. Adicione 3 dentes de alho amassado e mexa por 30 segundos.',
@@ -995,6 +999,8 @@ const MARMITA_DEFS = [
     ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 },
     recipe: {
       title: 'Tilápia ao Molho de Limão e Ervas + Arroz Integral Perfumado',
+      yield: 2,
+      aromatics: { alho: 3, cebola: 0.25, limao: 1 },
       items: [
         '<b>Tilápia:</b>',
         'Tempere os filés com 2 dentes de alho amassado, suco de 1 limão, sal, pimenta-do-reino, ervas finas e um fio de azeite. Deixe marinar por 10 minutos.',
@@ -1012,6 +1018,8 @@ const MARMITA_DEFS = [
     ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 },
     recipe: {
       title: 'Lombo Suíno com Mostarda, Mel e Ervas + Arroz ao Alho',
+      yield: 3,
+      aromatics: { alho: 6 },
       items: [
         '<b>Lombo suíno:</b>',
         'Misture 1 colher de mostarda dijon, 1 colher de mel, 3 dentes de alho amassado, alecrim fresco, sal, pimenta-do-reino e azeite. Pincele generosamente no lombo.',
@@ -1029,6 +1037,8 @@ const MARMITA_DEFS = [
     ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 },
     recipe: {
       title: 'Sobrecoxa Desossada ao Alho e Páprica Defumada + Mandioca Dourada',
+      yield: 2,
+      aromatics: { alho: 5, limao: 0.5 },
       items: [
         '<b>Sobrecoxa:</b>',
         'Tempere a sobrecoxa desossada com 3 dentes de alho amassado, páprica defumada, cominho, suco de 1/2 limão, sal, pimenta-do-reino e azeite. Marine por 30 minutos.',
@@ -1046,6 +1056,8 @@ const MARMITA_DEFS = [
     ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 },
     recipe: {
       title: 'Coxão Mole Grelhado ao Molho de Tomate + Macarrão ao Alho e Óleo',
+      yield: 4,
+      aromatics: { alho: 8, cebola: 0.5, polpa_tomate: 200 },
       items: [
         '<b>Coxão mole grelhado:</b>',
         'Fatie o coxão mole em bifes finos (~1cm). Tempere com 2 dentes de alho amassado, sal, pimenta-do-reino e um toque de shoyu light. Deixe pegar tempero por 15 minutos.',
@@ -1073,6 +1085,8 @@ const DINNER_DEFS = [
     cooked: '3 ovos inteiros (~150g) | 50g peito de peru | 1 fatia mussarela (20g) | 2 fatias pão integral (~50g) | 5ml azeite',
     recipe: {
       title: 'Omelete de Peru ao Queijo e Ervas + Torrada com Alho',
+      yield: 1,
+      aromatics: { alho: 2 },
       items: [
         '<b>Omelete:</b>',
         'Corte 50g de peito de peru defumado em tirinhas. Refogue brevemente em frigideira antiaderente com 1 dente de alho picado, até perfumar.',
@@ -1092,6 +1106,8 @@ const DINNER_DEFS = [
     cooked: '50g goma de tapioca | 130g frango desfiado cozido | 30g queijo cottage | Salada de folhas + pepino',
     recipe: {
       title: 'Tapioca Cremosa de Frango com Alho e Ervas',
+      yield: 2,
+      aromatics: { alho: 2, cebola: 0.25, tomate: 1 },
       items: [
         '<b>Frango cremoso:</b>',
         'Cozinhe 175g de peito de frango (cru) em água com sal, 1 dente de alho e 1 folha de louro. Desfie.',
@@ -1112,6 +1128,8 @@ const DINNER_DEFS = [
     cooked: '130g alcatra grelhada | 100g arroz branco cozido | Salada de folhas + pepino | 5ml azeite',
     recipe: {
       title: 'Alcatra Grelhada ao Alho com Arroz Perfumado',
+      yield: 1,
+      aromatics: { alho: 3, cebola: 0.25 },
       items: [
         '<b>Alcatra grelhada:</b>',
         'Tempere 175g de alcatra (cru) com 2 dentes de alho amassado, sal, pimenta-do-reino, 1 colher de chá de molho inglês e uma pitada de ervas finas. Deixe 10 minutos.',
@@ -1131,6 +1149,8 @@ const DINNER_DEFS = [
     cooked: '120g atum em água drenado (1 lata) | 2 ovos cozidos (~100g) | 2 fatias pão integral (~50g) | 15g requeijão cremoso | Folhas + pepino',
     recipe: {
       title: 'Atum com Ovos Cozidos e Torradas (prático e rápido)',
+      yield: 1,
+      aromatics: { limao: 0.25 },
       items: [
         '<b>Atum com ovos:</b>',
         'Cozinhe 2 ovos por 8-9 minutos em água fervente. Resfrie em água gelada, descasque e fatie ou corte em quartos.',
@@ -1151,6 +1171,8 @@ const DINNER_DEFS = [
     cooked: '100g frango desfiado cozido | 3 fatias pão integral (~75g) | 20g queijo minas frescal | 15g requeijão cremoso | Folhas + pepino',
     recipe: {
       title: 'Sanduíche Natural Cremoso de Frango',
+      yield: 1,
+      aromatics: { alho: 1 },
       items: [
         '<b>Frango desfiado:</b>',
         'Cozinhe 134g de peito de frango (cru) em água com sal, 1 dente de alho e 1 folha de louro por ~15 minutos.',
@@ -1171,6 +1193,8 @@ const DINNER_DEFS = [
     cooked: '2 tortillas integrais (~80g) | 100g frango desfiado cozido | 30g queijo cottage | 20g queijo minas frescal | Folhas + pepino',
     recipe: {
       title: 'Wrap Cremoso de Frango ao Limão',
+      yield: 1,
+      aromatics: { alho: 2, cebola: 0.25, limao: 0.5 },
       items: [
         '<b>Frango cremoso:</b>',
         'Cozinhe 134g de peito de frango (cru) em água com sal, alho e 1 folha de louro. Desfie.',
@@ -1187,6 +1211,27 @@ const DINNER_DEFS = [
 ];
 
 const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0,"A":0,"S":0,"W":0};
+
+// Scale recipe aromatics by user's plan and aggregate. Aromatics are defined per-batch
+// (see `yield` and `aromatics` in each recipe). Returns totals in the unit each field uses
+// (alho in dentes, cebola/limao/tomate in unidades, polpa_tomate in gramas).
+function computeAromatics(marmitaPlan, dinnerPlan) {
+  const totals = { alho: 0, cebola: 0, limao: 0, tomate: 0, polpa_tomate: 0 };
+  const accumulate = (defs, plan) => {
+    defs.forEach(item => {
+      const qty = plan[item.id] || 0;
+      const r = item.recipe;
+      if (qty <= 0 || !r || !r.yield || !r.aromatics) return;
+      const scale = qty / r.yield;
+      Object.keys(totals).forEach(k => {
+        if (r.aromatics[k]) totals[k] += r.aromatics[k] * scale;
+      });
+    });
+  };
+  accumulate(MARMITA_DEFS, marmitaPlan);
+  accumulate(DINNER_DEFS, dinnerPlan);
+  return totals;
+}
 
 function getMarmitaPlan() {
   return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
@@ -1242,7 +1287,10 @@ function showMarmitaRecipe(id) {
   const content = document.getElementById('history-content');
   document.getElementById('history-title').textContent = 'Receita - ' + m.name;
 
-  let html = `<div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:12px">${m.recipe.title}</div>`;
+  let html = `<div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:6px">${m.recipe.title}</div>`;
+  if (m.recipe.yield) {
+    html += `<div style="display:inline-block;background:var(--green-bg);color:var(--green);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:12px">Rendimento: ${m.recipe.yield} marmita${m.recipe.yield > 1 ? 's' : ''}</div>`;
+  }
   html += '<div style="font-size:13px;line-height:1.7;color:var(--gray)">';
   m.recipe.items.forEach(item => {
     if (item.startsWith('<b>')) {
@@ -1253,7 +1301,7 @@ function showMarmitaRecipe(id) {
   });
   html += '</div>';
   html += `<div style="margin-top:16px;padding:10px;background:var(--gray-bg);border-radius:8px;font-size:12px;color:var(--gray-mid)">
-    <b>Composição final (cozido):</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
+    <b>Composição final (cozido, por marmita):</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
   </div>`;
   html += `<div style="margin-top:10px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green);font-weight:600">
     ${m.kcal} kcal | ${m.p}g Proteína | ${m.c}g Carboidrato | ${m.g}g Gordura
@@ -1308,7 +1356,10 @@ function showDinnerRecipe(id) {
   const content = document.getElementById('history-content');
   document.getElementById('history-title').textContent = 'Receita - ' + m.name;
 
-  let html = `<div style="font-size:15px;font-weight:700;color:var(--purple);margin-bottom:12px">${m.recipe.title}</div>`;
+  let html = `<div style="font-size:15px;font-weight:700;color:var(--purple);margin-bottom:6px">${m.recipe.title}</div>`;
+  if (m.recipe.yield) {
+    html += `<div style="display:inline-block;background:var(--purple-light);color:var(--purple);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:12px">Rendimento: ${m.recipe.yield} jantar${m.recipe.yield > 1 ? 'es' : ''}</div>`;
+  }
   html += '<div style="font-size:13px;line-height:1.7;color:var(--gray)">';
   m.recipe.items.forEach(item => {
     if (item.startsWith('<b>')) {
@@ -1319,7 +1370,7 @@ function showDinnerRecipe(id) {
   });
   html += '</div>';
   html += `<div style="margin-top:16px;padding:10px;background:var(--gray-bg);border-radius:8px;font-size:12px;color:var(--gray-mid)">
-    <b>Composição final:</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
+    <b>Composição final (por jantar):</b><br>${m.cooked.replace(/ \| /g, '<br>&bull; ').replace(/^/, '&bull; ')}
   </div>`;
   html += `<div style="margin-top:10px;padding:10px;background:var(--purple-light);border-radius:8px;font-size:12px;color:var(--purple);font-weight:600">
     ${m.kcal} kcal | ${m.p}g Proteína | ${m.c}g Carboidrato | ${m.g}g Gordura
@@ -1965,6 +2016,16 @@ function buildShoppingList() {
 
   const fmt = (g) => g >= 1000 ? `~${(g/1000).toFixed(1)} kg` : `~${Math.round(g/10)*10} g`;
 
+  // Aromatics dinâmicos (alho, cebola, limão, tomate, polpa de tomate) escalonados
+  // com base no rendimento de cada receita e nas quantidades planejadas.
+  const aromaticsRaw = computeAromatics(plan, dinnerPlan);
+  const alhoDentes   = Math.ceil(aromaticsRaw.alho);
+  const alhoCabecas  = alhoDentes > 0 ? Math.ceil(alhoDentes / 10) : 0; // ~10 dentes/cabeça
+  const cebolaUn     = Math.ceil(aromaticsRaw.cebola);
+  const limaoUn      = Math.ceil(aromaticsRaw.limao);
+  const tomateUn     = Math.ceil(aromaticsRaw.tomate);
+  const polpaSaches  = aromaticsRaw.polpa_tomate > 0 ? Math.ceil(aromaticsRaw.polpa_tomate / 200) : 0;
+
   return [
     { section: 'Proteínas (marmitas + refeições)', items: [
       ...(frangoG > 0 ? [{ name: 'Peito de frango (cru)', qty: fmt(frangoG) }] : []),
@@ -2010,11 +2071,14 @@ function buildShoppingList() {
     ]},
     { section: 'Temperos e Outros', items: [
       { name: 'Azeite de oliva extra virgem', qty: '1 garrafa (500ml)' },
-      { name: 'Alho fresco', qty: '2 cabecas' },
-      { name: 'Limao', qty: '6-8 unidades' },
-      { name: 'Paprica doce/defumada', qty: '1 pote' },
+      ...(alhoCabecas > 0 ? [{ name: 'Alho fresco', qty: `${alhoCabecas} cabeça${alhoCabecas > 1 ? 's' : ''} (~${alhoDentes} dentes)` }] : []),
+      ...(cebolaUn > 0 ? [{ name: 'Cebola', qty: `${cebolaUn} unidade${cebolaUn > 1 ? 's' : ''}` }] : []),
+      ...(limaoUn > 0 ? [{ name: 'Limão', qty: `${limaoUn} unidade${limaoUn > 1 ? 's' : ''}` }] : []),
+      ...(tomateUn > 0 ? [{ name: 'Tomate fresco', qty: `${tomateUn} unidade${tomateUn > 1 ? 's' : ''}` }] : []),
+      ...(polpaSaches > 0 ? [{ name: 'Polpa de tomate', qty: `${polpaSaches} sachê${polpaSaches > 1 ? 's' : ''} (~200g cada)` }] : []),
+      { name: 'Páprica doce/defumada', qty: '1 pote' },
       { name: 'Ervas finas', qty: '1 pote' },
-      { name: 'Cafe em po', qty: '2 pacotes' },
+      { name: 'Café em pó', qty: '2 pacotes' },
     ]},
     { section: 'Suplementos (mensal)', items: [
       { name: 'Whey protein isolado', qty: '2 potes (900g)' },
