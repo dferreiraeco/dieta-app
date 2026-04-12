@@ -1897,11 +1897,21 @@ function buildShoppingList() {
   const paoFatias = Math.max(0, paoTotalFatias - have('pao_integral'));
 
   // Ovos: 4 por café × 7 dias × 2 pessoas = 56 + omeletes + atum
-  const ovosTotal = 56 + dO * 3 + dA * 2;
+  const ovosNeeded = 56 + dO * 3 + dA * 2;
+  const ovosTotal = Math.max(0, ovosNeeded - have('ovos'));
   const ovosDuzias = Math.ceil(ovosTotal / 12);
 
   // Mussarela: 20g café × 14 + 20g omelete × dO
   const mussarelaG = Math.max(0, (14 * 20 + dO * 20) - have('mussarela'));
+
+  // Iogurte grego: 130g lanche tarde × 14 pessoas/dias
+  const iogurteG = Math.max(0, (14 * 130) - have('iogurte_grego'));
+
+  // Banana: 14 café + 14 lanche tarde
+  const bananaUn = Math.max(0, 28 - have('banana'));
+
+  // Maçã: 14 lanche manhã
+  const macaUn = Math.max(0, 14 - have('maca'));
 
   // Queijo minas frescal: sanduíche + wrap
   const minasG = Math.max(0, ((dS + dW) * 20) - have('queijo_minas'));
@@ -1929,14 +1939,14 @@ function buildShoppingList() {
       ...(tilapiaG > 0 ? [{ name: 'Filé de tilápia (cru)', qty: fmt(tilapiaG) }] : []),
       ...(lomboG > 0 ? [{ name: 'Lombo suíno (cru)', qty: fmt(lomboG) }] : []),
       ...(alcatraG > 0 ? [{ name: 'Alcatra (crua)', qty: fmt(alcatraG) }] : []),
-      { name: 'Ovos', qty: `${ovosDuzias} dúzia${ovosDuzias > 1 ? 's' : ''} (${ovosTotal} un)` },
+      ...(ovosTotal > 0 ? [{ name: 'Ovos', qty: `${ovosDuzias} dúzia${ovosDuzias > 1 ? 's' : ''} (${ovosTotal} un)` }] : []),
       ...(atumLatas > 0 ? [{ name: 'Atum em água (lata)', qty: `${atumLatas} lata${atumLatas > 1 ? 's' : ''} (~120g drenado/lata)` }] : []),
       ...(peruG > 0 ? [{ name: 'Peito de peru defumado', qty: fmt(peruG) }] : []),
-      { name: 'Queijo mussarela fatiado', qty: fmt(mussarelaG) },
+      ...(mussarelaG > 0 ? [{ name: 'Queijo mussarela fatiado', qty: fmt(mussarelaG) }] : []),
       ...(minasG > 0 ? [{ name: 'Queijo minas frescal', qty: fmt(minasG) }] : []),
       ...(cottagePotes > 0 ? [{ name: 'Queijo cottage', qty: `${cottagePotes} pote${cottagePotes > 1 ? 's' : ''} (400g cada)` }] : []),
       ...(requeijaoG > 0 ? [{ name: 'Requeijão cremoso', qty: fmt(requeijaoG) }] : []),
-      { name: 'Iogurte grego natural', qty: '~1.8 kg (~9 potes 200g)' },
+      ...(iogurteG > 0 ? [{ name: 'Iogurte grego natural', qty: fmt(iogurteG) }] : []),
     ]},
     { section: 'Carboidratos', items: [
       ...(arrozBrancoG > 0 ? [{ name: 'Arroz branco (cru)', qty: fmt(arrozBrancoG) }] : []),
@@ -1944,19 +1954,20 @@ function buildShoppingList() {
       ...(batataDoceG > 0 ? [{ name: 'Batata doce', qty: fmt(batataDoceG) }] : []),
       ...(mandiocaG > 0 ? [{ name: 'Mandioca (crua)', qty: fmt(mandiocaG) }] : []),
       ...(macarraoG > 0 ? [{ name: 'Macarrão integral (cru)', qty: fmt(macarraoG) }] : []),
-      { name: 'Pão integral', qty: `${Math.ceil(paoFatias / 20)} pacote${Math.ceil(paoFatias / 20) > 1 ? 's' : ''} (${paoFatias} fatias)` },
+      ...(paoFatias > 0 ? [{ name: 'Pão integral', qty: `${Math.ceil(paoFatias / 20)} pacote${Math.ceil(paoFatias / 20) > 1 ? 's' : ''} (${paoFatias} fatias)` }] : []),
       ...(gomaTapiocaG > 0 ? [{ name: 'Goma de tapioca', qty: fmt(gomaTapiocaG) }] : []),
       ...(tortillasUn > 0 ? [{ name: 'Tortilla integral', qty: `${tortillasUn} unidades (~40g cada)` }] : []),
-      { name: 'Aveia em flocos (opcional)', qty: '~400 g' },
     ]},
     { section: 'Frutas', items: [
-      { name: 'Banana prata', qty: '28 unidades' },
-      { name: 'Maçã (ou fruta preferida)', qty: '14 unidades' },
+      ...(bananaUn > 0 ? [{ name: 'Banana prata', qty: `${bananaUn} unidades` }] : []),
+      ...(macaUn > 0 ? [{ name: 'Maçã (ou fruta preferida)', qty: `${macaUn} unidades` }] : []),
     ]},
     { section: 'Folhas e Vegetais', items: [
-      { name: 'Alface', qty: `${Math.ceil(totalMarmitas / 2) + 2} unidades` },
-      { name: 'Rucula', qty: `${Math.ceil(totalMarmitas / 3) + 1} macos` },
-      { name: 'Pepino', qty: `${pepinos} unidades` },
+      ...(totalMarmitas + totalDinners > 0 ? [
+        { name: 'Alface', qty: `${Math.ceil((totalMarmitas + totalDinners) / 2) + 1} unidades` },
+        { name: 'Rúcula', qty: `${Math.ceil((totalMarmitas + totalDinners) / 3) + 1} maços` },
+        { name: 'Pepino', qty: `${pepinos} unidades` },
+      ] : []),
     ]},
     { section: 'Temperos e Outros', items: [
       { name: 'Azeite de oliva extra virgem', qty: '1 garrafa (500ml)' },
@@ -1981,6 +1992,7 @@ function renderShoppingList() {
   const container = document.getElementById('shopping-list');
   let html = '', total = 0, checked = 0;
   shopItems.forEach(sec => {
+    if (!sec.items || sec.items.length === 0) return; // skip empty sections
     html += `<div class="check-section">${sec.section}</div>`;
     sec.items.forEach(item => {
       const key = sec.section.slice(0,10) + '_' + item.name;
@@ -3030,6 +3042,15 @@ const GEN_DINNER_OTHERS = [
   { key: 'pao_integral', label: 'Pão integral (fatias)',  unit: 'fatias' },
 ];
 
+// Breakfast/snack ingredients: stock only
+const GEN_SNACKS = [
+  { key: 'ovos',           label: 'Ovos (unidades)',     unit: 'un' },
+  { key: 'iogurte_grego',  label: 'Iogurte grego natural', unit: 'g' },
+  { key: 'banana',         label: 'Banana prata (un)',   unit: 'un' },
+  { key: 'maca',           label: 'Maçã (un)',           unit: 'un' },
+  { key: 'aveia',          label: 'Aveia em flocos',     unit: 'g' },
+];
+
 function getHomeStock() {
   return JSON.parse(localStorage.getItem('home_stock') || '{}');
 }
@@ -3097,6 +3118,19 @@ function openMenuGenerator() {
     </div>`;
   });
 
+  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Café e Lanches</div>';
+  GEN_SNACKS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
+    </div>`;
+  });
+
   html += '<div id="gen-result" style="margin-top:14px"></div>';
   html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()">Gerar Cardápio</button>';
   html += '<button class="history-btn" style="margin-top:10px" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
@@ -3129,6 +3163,11 @@ function readGenInputs() {
     dinnerResult[ing.dinner] = Math.floor(qty / ing.rawPerUnit);
   });
   GEN_DINNER_OTHERS.forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    const qty = parseFloat(el.value) || 0;
+    if (qty > 0) stock[ing.key] = qty;
+  });
+  GEN_SNACKS.forEach(ing => {
     const el = document.getElementById('gen_' + ing.key);
     const qty = parseFloat(el.value) || 0;
     if (qty > 0) stock[ing.key] = qty;
