@@ -3029,12 +3029,13 @@ const GEN_PROTEINS = [
   { key: 'coxao_mole',  label: 'Coxão mole',         marmita: 'F', rawPerUnit: 215 },
 ];
 
-// Return the "type" portion of a marmita name, e.g. "Marmita A - Frango" -> "Frango"
+// Return the marmita name prefixed with "Marmita de", e.g. "Marmita A - Frango" -> "Marmita de Frango"
 function getMarmitaTypeName(id) {
   const m = MARMITA_DEFS.find(x => x.id === id);
   if (!m) return 'Marmita ' + id;
   const parts = m.name.split(' - ');
-  return parts.length > 1 ? parts[1] : m.name;
+  const type = parts.length > 1 ? parts[1] : m.name;
+  return 'Marmita de ' + type;
 }
 
 function getDinnerTypeName(id) {
