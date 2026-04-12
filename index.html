@@ -1919,11 +1919,10 @@ function buildShoppingList() {
   // Iogurte grego: 130g lanche tarde × 14 pessoas/dias
   const iogurteG = Math.max(0, (14 * 130) - have('iogurte_grego'));
 
-  // Banana: 14 café + 14 lanche tarde
-  const bananaUn = Math.max(0, 28 - have('banana'));
-
-  // Maçã: 14 lanche manhã
-  const macaUn = Math.max(0, 14 - have('maca'));
+  // Frutas: todas as frutas são perfeitamente substituíveis. Necessidade semanal total
+  // = FRUIT_WEEKLY_NEED (42 porções). Soma o estoque de todas as frutas e calcula o gap.
+  const fruitStockTotal = FRUIT_KEYS.reduce((sum, k) => sum + have(k), 0);
+  const fruitShortfall = Math.max(0, FRUIT_WEEKLY_NEED - fruitStockTotal);
 
   // Queijo minas frescal: sanduíche + wrap
   const minasG = Math.max(0, ((dS + dW) * 20) - have('queijo_minas'));
@@ -1971,8 +1970,7 @@ function buildShoppingList() {
       ...(tortillasUn > 0 ? [{ name: 'Tortilla integral', qty: `${tortillasUn} unidades (~40g cada)` }] : []),
     ]},
     { section: 'Frutas', items: [
-      ...(bananaUn > 0 ? [{ name: 'Banana prata', qty: `${bananaUn} unidades` }] : []),
-      ...(macaUn > 0 ? [{ name: 'Maçã (ou fruta preferida)', qty: `${macaUn} unidades` }] : []),
+      ...(fruitShortfall > 0 ? [{ name: 'Maçã', qty: `${fruitShortfall} porções`, fruitWarning: true }] : []),
     ]},
     { section: 'Folhas e Vegetais', items: [
       ...(totalMarmitas + totalDinners > 0 ? [
@@ -2015,6 +2013,11 @@ function renderShoppingList() {
         <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleShop('${key.replace(/'/g,"\\'")}', this)">
         <label class="check-label"><span class="qty">${item.qty}</span> ${item.name}</label>
       </div>`;
+      if (item.fruitWarning) {
+        html += `<div style="background:#fff5f5;border-left:3px solid var(--red);color:var(--red);padding:8px 12px;margin:4px 0 8px;font-size:12px;border-radius:6px">
+          Você pode comprar outras frutas no lugar da maçã. Consulte a tabela de frutas na aba <b>Marmitas</b> para ver as equivalências de porção.
+        </div>`;
+      }
     });
   });
   container.innerHTML = html;
@@ -2117,6 +2120,19 @@ function exportShoppingPDF() {
       doc.setTextColor(45, 55, 72);
       doc.text(item.name, margin + 42, y);
       y += 6;
+      // Fruit warning (below maçã item)
+      if (item.fruitWarning) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(229, 62, 62);
+        const warn = 'Voce pode comprar outras frutas no lugar da maca. Ver tabela de frutas na aba Marmitas.';
+        const lines = doc.splitTextToSize(warn, pageW - margin * 2 - 6);
+        doc.text(lines, margin + 6, y);
+        y += lines.length * 4 + 2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(45, 55, 72);
+      }
     });
     y += 4;
   });
@@ -3074,10 +3090,25 @@ const GEN_DINNER_OTHERS = [
 const GEN_SNACKS = [
   { key: 'ovos',           label: 'Ovos (unidades)',     unit: 'un' },
   { key: 'iogurte_grego',  label: 'Iogurte grego natural', unit: 'g' },
-  { key: 'banana',         label: 'Banana prata (un)',   unit: 'un' },
-  { key: 'maca',           label: 'Maçã (un)',           unit: 'un' },
   { key: 'aveia',          label: 'Aveia em flocos',     unit: 'g' },
 ];
+
+// Fruits: perfectly substitutable across meals (breakfast + morning snack + afternoon snack)
+// 1 porção = 1 serving from the table shown in the Marmitas tab
+const GEN_FRUITS = [
+  { key: 'banana',   label: 'Banana prata',  unit: 'porções' },
+  { key: 'maca',     label: 'Maçã',          unit: 'porções' },
+  { key: 'mamao',    label: 'Mamão papaya',  unit: 'porções' },
+  { key: 'uva',      label: 'Uva',           unit: 'porções' },
+  { key: 'morango',  label: 'Morango',       unit: 'porções' },
+  { key: 'abacaxi',  label: 'Abacaxi',       unit: 'porções' },
+  { key: 'melancia', label: 'Melancia',      unit: 'porções' },
+  { key: 'laranja',  label: 'Laranja',       unit: 'porções' },
+  { key: 'pera',     label: 'Pera',          unit: 'porções' },
+  { key: 'kiwi',     label: 'Kiwi',          unit: 'porções' },
+];
+const FRUIT_KEYS = GEN_FRUITS.map(f => f.key);
+const FRUIT_WEEKLY_NEED = 42; // 14 café + 14 lanche manhã + 14 lanche tarde (7 dias × 2 pessoas × 3 porções)
 
 function getHomeStock() {
   return JSON.parse(localStorage.getItem('home_stock') || '{}');
@@ -3159,6 +3190,20 @@ function openMenuGenerator() {
     </div>`;
   });
 
+  html += '<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;margin:14px 0 6px">Frutas (porções)</div>';
+  html += '<div style="font-size:11px;color:var(--gray-mid);margin-bottom:6px">1 porção = 1 serving da tabela de frutas. São perfeitamente substituíveis entre si.</div>';
+  GEN_FRUITS.forEach(ing => {
+    const existing = stock[ing.key] || '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
+      </div>
+      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
+        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
+      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
+    </div>`;
+  });
+
   html += '<div id="gen-result" style="margin-top:14px"></div>';
   html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()">Gerar Cardápio</button>';
   html += '<button class="history-btn" style="margin-top:10px" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
@@ -3170,7 +3215,7 @@ function openMenuGenerator() {
 
 function readGenInputs() {
   const stock = {};
-  const allLists = [GEN_PROTEINS, GEN_CARBS, GEN_DINNER_PROTEINS, GEN_DINNER_OTHERS, GEN_SNACKS];
+  const allLists = [GEN_PROTEINS, GEN_CARBS, GEN_DINNER_PROTEINS, GEN_DINNER_OTHERS, GEN_SNACKS, GEN_FRUITS];
   allLists.forEach(list => {
     list.forEach(ing => {
       const el = document.getElementById('gen_' + ing.key);
