@@ -220,6 +220,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   transition: opacity 0.2s;
 }
 .save-btn:active { opacity: 0.7; }
+.save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .history-btn {
   display: block; width: 100%; padding: 12px; border: 2px solid var(--blue-mid);
   background: var(--blue-bg); color: var(--blue-mid); border-radius: 12px;
@@ -3306,7 +3307,7 @@ function openMenuGenerator() {
 
   html += '<div id="gen-result" style="margin-top:14px"></div>';
   html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()">Gerar Cardápio</button>';
-  html += '<button class="history-btn" style="margin-top:10px" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
+  html += '<button class="save-btn" style="margin-top:10px;background:var(--blue-mid)" onclick="applyGeneratedMenu()" id="gen-apply-btn" disabled>Aplicar ao Planejamento</button>';
   html += '<button class="reset-btn" style="margin-top:10px" onclick="clearHomeStock()">Limpar Estoque em Casa</button>';
 
   content.innerHTML = html;
