@@ -163,6 +163,16 @@
       </p>
     </div>
 
+    <h3 class="ob-section-title">Configuração de Usuário</h3>
+    <div class="ob-field">
+      <label>Cardápio para duas pessoas?</label>
+      <select id="ob-dois">
+        <option value="sim" selected>Sim — lista de compras e cardápio para 2 pessoas</option>
+        <option value="nao">Não — somente para mim (1 pessoa)</option>
+      </select>
+      <div class="ob-error" id="ob-dois-err"></div>
+    </div>
+
     <button id="ob-submit" class="save-btn" onclick="submitOnboarding()" style="margin-top:14px">Salvar e Continuar</button>
   </div>
 </div>
@@ -171,7 +181,7 @@
 <div id="page-marmitas" class="page active">
   <div class="page-header">
     <h1>Planejamento de Refeições</h1>
-    <p>Monte sua semana (para 2 pessoas)</p>
+    <p id="marmitas-subtitle">Monte sua semana (para 2 pessoas)</p>
   </div>
 
   <button onclick="openMenuGenerator()" style="display:block;width:100%;padding:16px 48px 16px 18px;background:#fff;border:2.5px solid var(--green);color:var(--green);border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin:0 0 14px;box-shadow:0 4px 14px rgba(39,103,73,0.18);text-align:left;position:relative;line-height:1.3">
@@ -266,7 +276,7 @@
 <div id="page-compras" class="page">
   <div class="page-header">
     <h1>Lista de Compras</h1>
-    <p>Compra semanal para 2 pessoas. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).</p>
+    <p id="compras-subtitle">Compra semanal para 2 pessoas. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).</p>
   </div>
   <div class="card">
     <div class="progress-bar"><div class="progress-fill" id="shop-progress" style="width:0%"></div></div>

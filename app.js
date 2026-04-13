@@ -171,6 +171,7 @@ function getMeals() {
   // Build lunch (marmita)
   const selections = getTodaySelections();
   const lunchSalad = buildSaladText(MARMITA_DEFS, selections, { alface: 50, pepino: 80, azeite: 5 });
+  const single = isSinglePerson();
   let lunch;
   if (selections.length === 0) {
     lunch = { id: 'almoco', time: '13h', name: 'Almoço (Marmita)',
@@ -188,9 +189,16 @@ function getMeals() {
       names.push(count > 1 ? `${count}x ${def.name.split(' - ')[1]}` : def.name.split(' - ')[1]);
     });
     const n = selections.length;
+    // v2.1.33: 1 pessoa → mostra macros da marmita específica (sem dividir pelo n).
+    // 2 pessoas → divide pelo n (média por pessoa) como antes.
+    const lunchKcal = single ? kcal : Math.round(kcal / n);
+    const lunchP    = single ? p    : Math.round(p / n);
+    const lunchC    = single ? c    : Math.round(c / n);
+    const lunchG    = single ? g    : Math.round(g / n);
+    const lunchDesc = single ? 'Da marmita selecionada' : 'Média por pessoa';
     lunch = { id: 'almoco', time: '13h', name: 'Almoço (' + names.join(' + ') + ')',
-        desc: 'Média por pessoa', foods: names.join(' + ') + lunchSalad,
-        kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
+        desc: lunchDesc, foods: names.join(' + ') + lunchSalad,
+        kcal: lunchKcal, p: lunchP, c: lunchC, g: lunchG,
         color: 'var(--green)' };
   }
 
@@ -214,9 +222,15 @@ function getMeals() {
       names.push(count > 1 ? `${count}x ${def.name}` : def.name);
     });
     const n = dSel.length;
+    // v2.1.33: mesma lógica do almoço — single mostra macros do jantar específico.
+    const dinnerKcal = single ? kcal : Math.round(kcal / n);
+    const dinnerP    = single ? p    : Math.round(p / n);
+    const dinnerC    = single ? c    : Math.round(c / n);
+    const dinnerG    = single ? g    : Math.round(g / n);
+    const dinnerDesc = single ? 'Do jantar selecionado' : 'Média por pessoa';
     dinner = { id: 'jantar', time: '20h', name: 'Jantar (' + names.join(' + ') + ')',
-        desc: 'Média por pessoa', foods: names.join(' + ') + dinnerSalad,
-        kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
+        desc: dinnerDesc, foods: names.join(' + ') + dinnerSalad,
+        kcal: dinnerKcal, p: dinnerP, c: dinnerC, g: dinnerG,
         color: 'var(--purple)' };
   }
 
@@ -415,6 +429,26 @@ function renderMacroLines(consumed, goals) {
 // cálculo se necessário — não poluem o daily tracker.
 
 // Atualiza o subtítulo da aba Dieta com a meta dinâmica derivada do perfil.
+// v2.1.33: helper que diz se o app está em modo single-person.
+// Default false (cardapio_para_dois é true por default — comportamento legado).
+function isSinglePerson() {
+  const p = getUserProfile();
+  return !!(p && p.cardapio_para_dois === false);
+}
+
+// v2.1.33: subtítulos das abas Marmitas + Compras dependem de single vs dois.
+function updatePlannerSubtitles() {
+  const single = isSinglePerson();
+  const m = document.getElementById('marmitas-subtitle');
+  const c = document.getElementById('compras-subtitle');
+  if (m) m.textContent = single
+    ? 'Monte sua semana (para 1 pessoa)'
+    : 'Monte sua semana (para 2 pessoas)';
+  if (c) c.textContent = single
+    ? 'Compra semanal para 1 pessoa. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).'
+    : 'Compra semanal para 2 pessoas. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).';
+}
+
 function renderDietHeader(goals) {
   const el = document.getElementById('diet-goal-text');
   if (!el) return;
@@ -957,17 +991,24 @@ function selectTodayMarmita(type) {
   const today = localDateStr();
   let selections = getTodaySelections();
 
-  // Check stock before adding
-  const stock = getStock();
-  const currentCount = selections.filter(t => t === type).length;
-  // When adding, check if stock allows it (stock already accounts for today's selections)
-  // stock[type] is already reduced by today's selections, so if > 0 we can add more
-  if (stock[type] > 0) {
-    selections.push(type);
-  } else if (currentCount > 0) {
-    // Remove last occurrence of this type (toggle off)
-    const idx = selections.lastIndexOf(type);
-    if (idx !== -1) selections.splice(idx, 1);
+  // v2.1.33: modo 1 pessoa = single-select. Clicar substitui a seleção atual
+  // (ou desmarca, se for a mesma marmita já escolhida).
+  if (isSinglePerson()) {
+    if (selections.length === 1 && selections[0] === type) {
+      selections = []; // toggle off
+    } else {
+      selections = [type]; // substitui
+    }
+  } else {
+    // Modo 2 pessoas (legado): adiciona/remove com base no estoque
+    const stock = getStock();
+    const currentCount = selections.filter(t => t === type).length;
+    if (stock[type] > 0) {
+      selections.push(type);
+    } else if (currentCount > 0) {
+      const idx = selections.lastIndexOf(type);
+      if (idx !== -1) selections.splice(idx, 1);
+    }
   }
 
   if (selections.length === 0) {
@@ -1091,12 +1132,21 @@ function selectTodayDinner(type) {
   const today = localDateStr();
   let selections = getTodayDinnerSelections();
 
-  const stock = getDinnerStock();
-  if (stock[type] > 0) {
-    selections.push(type);
+  // v2.1.33: modo 1 pessoa = single-select (idêntico ao selectTodayMarmita).
+  if (isSinglePerson()) {
+    if (selections.length === 1 && selections[0] === type) {
+      selections = []; // toggle off
+    } else {
+      selections = [type]; // substitui
+    }
   } else {
-    const idx = selections.lastIndexOf(type);
-    if (idx !== -1) selections.splice(idx, 1);
+    const stock = getDinnerStock();
+    if (stock[type] > 0) {
+      selections.push(type);
+    } else {
+      const idx = selections.lastIndexOf(type);
+      if (idx !== -1) selections.splice(idx, 1);
+    }
   }
 
   if (selections.length === 0) delete consumed[today];
@@ -1469,6 +1519,14 @@ function buildShoppingList() {
     needs[k] = (needs[k] || 0) + v;
   });
 
+  // v2.1.33: modo 1 pessoa — divide tudo por 2.
+  // O app foi construído assumindo 2 pessoas em casa. Quando o usuário marca
+  // "Cardápio para duas pessoas? Não", a lista de compras deve ser metade.
+  // Aromatics são tratados separadamente abaixo (também precisam halve).
+  if (isSinglePerson()) {
+    Object.keys(needs).forEach(k => { needs[k] = needs[k] / 2; });
+  }
+
   // Quantidade a comprar = necessidade - estoque (não-negativo)
   const toBuy = (k) => Math.max(0, (needs[k] || 0) - have(k));
 
@@ -1546,13 +1604,15 @@ function buildShoppingList() {
 
   // Aromatics dinâmicos (alho, cebola, limão, tomate, polpa de tomate) escalonados
   // com base no rendimento de cada receita e nas quantidades planejadas.
+  // v2.1.33: aplica o mesmo halve do modo single-person.
   const aromaticsRaw = computeAromatics(plan, dinnerPlan);
-  const alhoDentes   = Math.ceil(aromaticsRaw.alho);
+  const aromaticsScale = isSinglePerson() ? 0.5 : 1;
+  const alhoDentes   = Math.ceil(aromaticsRaw.alho * aromaticsScale);
   const alhoCabecas  = alhoDentes > 0 ? Math.ceil(alhoDentes / 10) : 0; // 1 cabeça = 10 dentes
-  const cebolaUn     = Math.ceil(aromaticsRaw.cebola);
-  const limaoUn      = Math.ceil(aromaticsRaw.limao);
-  const tomateUn     = Math.ceil(aromaticsRaw.tomate);
-  const polpaSaches  = aromaticsRaw.polpa_tomate > 0 ? Math.ceil(aromaticsRaw.polpa_tomate / 200) : 0;
+  const cebolaUn     = Math.ceil(aromaticsRaw.cebola * aromaticsScale);
+  const limaoUn      = Math.ceil(aromaticsRaw.limao * aromaticsScale);
+  const tomateUn     = Math.ceil(aromaticsRaw.tomate * aromaticsScale);
+  const polpaSaches  = aromaticsRaw.polpa_tomate > 0 ? Math.ceil((aromaticsRaw.polpa_tomate * aromaticsScale) / 200) : 0;
 
   return [
     { section: 'Proteínas (marmitas + refeições)', items: [
@@ -3897,6 +3957,11 @@ function openProfileView() {
       ${intensityLine}
     </div>
 
+    <div class="pv-section">
+      <h3>Configuração de Usuário</h3>
+      <div class="pv-row"><span class="pv-label">Cardápio para 2 pessoas</span><span class="pv-value">${profile.cardapio_para_dois === false ? 'Não (somente 1 pessoa)' : 'Sim'}</span></div>
+    </div>
+
     ${criadoTxt ? `<div class="pv-footer">Perfil criado em ${criadoTxt}</div>` : ''}
   `;
 
@@ -4002,6 +4067,7 @@ function openEditProfile() {
   set('ob-bf',         profile.body_fat_pct != null ? profile.body_fat_pct : '');
   set('ob-deficit',    profile.deficit_intensity || 'moderado');
   set('ob-surplus',    profile.surplus_intensity || 'moderado');
+  set('ob-dois',       profile.cardapio_para_dois === false ? 'nao' : 'sim');
   clearOnboardingErrors();
 
   const modal = document.getElementById('onboarding-modal');
@@ -4039,6 +4105,7 @@ function submitOnboarding() {
   const atividade  = get('ob-atividade').value;
   const deficit    = get('ob-deficit').value;
   const surplus    = get('ob-surplus').value;
+  const cardapioDois = get('ob-dois').value !== 'nao'; // default true; só false se "nao"
 
   clearOnboardingErrors();
   let hasError = false;
@@ -4098,6 +4165,7 @@ function submitOnboarding() {
     nivel_atividade: atividade,
     deficit_intensity: deficit,
     surplus_intensity: surplus,
+    cardapio_para_dois: cardapioDois,
     criado_em: existing.criado_em || new Date().toISOString(),
   });
 
@@ -4117,6 +4185,11 @@ function submitOnboarding() {
   renderDietHeader();
   renderWeightLog();
   updateDailyProgress();
+  updatePlannerSubtitles();
+  // v2.1.33: lista de compras + metas dos almoços/jantares dependem do
+  // modo single/dois — re-render pra refletir a mudança imediatamente.
+  if (typeof renderShoppingList === 'function') renderShoppingList();
+  if (typeof renderMeals === 'function') renderMeals();
 }
 
 // ============================================================
@@ -4278,6 +4351,7 @@ function initApp() {
   showOnboardingIfNeeded();
 
   renderUserBar();
+  updatePlannerSubtitles();
 
   // v2.1.32: rollover automático de domingo (silencioso, sem prompt).
   // Roda no init: se hoje é domingo e a semana atual ficou pra trás,

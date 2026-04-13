@@ -387,6 +387,16 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .ob-error.show { display: block; }
 .ob-row { display: flex; gap: 10px; }
 .ob-row .ob-field { flex: 1; }
+.ob-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 18px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gray-light);
+}
 .ob-close-btn {
   position: absolute; top: 10px; right: 10px;
   width: 34px; height: 34px; border-radius: 50%;
