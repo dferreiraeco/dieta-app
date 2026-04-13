@@ -382,7 +382,7 @@
 </div>
 
 <!-- ==================== HISTORY MODAL ==================== -->
-<div class="modal-overlay" id="history-modal">
+<div class="modal-overlay" id="history-modal" data-close-fn="closeHistory">
   <div class="modal-wrap">
     <button class="close-x" onclick="closeHistory()" aria-label="Fechar">&times;</button>
     <div class="modal">
@@ -393,7 +393,7 @@
 </div>
 
 <!-- ==================== CALC DETAILS MODAL (v2.0.5) ==================== -->
-<div class="modal-overlay" id="calc-details-modal" style="z-index:250;align-items:center">
+<div class="modal-overlay" id="calc-details-modal" data-close-fn="closeCalcDetails" style="z-index:250;align-items:center">
   <div class="modal" style="max-width:560px;border-radius:20px;max-height:92vh;position:relative">
     <button class="ob-close-btn" onclick="closeCalcDetails()" aria-label="Fechar" style="display:flex">×</button>
     <h2 style="margin-bottom:14px">Detalhes do cálculo</h2>
@@ -402,7 +402,7 @@
 </div>
 
 <!-- ==================== PROFILE VIEW MODAL (v2.1.2) — bottom sheet ==================== -->
-<div class="modal-overlay" id="profile-view-modal" style="z-index:240">
+<div class="modal-overlay" id="profile-view-modal" data-close-fn="closeProfileView" style="z-index:240">
   <div class="modal-wrap">
     <button class="close-x" onclick="closeProfileView()" aria-label="Fechar">&times;</button>
     <div class="modal profile-view-modal">

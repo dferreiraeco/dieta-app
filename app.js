@@ -453,6 +453,78 @@ function renderMacroLines(consumed, goals) {
 // cálculo se necessário — não poluem o daily tracker.
 
 // Atualiza o subtítulo da aba Dieta com a meta dinâmica derivada do perfil.
+// v2.1.50: modal a11y — focus trap + Esc pra fechar (item 19 roadmap).
+//
+// O handler é global (um único keydown listener no document). Quando o
+// usuário pressiona Esc ou Tab:
+//   - Esc: fecha o modal topmost (maior z-index) que tenha data-close-fn,
+//     chamando a função correspondente no window.
+//   - Tab / Shift+Tab: implementa focus trap — tabular além do último ou
+//     antes do primeiro elemento focusable do modal volta pro oposto.
+//
+// Modais cobertos (via data-close-fn no HTML):
+//   - history-modal    (closeHistory)
+//   - calc-details     (closeCalcDetails)
+//   - profile-view     (closeProfileView)
+//
+// Excluídos propositalmente:
+//   - onboarding-modal em modo create (usuário PRECISA preencher)
+//   - confirm-modal (tem seu próprio handler Esc/Enter em customConfirm)
+const MODAL_A11Y_FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function _getTopmostOpenModal() {
+  const openModals = Array.from(document.querySelectorAll('.modal-overlay.open'));
+  if (openModals.length === 0) return null;
+  // Ordena por z-index (maior z = topmost). Empate → último no DOM (mais recente).
+  openModals.sort((a, b) => {
+    const za = parseInt(getComputedStyle(a).zIndex, 10) || 0;
+    const zb = parseInt(getComputedStyle(b).zIndex, 10) || 0;
+    if (za !== zb) return zb - za;
+    // Empate: pick o que aparece depois no DOM
+    return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_PRECEDING) ? -1 : 1;
+  });
+  return openModals[0];
+}
+
+function _modalA11yHandler(e) {
+  const modal = _getTopmostOpenModal();
+  if (!modal) return;
+
+  if (e.key === 'Escape') {
+    const fnName = modal.dataset.closeFn;
+    if (fnName && typeof window[fnName] === 'function') {
+      e.preventDefault();
+      window[fnName]();
+    }
+    return;
+  }
+
+  if (e.key === 'Tab') {
+    const focusables = modal.querySelectorAll(MODAL_A11Y_FOCUSABLE);
+    const visibles = Array.from(focusables).filter(el => {
+      // Elementos com display:none não devem entrar no ciclo
+      return el.offsetParent !== null || el === document.activeElement;
+    });
+    if (visibles.length === 0) return;
+    const first = visibles[0];
+    const last  = visibles[visibles.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+}
+
+function setupModalA11y() {
+  if (document.body.dataset.modalA11yReady === '1') return;
+  document.body.dataset.modalA11yReady = '1';
+  document.addEventListener('keydown', _modalA11yHandler);
+}
+
 // v2.1.37: dark mode toggle.
 // Estados: 'light', 'dark', 'auto' (segue prefers-color-scheme). Default 'auto'.
 // O tema é aplicado inicialmente via inline script no <head> (zero flash).
@@ -4702,6 +4774,7 @@ function initApp() {
   setupIntensityToggle();
   setupOnboardingValidation();
   initTheme();
+  setupModalA11y();
   showOnboardingIfNeeded();
 
   renderUserBar();

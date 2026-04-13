@@ -96,6 +96,26 @@
   }
 } */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+/* v2.1.50 — focus indicators (item 19 roadmap, a11y).
+   :focus-visible só aparece em navegação de teclado, não em clique mouse/touch.
+   Outline em var(--green-primary) com offset pra destacar sem colar no elemento. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--green-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--green-primary);
+  outline-offset: 2px;
+}
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--gray-bg); color: var(--gray);
