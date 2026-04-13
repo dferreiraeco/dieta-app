@@ -43,26 +43,62 @@
   <p class="auth-subtitle">Dieta + Treino + Marmitas</p>
   <p class="auth-desc">Controle seu plano alimentar, planeje marmitas, registre treinos e acompanhe sua evolução</p>
   <div class="auth-card">
-    <h2>Comece agora</h2>
-    <button class="google-btn" onclick="googleLogin()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
-      Entrar com Google
-    </button>
-    <div class="auth-divider">ou</div>
-    <button class="skip-btn" onclick="skipLogin()">Continuar sem conta</button>
-    <div class="auth-features">
-      <div class="auth-feat">
-        <div class="auth-feat-icon">&#10003;</div>
-        <span><b>Com conta:</b> dados sincronizados entre celular e computador</span>
+    <!-- v2.1.52: main view com 3 opções de login -->
+    <div id="auth-main">
+      <h2>Comece agora</h2>
+      <button class="google-btn" onclick="googleLogin()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+        Entrar com Google
+      </button>
+      <button class="email-btn" onclick="showAuthEmailForm()">
+        <span class="email-btn-icon">✉</span>
+        Entrar com email
+      </button>
+      <div class="auth-divider">ou</div>
+      <button class="skip-btn" onclick="skipLogin()">Continuar sem conta</button>
+      <div class="auth-features">
+        <div class="auth-feat">
+          <div class="auth-feat-icon">&#10003;</div>
+          <span><b>Com conta:</b> dados sincronizados entre celular e computador</span>
+        </div>
+        <div class="auth-feat">
+          <div class="auth-feat-icon">&#10003;</div>
+          <span><b>Com conta:</b> backup automático na nuvem</span>
+        </div>
+        <div class="auth-feat">
+          <div class="auth-feat-icon">&#8226;</div>
+          <span><b>Sem conta:</b> dados salvos apenas neste dispositivo</span>
+        </div>
       </div>
-      <div class="auth-feat">
-        <div class="auth-feat-icon">&#10003;</div>
-        <span><b>Com conta:</b> backup automático na nuvem</span>
+    </div>
+
+    <!-- v2.1.52: email/password form (signup ou signin, alterna via toggleAuthMode) -->
+    <div id="auth-email-form" style="display:none">
+      <button class="auth-back" onclick="showAuthMain()" aria-label="Voltar">← Voltar</button>
+      <h2 id="auth-email-title">Entrar</h2>
+      <div class="ob-field">
+        <label>Email</label>
+        <input type="email" id="auth-email" autocomplete="email" placeholder="voce@email.com">
+        <div class="ob-error" id="auth-email-err"></div>
       </div>
-      <div class="auth-feat">
-        <div class="auth-feat-icon">&#8226;</div>
-        <span><b>Sem conta:</b> dados salvos apenas neste dispositivo</span>
+      <div class="ob-field">
+        <label>Senha</label>
+        <input type="password" id="auth-password" autocomplete="current-password" placeholder="Mínimo 6 caracteres">
+        <div class="ob-error" id="auth-password-err"></div>
       </div>
+      <div class="ob-field" id="auth-confirm-field" style="display:none">
+        <label>Confirmar senha</label>
+        <input type="password" id="auth-confirm" autocomplete="new-password" placeholder="Digite a senha novamente">
+        <div class="ob-error" id="auth-confirm-err"></div>
+      </div>
+      <div class="auth-info" id="auth-email-info"></div>
+      <button class="save-btn" id="auth-email-submit" onclick="submitAuthEmail()">Entrar</button>
+      <button class="auth-toggle-btn" onclick="toggleAuthMode()" id="auth-toggle-btn" type="button">
+        Não tem conta? <b>Criar conta</b>
+      </button>
+      <button class="auth-forgot-btn" onclick="sendPasswordReset()" id="auth-forgot-btn" type="button">
+        Esqueci minha senha
+      </button>
     </div>
   </div>
 </div>

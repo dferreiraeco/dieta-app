@@ -876,6 +876,83 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .google-btn:active { background: var(--gray-bg); transform: scale(0.98); }
 .google-btn img { width: 20px; height: 20px; }
+
+/* v2.1.52: email/senha button — mesma estrutura do google-btn */
+.email-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 14px; border: 2px solid var(--green-primary); border-radius: 12px;
+  background: var(--green-soft); font-size: 15px; font-weight: 700; cursor: pointer;
+  color: var(--green-primary); transition: all 0.2s;
+  margin-top: 10px;
+}
+.email-btn:active { background: var(--surface); transform: scale(0.98); }
+.email-btn-icon {
+  font-size: 18px;
+  line-height: 1;
+  width: 20px;
+  text-align: center;
+}
+
+/* v2.1.52: email form view */
+#auth-email-form h2 {
+  font-size: 18px;
+  color: var(--ink-strong);
+  margin-bottom: 16px;
+  text-align: center;
+}
+.auth-back {
+  background: none; border: none; color: var(--ink-medium);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 4px 0; margin-bottom: 4px;
+}
+.auth-back:hover { color: var(--green-primary); }
+#auth-email-form .ob-field { margin-bottom: 12px; }
+#auth-email-form .ob-field label {
+  display: block; font-size: 11px; font-weight: 700; color: var(--ink-medium);
+  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px;
+}
+#auth-email-form .ob-field input {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light);
+  border-radius: 10px; font-size: 15px; background: var(--surface); color: var(--ink-strong);
+  -webkit-appearance: none; appearance: none;
+}
+#auth-email-form .ob-field input:focus {
+  outline: none; border-color: var(--green-primary);
+}
+#auth-email-form .ob-field input.error { border-color: var(--accent-danger); background: var(--accent-danger-soft); }
+#auth-email-form .ob-error {
+  display: none; font-size: 11px; color: var(--accent-danger);
+  margin-top: 4px; font-weight: 600;
+}
+#auth-email-form .ob-error.show { display: block; }
+.auth-info {
+  display: none;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  background: var(--green-soft);
+  color: var(--green-primary);
+}
+.auth-info.success { background: var(--green-soft); color: var(--green-primary); }
+.auth-toggle-btn {
+  display: block; width: 100%;
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--ink-medium);
+  padding: 10px 0; margin-top: 8px;
+  text-align: center;
+}
+.auth-toggle-btn b { color: var(--green-primary); }
+.auth-forgot-btn {
+  display: block; width: 100%;
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; color: var(--ink-soft-text);
+  padding: 4px 0;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .auth-divider {
   display: flex; align-items: center; gap: 12px; margin: 16px 0;
   color: var(--gray-mid); font-size: 12px;

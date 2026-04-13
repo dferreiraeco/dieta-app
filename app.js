@@ -4040,6 +4040,167 @@ function skipLogin() {
   initApp();
 }
 
+// v2.1.52: cadastro próprio via email/senha (Firebase Auth Email/Password).
+// REQUER que o provider Email/Password esteja habilitado no Firebase console:
+//   Authentication → Sign-in method → Email/Password → Enable
+// Sem isso, createUserWithEmailAndPassword retorna 'auth/operation-not-allowed'.
+let _authEmailMode = 'signin'; // 'signin' ou 'signup'
+
+function showAuthEmailForm() {
+  document.getElementById('auth-main').style.display = 'none';
+  document.getElementById('auth-email-form').style.display = 'block';
+  _authEmailMode = 'signin';
+  _updateAuthEmailUI();
+  // Foco no primeiro input
+  setTimeout(() => document.getElementById('auth-email').focus(), 50);
+}
+
+function showAuthMain() {
+  document.getElementById('auth-main').style.display = 'block';
+  document.getElementById('auth-email-form').style.display = 'none';
+  _clearAuthEmailErrors();
+  _setAuthInfo('');
+  // Limpa os campos pra não carregar senha antiga
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-confirm').value = '';
+}
+
+function toggleAuthMode() {
+  _authEmailMode = _authEmailMode === 'signin' ? 'signup' : 'signin';
+  _updateAuthEmailUI();
+}
+
+function _updateAuthEmailUI() {
+  const title       = document.getElementById('auth-email-title');
+  const submit      = document.getElementById('auth-email-submit');
+  const confirmField= document.getElementById('auth-confirm-field');
+  const toggleBtn   = document.getElementById('auth-toggle-btn');
+  const passwordEl  = document.getElementById('auth-password');
+  if (_authEmailMode === 'signin') {
+    title.textContent  = 'Entrar';
+    submit.textContent = 'Entrar';
+    confirmField.style.display = 'none';
+    toggleBtn.innerHTML = 'Não tem conta? <b>Criar conta</b>';
+    passwordEl.setAttribute('autocomplete', 'current-password');
+  } else {
+    title.textContent  = 'Criar conta';
+    submit.textContent = 'Criar conta';
+    confirmField.style.display = '';
+    toggleBtn.innerHTML = 'Já tem conta? <b>Entrar</b>';
+    passwordEl.setAttribute('autocomplete', 'new-password');
+  }
+  _clearAuthEmailErrors();
+  _setAuthInfo('');
+}
+
+function _clearAuthEmailErrors() {
+  ['auth-email', 'auth-password', 'auth-confirm'].forEach(id => {
+    const err = document.getElementById(id + '-err');
+    if (err) { err.textContent = ''; err.classList.remove('show'); }
+    const input = document.getElementById(id);
+    if (input) input.classList.remove('error');
+  });
+}
+
+function _showAuthEmailError(id, msg) {
+  const err = document.getElementById(id + '-err');
+  if (err) { err.textContent = msg; err.classList.add('show'); }
+  const input = document.getElementById(id);
+  if (input) input.classList.add('error');
+}
+
+function _setAuthInfo(msg, kind) {
+  const el = document.getElementById('auth-email-info');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'auth-info' + (kind ? ' ' + kind : '');
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// Mapeia códigos de erro do Firebase pra mensagens em PT-BR amigáveis.
+const AUTH_EMAIL_ERRORS = {
+  'auth/email-already-in-use':  ['auth-email',    'Este email já está cadastrado'],
+  'auth/invalid-email':         ['auth-email',    'Email inválido'],
+  'auth/weak-password':         ['auth-password', 'Senha muito fraca (mínimo 6 caracteres)'],
+  'auth/user-not-found':        ['auth-email',    'Usuário não encontrado'],
+  'auth/wrong-password':        ['auth-password', 'Senha incorreta'],
+  'auth/invalid-credential':    ['auth-password', 'Email ou senha incorretos'],
+  'auth/too-many-requests':     ['auth-email',    'Muitas tentativas. Tente novamente mais tarde'],
+  'auth/network-request-failed':['auth-email',    'Erro de rede. Verifique sua conexão'],
+  'auth/operation-not-allowed': ['auth-email',    'Login por email não está habilitado'],
+  'auth/user-disabled':         ['auth-email',    'Esta conta foi desativada'],
+};
+
+async function submitAuthEmail() {
+  _clearAuthEmailErrors();
+  _setAuthInfo('');
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const isSignup = _authEmailMode === 'signup';
+
+  // Validação básica client-side (antes de bater no Firebase)
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    _showAuthEmailError('auth-email', 'Email inválido');
+    return;
+  }
+  if (!password || password.length < 6) {
+    _showAuthEmailError('auth-password', 'Senha precisa de pelo menos 6 caracteres');
+    return;
+  }
+  if (isSignup) {
+    const confirm = document.getElementById('auth-confirm').value;
+    if (password !== confirm) {
+      _showAuthEmailError('auth-confirm', 'As senhas não coincidem');
+      return;
+    }
+  }
+
+  const submit = document.getElementById('auth-email-submit');
+  const originalText = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = isSignup ? 'Criando...' : 'Entrando...';
+
+  try {
+    if (isSignup) {
+      await auth.createUserWithEmailAndPassword(email, password);
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+    // Sucesso: auth.onAuthStateChanged cuida de esconder a auth screen
+    // e chamar initApp(). Não precisa fazer mais nada aqui.
+  } catch (e) {
+    submit.disabled = false;
+    submit.textContent = originalText;
+    const mapping = AUTH_EMAIL_ERRORS[e.code];
+    if (mapping) {
+      _showAuthEmailError(mapping[0], mapping[1]);
+    } else {
+      _showAuthEmailError('auth-email', e.message || 'Erro ao autenticar');
+    }
+  }
+}
+
+async function sendPasswordReset() {
+  _clearAuthEmailErrors();
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email || !email.includes('@')) {
+    _showAuthEmailError('auth-email', 'Digite seu email pra receber o link de redefinição');
+    return;
+  }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    _setAuthInfo('Email de redefinição enviado. Verifique sua caixa de entrada.', 'success');
+  } catch (e) {
+    const mapping = AUTH_EMAIL_ERRORS[e.code];
+    if (mapping) {
+      _showAuthEmailError(mapping[0], mapping[1]);
+    } else {
+      _showAuthEmailError('auth-email', 'Erro ao enviar email de redefinição');
+    }
+  }
+}
+
 async function logout() {
   if (!await customConfirm('Seus dados continuam salvos.', { title: 'Sair da conta?', okLabel: 'Sair' })) return;
   stopFirestoreSync();
