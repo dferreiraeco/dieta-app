@@ -1307,39 +1307,24 @@ function onPlanChange() {
   updateWeekLabel();
 }
 
-async function startNewWeek() {
-  const currentWeek = getCurrentWeekLabel();
-  const thisWeek = getWeekId();
-  const today = new Date();
-  const isSunday = today.getDay() === 0;
+// v2.1.32: dois fluxos separados
+//
+//  1) clearWeekPlan() — chamado pelo botão "Limpar Planejamento Semanal".
+//     Clear puro, sem arquivamento, usável qualquer dia. Apaga marmitas,
+//     jantares, lista de compras marcada, consumo da semana, estoque em
+//     casa, draft do gerador, snapshots do lastApplied. NÃO toca no
+//     histórico nem no marmitaCurrentWeek (a "semana atual" continua a
+//     mesma — só o conteúdo dela foi limpo).
+//
+//  2) autoSundayRollover() — chamado em initApp(). Silencioso, sem prompt.
+//     Quando hoje é domingo E o marmitaCurrentWeek é diferente de
+//     getWeekId() (ou seja, transitamos pra semana nova), arquiva a
+//     semana anterior no histórico e zera tudo (incluindo homeStock).
+//     Usa _internalResetWeek() reaproveitando o mesmo cleanup do clear.
 
-  // Check if there's already a saved plan for this week
-  const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
-  const hasCurrentWeekPlan = !!history[thisWeek];
-
-  // If not Sunday and there's already a plan for this week, block
-  if (!isSunday && hasCurrentWeekPlan) {
-    alert(`Já existe um planejamento vigente para esta semana (${thisWeek}).\n\nAjuste as marmitas e jantares diretamente nos cards — as alterações são salvas automaticamente e a lista de compras é atualizada.\n\nUm novo planejamento só pode ser iniciado no domingo ou quando não houver planejamento salvo para a semana.`);
-    return;
-  }
-
-  const ok = await customConfirm(
-    'O planejamento anterior será arquivado no histórico.\nA lista de compras e o consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.',
-    { title: 'Limpar planejamento semanal?', okLabel: 'Limpar', danger: true }
-  );
-  if (!ok) return;
-
-  // Archive current plan if it exists and is different from new week
-  if (currentWeek !== thisWeek) {
-    const plan = getMarmitaPlan();
-    const totalPlan = Object.values(plan).reduce((a,b) => a+b, 0);
-    if (totalPlan > 0) {
-      history[currentWeek] = { ...plan, _saved: new Date().toISOString() };
-      localStorage.setItem(STORAGE_KEYS.marmitaHistory, JSON.stringify(history));
-    }
-  }
-
-  // Reset everything
+function _internalResetWeek() {
+  // Cleanup compartilhado entre clearWeekPlan e autoSundayRollover.
+  // NÃO arquiva nem mexe em marmitaCurrentWeek.
   localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(DEFAULT_PLAN));
   localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(DEFAULT_DINNER_PLAN));
   localStorage.removeItem(STORAGE_KEYS.shopChecks);
@@ -1349,8 +1334,9 @@ async function startNewWeek() {
   localStorage.removeItem(STORAGE_KEYS.genDraft);
   localStorage.removeItem(STORAGE_KEYS.genLastAppliedMarmita);
   localStorage.removeItem(STORAGE_KEYS.genLastAppliedDinner);
-  localStorage.setItem(STORAGE_KEYS.marmitaCurrentWeek, thisWeek);
+}
 
+function _rerenderAfterReset() {
   renderMarmitaPlanner();
   renderDinnerPlanner();
   renderShoppingList();
@@ -1358,26 +1344,47 @@ async function startNewWeek() {
   renderMarmitaSelector();
   renderDinnerSelector();
   updateWeekLabel();
-
-  const btn = document.querySelectorAll('#page-marmitas .save-btn')[1];
-  btn.textContent = 'Novo planejamento iniciado!';
-  btn.style.background = '#276749';
-  setTimeout(() => { btn.textContent = 'Novo Planejamento Semanal'; btn.style.background = 'var(--orange)'; }, 2000);
 }
 
-function checkSundayPrompt() {
+async function clearWeekPlan() {
+  const ok = await customConfirm(
+    'Marmitas, jantares, lista de compras marcada, consumo da semana e estoque em casa serão apagados.\n\nO planejamento NÃO será arquivado no histórico (o arquivamento acontece automaticamente toda vez que uma semana nova começa, no domingo).',
+    { title: 'Limpar planejamento atual?', okLabel: 'Limpar', danger: true }
+  );
+  if (!ok) return;
+
+  _internalResetWeek();
+  _rerenderAfterReset();
+  onPlanChange();
+}
+
+function autoSundayRollover() {
   const today = new Date();
-  if (today.getDay() !== 0) return; // not Sunday
-  const lastPrompt = localStorage.getItem(STORAGE_KEYS.sundayPromptDate);
-  const todayStr = localDateStr(today);
-  if (lastPrompt === todayStr) return; // already prompted today
-  localStorage.setItem(STORAGE_KEYS.sundayPromptDate, todayStr);
-  setTimeout(async () => {
-    if (await customConfirm('Hoje é domingo! Deseja iniciar um novo planejamento de marmitas para a semana?', { okLabel: 'Iniciar' })) {
-      startNewWeek();
-      switchTab('marmitas');
-    }
-  }, 500);
+  if (today.getDay() !== 0) return; // só roda em domingo
+  const thisWeek = getWeekId();
+  const currentWeek = getCurrentWeekLabel();
+  // Se já estamos marcando essa semana como "atual", já rolou. Sai.
+  if (currentWeek === thisWeek) return;
+
+  // Arquiva o plano da semana anterior (se tinha algo)
+  const plan = getMarmitaPlan();
+  const dinnerPlan = getDinnerPlan();
+  const totalMarmita = Object.values(plan).reduce((a, b) => a + b, 0);
+  const totalDinner = Object.values(dinnerPlan).reduce((a, b) => a + b, 0);
+  if (totalMarmita > 0 || totalDinner > 0) {
+    const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
+    history[currentWeek] = {
+      ...plan,
+      _dinner: dinnerPlan,
+      _saved: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.marmitaHistory, JSON.stringify(history));
+  }
+
+  _internalResetWeek();
+  localStorage.setItem(STORAGE_KEYS.marmitaCurrentWeek, thisWeek);
+  _rerenderAfterReset();
+  onPlanChange();
 }
 
 function openMarmitaHistory() {
@@ -3411,8 +3418,9 @@ async function resetAllData() {
   // Clear cardio_ daily keys
   Object.keys(localStorage).filter(k => k.startsWith('cardio_')).forEach(k => localStorage.removeItem(k));
 
-  // Clear other misc keys
-  localStorage.removeItem(STORAGE_KEYS.sundayPromptDate);
+  // Clear other misc keys (legacy: chave do prompt de domingo, não mais usada
+  // mas removida pra limpar instalações antigas)
+  localStorage.removeItem('sunday_prompt_date');
 
   // If logged in, also clear Firestore
   if (currentUser) {
@@ -4271,8 +4279,10 @@ function initApp() {
 
   renderUserBar();
 
-  // Sunday prompt - only after app is loaded (logged in or skipped login)
-  setTimeout(checkSundayPrompt, 500);
+  // v2.1.32: rollover automático de domingo (silencioso, sem prompt).
+  // Roda no init: se hoje é domingo e a semana atual ficou pra trás,
+  // arquiva e zera tudo (incluindo homeStock).
+  setTimeout(autoSundayRollover, 500);
 }
 
 // Block pinch-to-zoom and double-tap zoom on iOS

@@ -34,7 +34,6 @@ const STORAGE_KEYS = {
   calLog:              'cal_log',
   // Perfil / sessão
   userProfile:         'user_profile',
-  sundayPromptDate:    'sunday_prompt_date',
   skipLogin:           'skip_login',
   weightLog:           'weight_log',
 };
