@@ -580,12 +580,54 @@ function renderMealFoodsText(meal) {
   return text;
 }
 
-// Fator de escala aplicado às refeições fixas: meta_kcal / base.
-// base é o DEFAULT_GOALS.kcal (2000), que foi o target original da dieta quando
-// ela foi desenhada — os baseGrams de FIXED_MEAL_RECIPES refletem esse target.
+// v2.1.40: portion scale iterativo com fixed-point.
+//
+// Antes (v2.0+): scale = target / 2000. Problema: a soma real das receitas
+// no scale 1.0 não bate exatamente 2000 kcal (real é ~2098), e mais grave,
+// duas não-linearidades compõem mal:
+//   1. Refeições fixas têm "stickiness" de inteiros (round qty pra 1, 2, 3...
+//      ovos/fatias) — quando você escala 0.88×, ainda dá 2 ovos. As fixas mal
+//      reduzem com targets baixos.
+//   2. Marmitas/jantares têm round-down (floor pra 10g) que tira ~3-5% kcal
+//      sistematicamente.
+// Combinado, em targets baixos o usuário ficava +6.6% acima da meta; em
+// targets altos, -5% abaixo. Sem constante única que resolvesse os dois.
+//
+// Solução: fixed-point iteration. Estimamos o total diário com a média de
+// marmita+jantar no scale candidato, comparamos com o target, e ajustamos
+// o scale proporcionalmente. Convergência em 3-5 iterações. Cacheado por
+// target value (a meta do usuário muda raramente).
+//
+// Resultado típico (vs target):
+//   target 1800: ±2-3% (vs +6.6% antes)
+//   target 2330: ±2-3% (vs -5% antes)
+//   target 2826: ±2-5% (vs -5% antes)
+const _portionScaleCache = {};
+function _estimateDailyKcal(scale) {
+  let total = 0;
+  FIXED_MEAL_RECIPES.forEach(r => {
+    total += computeMealMacros(scaleMealIngredients(r, scale).ingredients).kcal;
+  });
+  // Média de marmita+jantar no mesmo scale (representa o caso médio que
+  // o usuário vai consumir; seleções específicas oscilam ±3-5% ao redor).
+  const meanM = MARMITA_DEFS.reduce((a, m) => a + scaleMealDef(m, scale).kcal, 0) / MARMITA_DEFS.length;
+  const meanD = DINNER_DEFS.reduce((a, d) => a + scaleMealDef(d, scale).kcal, 0) / DINNER_DEFS.length;
+  return total + meanM + meanD;
+}
 function computePortionScale(goalsKcal) {
   if (!goalsKcal || goalsKcal <= 0) return 1;
-  return goalsKcal / DEFAULT_GOALS.kcal;
+  if (_portionScaleCache[goalsKcal] != null) return _portionScaleCache[goalsKcal];
+  // Initial guess: target / 2098 (soma média das receitas no scale 1.0 — mais
+  // próximo da realidade do que a constante antiga 2000).
+  let scale = goalsKcal / 2098;
+  for (let i = 0; i < 8; i++) {
+    const actual = _estimateDailyKcal(scale);
+    const diff = goalsKcal - actual;
+    if (Math.abs(diff) < 3) break;
+    scale = scale * (goalsKcal / actual);
+  }
+  _portionScaleCache[goalsKcal] = scale;
+  return scale;
 }
 
 // v2.1.34/35: helper compartilhado que retorna uma cópia escalada de um def

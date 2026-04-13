@@ -1010,19 +1010,29 @@ h.describe('weeksInCut', () => {
 // ============================================================
 // v2.0 — refeições fixas escaláveis
 // ============================================================
-h.describe('computePortionScale', () => {
-  h.test('scale = 1 para target igual à base (2000 kcal)', () => {
-    assertEq(app.computePortionScale(2000), 1);
+h.describe('computePortionScale (iterativo, v2.1.40)', () => {
+  // O scale agora é calculado por fixed-point iteration pra aproximar o
+  // total real do dia ao target. Não é mais target/2000 — em vez disso,
+  // converge num valor que faz a soma das 4 fixas + média marmita+jantar
+  // ficar próxima do target.
+  h.test('target 2000 → scale ~0.98 (refeições reais somam um pouco mais que 2000 base)', () => {
+    const s = app.computePortionScale(2000);
+    assertTrue(s > 0.94 && s < 1.02, 'esperado ~0.94-1.02, got ' + s);
   });
 
-  h.test('scale = 1.413 para target 2826', () => {
+  h.test('target 2826 → scale ~1.43 (alvo alto)', () => {
     const s = app.computePortionScale(2826);
-    assertTrue(Math.abs(s - 1.413) < 0.001, 'esperado ~1.413, got ' + s);
+    assertTrue(s > 1.40 && s < 1.48, 'esperado ~1.40-1.48, got ' + s);
   });
 
-  h.test('scale = 1.164 para target 2328 (agressivo Diego)', () => {
+  h.test('target 2328 → scale ~1.22 (Diego)', () => {
     const s = app.computePortionScale(2328);
-    assertTrue(Math.abs(s - 1.164) < 0.001, 'esperado ~1.164, got ' + s);
+    assertTrue(s > 1.18 && s < 1.26, 'esperado ~1.18-1.26, got ' + s);
+  });
+
+  h.test('target 1800 → scale ~0.82 (alvo baixo)', () => {
+    const s = app.computePortionScale(1800);
+    assertTrue(s > 0.78 && s < 0.86, 'esperado ~0.78-0.86, got ' + s);
   });
 
   h.test('target inválido → scale = 1', () => {
