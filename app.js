@@ -743,14 +743,13 @@ function openMarmitaPicker() {
     const typeName = getMarmitaTypeName(m.id);
     const current = plan[m.id] || 0;
     const added = current > 0;
-    html += `<button onclick="addMarmitaToPlan('${m.id}')"
-      style="display:block;width:100%;padding:12px 14px;margin-bottom:8px;text-align:left;background:${added ? 'var(--green-bg)' : '#fff'};border:1.5px solid ${added ? 'var(--green)' : 'var(--gray-light)'};border-radius:10px;cursor:pointer">
+    html += `<button class="picker-option ${added ? 'added-marmita' : ''}" onclick="addMarmitaToPlan('${m.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:700;color:var(--blue)">${typeName}</div>
-        ${added ? `<span style="background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${current} no plano</span>` : ''}
+        <div class="picker-title">${typeName}</div>
+        ${added ? `<span class="picker-badge">${current} no plano</span>` : ''}
       </div>
-      <div style="font-size:11px;color:var(--gray-mid);margin-top:3px">${m.desc}</div>
-      <div style="font-size:11px;color:var(--orange);margin-top:4px;font-weight:600">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      <div class="picker-desc">${m.desc}</div>
+      <div class="picker-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
     </button>`;
   });
 
@@ -867,14 +866,13 @@ function openDinnerPicker() {
   getScaledDinners().forEach(m => {
     const current = plan[m.id] || 0;
     const added = current > 0;
-    html += `<button onclick="addDinnerToPlan('${m.id}')"
-      style="display:block;width:100%;padding:12px 14px;margin-bottom:8px;text-align:left;background:${added ? 'var(--purple-light)' : '#fff'};border:1.5px solid ${added ? 'var(--purple)' : 'var(--gray-light)'};border-radius:10px;cursor:pointer">
+    html += `<button class="picker-option ${added ? 'added-dinner' : ''}" onclick="addDinnerToPlan('${m.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:700;color:var(--blue)">${m.name}</div>
-        ${added ? `<span style="background:var(--purple);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${current} no plano</span>` : ''}
+        <div class="picker-title">${m.name}</div>
+        ${added ? `<span class="picker-badge is-dinner">${current} no plano</span>` : ''}
       </div>
-      <div style="font-size:11px;color:var(--gray-mid);margin-top:3px">${m.desc}</div>
-      <div style="font-size:11px;color:var(--orange);margin-top:4px;font-weight:600">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      <div class="picker-desc">${m.desc}</div>
+      <div class="picker-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
     </button>`;
   });
 
@@ -1774,9 +1772,9 @@ function renderShoppingList() {
         const bullets = item.fruitBuySuggestions
           .map(s => `<li style="margin:2px 0"><b>${s.porcoes} porções</b> — ${s.name}</li>`)
           .join('');
-        html += `<div style="background:#f0fff4;border-left:3px solid var(--green);padding:8px 12px;margin:2px 0 8px;font-size:12px;border-radius:6px">
+        html += `<div style="background:var(--green-soft);border-left:3px solid var(--green);padding:8px 12px;margin:2px 0 8px;font-size:12px;border-radius:6px">
           <b style="color:var(--green)">Sugestão de compra (3 frutas variadas):</b>
-          <ul style="margin:4px 0 0 18px;padding:0;color:var(--gray)">${bullets}</ul>
+          <ul style="margin:4px 0 0 18px;padding:0;color:var(--ink-strong)">${bullets}</ul>
         </div>`;
       }
     });

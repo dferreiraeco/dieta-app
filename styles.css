@@ -74,11 +74,18 @@
   --ink-medium:     #B8C4BE;
   --ink-soft:       #7A8680;
   --gray-light:     #2D3834;
+  /* v2.1.38: accents lighter pra legibilidade sobre fundo escuro */
+  --green-primary:  #6FBF8F;  /* era #2B7A4B (deep green) */
+  --green-dark:     #2B7A4B;  /* o "deep" antigo agora é a sombra */
   --green-soft:     rgba(43, 122, 75, 0.18);
-  --accent-warm-soft:  rgba(232, 160, 78, 0.15);
-  --accent-danger-soft: rgba(211, 90, 71, 0.18);
+  --purple-soft:    #B6A8E0;  /* era #7B6BA8 */
   --purple-bg:      rgba(123, 107, 168, 0.18);
+  --yellow-soft:    #E0C76A;  /* era #A68318 */
   --yellow-bg:      rgba(166, 131, 24, 0.18);
+  --accent-warm:    #F0B873;  /* era #E8A04E */
+  --accent-warm-soft:  rgba(232, 160, 78, 0.15);
+  --accent-danger:  #E88A7A;  /* era #D35A47 */
+  --accent-danger-soft: rgba(211, 90, 71, 0.18);
   --shadow-soft:    0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-mid:     0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-lg:      0 12px 32px rgba(0, 0, 0, 0.55);
@@ -316,6 +323,32 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .save-btn:active { opacity: 0.7; }
 .save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* ---- PICKER OPTIONS (v2.1.38, sempre light regardless of theme) ----
+   Cards de seleção dentro do modal "Adicionar Novo Sabor de Marmita/Jantar".
+   Mantemos fundo branco e texto preto sempre, pra contrastar com o modal
+   escuro no dark mode (visual de "card de produto" sobre overlay). */
+.picker-option {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  text-align: left;
+  background: #fff;
+  border: 1.5px solid #E5E8E6;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.picker-option.added-marmita { background: #E8F3ED; border-color: #2B7A4B; }
+.picker-option.added-dinner  { background: #F0EDF7; border-color: #7B6BA8; }
+.picker-option .picker-title { font-size: 14px; font-weight: 700; color: #1A2E22; }
+.picker-option .picker-desc  { font-size: 11px; color: #5A6B63; margin-top: 3px; }
+.picker-option .picker-macros { font-size: 11px; color: #E8A04E; margin-top: 4px; font-weight: 600; }
+.picker-option .picker-badge {
+  background: #2B7A4B; color: #fff; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+}
+.picker-option .picker-badge.is-dinner { background: #7B6BA8; }
+
 /* ---- THEME TOGGLE (segmented control, v2.1.37) ---- */
 .theme-toggle {
   display: flex;
@@ -449,8 +482,8 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   width: 38px; height: 38px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,0.95);
-  color: var(--gray);
+  background: var(--surface);
+  color: var(--ink-strong);
   font-size: 22px;
   font-weight: 400;
   line-height: 1;
