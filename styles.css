@@ -323,6 +323,104 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .save-btn:active { opacity: 0.7; }
 .save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* ---- GERADOR DE CARDÁPIO (v2.1.47: sticky mode picker + accordion) ---- */
+.gen-sticky-mode {
+  position: sticky;
+  top: -20px;  /* compensa padding do .modal pra colar no topo */
+  background: var(--surface);
+  z-index: 5;
+  margin: -20px -16px 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--gray-light);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.gen-mode-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.gen-mode-row { display: flex; gap: 8px; }
+.gen-mode-check {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-light);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+  transition: all 0.15s;
+}
+.gen-mode-check input { width: 16px; height: 16px; accent-color: var(--green); }
+.gen-mode-check:has(input:checked) {
+  background: var(--green-soft);
+  border-color: var(--green-primary);
+  color: var(--green-primary);
+}
+.gen-mode-check.dinner input { accent-color: var(--purple-soft); }
+.gen-mode-check.dinner:has(input:checked) {
+  background: var(--purple-bg);
+  border-color: var(--purple-soft);
+  color: var(--purple-soft);
+}
+
+.gen-section {
+  margin: 12px 0;
+}
+.gen-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px 12px;
+  background: var(--gray-bg);
+  border-radius: 10px;
+  user-select: none;
+  transition: background 0.15s;
+}
+.gen-section-header:active { background: var(--gray-light); }
+.gen-section-header .sh-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-light);
+  flex-shrink: 0;
+}
+.gen-section-header.has-values .sh-dot {
+  background: var(--green-primary);
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+.gen-section-header .sh-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-strong);
+}
+.gen-section-header .sh-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-medium);
+  font-variant-numeric: tabular-nums;
+}
+.gen-section-header .sh-chevron {
+  font-size: 10px;
+  color: var(--ink-soft);
+  transition: transform 0.2s;
+}
+.gen-section.collapsed .sh-chevron { transform: rotate(-90deg); }
+.gen-section-body {
+  padding: 4px 2px 0;
+}
+.gen-section.collapsed .gen-section-body { display: none; }
+
 /* ---- PICKER OPTIONS (v2.1.38, sempre light regardless of theme) ----
    Cards de seleção dentro do modal "Adicionar Novo Sabor de Marmita/Jantar".
    Mantemos fundo branco e texto preto sempre, pra contrastar com o modal

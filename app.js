@@ -2794,6 +2794,11 @@ function saveGenDraft() {
     const draft = { stock };
     if (window._genMarmitaResult) draft.marmitaResult = window._genMarmitaResult;
     if (window._genDinnerResult)  draft.dinnerResult  = window._genDinnerResult;
+    // v2.1.47: persiste o estado do mode picker (sticky topo)
+    const modeM = document.getElementById('gen_mode_marmita');
+    const modeD = document.getElementById('gen_mode_dinner');
+    if (modeM) draft.modeMarmita = modeM.checked;
+    if (modeD) draft.modeDinner  = modeD.checked;
     localStorage.setItem(STORAGE_KEYS.genDraft, JSON.stringify(draft));
   } catch (e) {}
 }
@@ -2805,6 +2810,96 @@ function clearGenDraft() {
   window._genDinnerResult = null;
 }
 
+// v2.1.47: Gerador de Cardápio reorganizado
+//  - Mode picker (Marmita/Jantar) sticky no topo, sempre visível
+//  - Seções em accordion com contador "X/Y preenchidos" + bolinha indicadora
+//  - Pop-up intermediário removido (generateMenu lê direto do mode picker)
+const GEN_SECTIONS = [
+  { id: 'proteins',   title: 'Proteínas (Marmitas)',  list: () => GEN_PROTEINS },
+  { id: 'carbs',      title: 'Carboidratos (Marmitas)', list: () => GEN_CARBS },
+  { id: 'dprots',     title: 'Proteínas (Jantares)',  list: () => [...GEN_SHARED_DINNER_PROTEINS, ...GEN_DINNER_PROTEINS] },
+  { id: 'dothers',    title: 'Outros (Jantares)',     list: () => GEN_DINNER_OTHERS },
+  { id: 'snacks',     title: 'Café e Lanches',         list: () => GEN_SNACKS },
+  { id: 'fruits',     title: 'Frutas',                 list: () => GEN_FRUITS },
+];
+
+function _genCountFilled(sectionId, stock) {
+  const sec = GEN_SECTIONS.find(s => s.id === sectionId);
+  if (!sec) return { filled: 0, total: 0 };
+  const items = sec.list();
+  const filled = items.filter(ing => (stock[ing.key] || 0) > 0).length;
+  return { filled, total: items.length };
+}
+
+function updateGenSectionHeader(sectionId) {
+  const header = document.getElementById('gen_header_' + sectionId);
+  const countEl = document.getElementById('gen_count_' + sectionId);
+  if (!header || !countEl) return;
+  // Lê valores atuais dos inputs dentro da seção
+  const sec = GEN_SECTIONS.find(s => s.id === sectionId);
+  if (!sec) return;
+  let filled = 0;
+  sec.list().forEach(ing => {
+    const el = document.getElementById('gen_' + ing.key);
+    if (el && parseFloat(el.value) > 0) filled++;
+  });
+  const total = sec.list().length;
+  countEl.textContent = `${filled}/${total}`;
+  header.classList.toggle('has-values', filled > 0);
+}
+
+function toggleGenSection(sectionId) {
+  const sec = document.getElementById('gen_section_' + sectionId);
+  if (sec) sec.classList.toggle('collapsed');
+}
+
+function _genRowHtml(ing, stock, extraDesc) {
+  const existing = stock[ing.key] || '';
+  const unit = ing.unit || 'g';
+  const descLine = extraDesc ? `<div style="font-size:11px;color:var(--ink-soft)">${extraDesc}</div>` : '';
+  const extraAttr = ing.gPerPorcao ? `oninput="updateFruitPorcoes('${ing.key}', ${ing.gPerPorcao}); updateGenSectionHeader('fruits')"` : '';
+  return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:var(--ink-strong)">${ing.label}</div>
+      ${descLine}
+    </div>
+    <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}" ${extraAttr}
+      style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg);color:var(--ink-strong)">
+    <span style="font-size:12px;color:var(--ink-soft)">${unit}</span>
+  </div>`;
+}
+
+function _genSectionHtml(sec, stock) {
+  const items = sec.list();
+  const filled = items.filter(ing => (stock[ing.key] || 0) > 0).length;
+  const hasValues = filled > 0;
+  // Primeira seção (proteínas) abre por default; outras abrem apenas se tiverem valores
+  const startOpen = sec.id === 'proteins' || hasValues;
+  let bodyHtml = '';
+  items.forEach(ing => {
+    let desc = '';
+    if (ing.marmita) desc = `${getMarmitaTypeName(ing.marmita)} (${ing.rawPerUnit}g/marmita)`;
+    else if (ing.dinner) desc = `${getDinnerTypeName(ing.dinner)} (${ing.rawPerUnit}${ing.unit}/jantar)`;
+    else if (ing.sharedHint) desc = ing.sharedHint;
+    else if (ing.gPerPorcao) {
+      const porcoes = stock[ing.key] ? (stock[ing.key] / ing.gPerPorcao).toFixed(1).replace(/\.0$/, '') : '0';
+      desc = `1 porção ≈ ${ing.gPerPorcao}g <span id="gen_por_${ing.key}" style="color:var(--green-primary)">(${porcoes} porções)</span>`;
+    }
+    bodyHtml += _genRowHtml(ing, stock, desc);
+  });
+  return `
+    <div class="gen-section ${startOpen ? '' : 'collapsed'}" id="gen_section_${sec.id}">
+      <div class="gen-section-header ${hasValues ? 'has-values' : ''}" id="gen_header_${sec.id}" onclick="toggleGenSection('${sec.id}')">
+        <span class="sh-dot"></span>
+        <span class="sh-title">${sec.title}</span>
+        <span class="sh-count" id="gen_count_${sec.id}">${filled}/${items.length}</span>
+        <span class="sh-chevron">▼</span>
+      </div>
+      <div class="gen-section-body">${bodyHtml}</div>
+    </div>
+  `;
+}
+
 function openMenuGenerator() {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
@@ -2813,104 +2908,28 @@ function openMenuGenerator() {
   // Usa o draft se houver (inputs + resultados da última vez), senão cai para home_stock
   const draft = loadGenDraft();
   const stock = (draft && draft.stock) ? draft.stock : getHomeStock();
+  // Modo inicial: do draft se existir, senão ambos marcados
+  const modeM = draft && draft.modeMarmita != null ? draft.modeMarmita : true;
+  const modeD = draft && draft.modeDinner  != null ? draft.modeDinner  : true;
 
-  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas do que você tem em casa. As proteínas são usadas para calcular o número de marmitas e/ou jantares (arredondando para baixo). Os demais ingredientes são salvos como estoque e descontados da lista de compras.</div>';
+  let html = `
+    <div class="gen-sticky-mode">
+      <div class="gen-mode-title">O que gerar?</div>
+      <div class="gen-mode-row">
+        <label class="gen-mode-check">
+          <input type="checkbox" id="gen_mode_marmita" ${modeM ? 'checked' : ''}>
+          <span>Marmita</span>
+        </label>
+        <label class="gen-mode-check dinner">
+          <input type="checkbox" id="gen_mode_dinner" ${modeD ? 'checked' : ''}>
+          <span>Jantar</span>
+        </label>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--ink-medium);margin-bottom:10px">Informe a quantidade <b>crua</b> em gramas do que você tem em casa. As proteínas são usadas para calcular o número de marmitas e/ou jantares. Os demais ingredientes são salvos como estoque e descontados da lista de compras.</div>
+  `;
 
-  html += '<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;margin:12px 0 6px">Proteínas</div>';
-  GEN_PROTEINS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">${getMarmitaTypeName(ing.marmita)} (${ing.rawPerUnit}g/marmita)</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">g</span>
-    </div>`;
-  });
-
-  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Carboidratos (Marmitas)</div>';
-  GEN_CARBS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">g</span>
-    </div>`;
-  });
-
-  html += '<div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;margin:14px 0 6px">Proteínas (Jantares)</div>';
-  GEN_SHARED_DINNER_PROTEINS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">${ing.sharedHint}</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
-    </div>`;
-  });
-  GEN_DINNER_PROTEINS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">${getDinnerTypeName(ing.dinner)} (${ing.rawPerUnit}${ing.unit}/jantar)</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
-    </div>`;
-  });
-
-  html += '<div style="font-size:12px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;margin:14px 0 6px">Outros (Jantares)</div>';
-  GEN_DINNER_OTHERS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
-    </div>`;
-  });
-
-  html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin:14px 0 6px">Café e Lanches</div>';
-  GEN_SNACKS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
-    </div>`;
-  });
-
-  html += '<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;margin:14px 0 6px">Frutas (gramas)</div>';
-  html += '<div style="font-size:11px;color:var(--gray-mid);margin-bottom:6px">Informe a quantidade em <b>gramas</b> de cada fruta. O sistema converte em porções automaticamente pela referência ao lado.</div>';
-  GEN_FRUITS.forEach(ing => {
-    const existing = stock[ing.key] || '';
-    const porcoes = existing ? (existing / ing.gPerPorcao).toFixed(1).replace(/\.0$/, '') : '0';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">${ing.label}</div>
-        <div style="font-size:11px;color:var(--gray-mid)">1 porção ≈ ${ing.gPerPorcao}g <span id="gen_por_${ing.key}" style="color:var(--green)">(${porcoes} porções)</span></div>
-      </div>
-      <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}"
-        oninput="updateFruitPorcoes('${ing.key}', ${ing.gPerPorcao})"
-        style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg)">
-      <span style="font-size:12px;color:var(--gray-mid)">${ing.unit}</span>
-    </div>`;
-  });
+  GEN_SECTIONS.forEach(sec => { html += _genSectionHtml(sec, stock); });
 
   html += '<div id="gen-result" style="margin-top:14px"></div>';
   html += '<button class="save-btn" style="margin-top:14px" onclick="generateMenu()" id="gen-generate-btn">Gerar Cardápio</button>';
@@ -2919,6 +2938,15 @@ function openMenuGenerator() {
 
   content.innerHTML = html;
   modal.classList.add('open');
+
+  // v2.1.47: hook input listeners nos campos pra atualizar os contadores
+  // dos headers das seções em tempo real (filled/total + bolinha verde).
+  GEN_SECTIONS.forEach(sec => {
+    sec.list().forEach(ing => {
+      const el = document.getElementById('gen_' + ing.key);
+      if (el) el.addEventListener('input', () => updateGenSectionHeader(sec.id));
+    });
+  });
 
   // Rola o card de volta ao início (sempre começa do topo ao abrir)
   const modalBox = content.closest('.modal');
@@ -2958,8 +2986,8 @@ function readGenInputs() {
 }
 
 function generateMenu() {
-  // Se nenhuma proteína foi inserida, mostra a mensagem de erro direto sem
-  // passar pelo picker de modo.
+  // v2.1.47: lê o modo direto do sticky mode picker no topo do modal
+  // (antes havia um popup intermediário confirmShared que foi removido).
   const stock = readGenInputs();
   const proteinLists = [GEN_PROTEINS, GEN_DINNER_PROTEINS, GEN_SHARED_DINNER_PROTEINS];
   const hasAnyProtein = proteinLists.some(list =>
@@ -2967,64 +2995,19 @@ function generateMenu() {
   );
   if (!hasAnyProtein) {
     document.getElementById('gen-result').innerHTML =
-      '<div style="background:var(--red-light);color:var(--red);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades de <b>proteínas</b> para gerar o cardápio</div>';
+      '<div style="background:var(--accent-danger-soft);color:var(--accent-danger);border-radius:10px;padding:12px;font-size:13px;text-align:center">Insira quantidades de <b>proteínas</b> para gerar o cardápio</div>';
     document.getElementById('gen-apply-btn').disabled = true;
     setGenerateButtonState(false);
-    // Limpa referências de resultado anterior
     window._genMarmitaResult = null;
     window._genDinnerResult = null;
     return;
   }
-  // Com proteínas presentes, mostra o picker de modo (marmita / jantar / ambos)
-  showModePicker();
-}
-
-function showModePicker() {
-  const stock = readGenInputs();
-  const shared = GEN_PROTEINS.filter(ing => ing.dinnerAlt && (stock[ing.key] || 0) > 0);
-
-  let warning = '';
-  if (shared.length > 0) {
-    const list = shared.map(ing => {
-      const mName = getMarmitaTypeName(ing.marmita);
-      const dName = getDinnerTypeName(ing.dinnerAlt);
-      return `<li style="margin:2px 0"><b>${ing.label}</b> <span style="color:var(--gray-mid)">(${mName} / ${dName})</span></li>`;
-    }).join('');
-    warning = `
-      <div style="background:#fffbeb;border-left:3px solid var(--orange);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:var(--gray)">
-        <b style="color:var(--orange)">Ingrediente compartilhado:</b>
-        <ul style="margin:4px 0 0 16px;padding:0">${list}</ul>
-      </div>`;
-  }
-
-  const html = `
-    <div style="background:var(--blue-bg);border:2px solid var(--blue-mid);border-radius:12px;padding:14px">
-      <div style="font-size:14px;font-weight:700;color:var(--blue);margin-bottom:6px">O que você quer gerar?</div>
-      <div style="font-size:12px;color:var(--gray-mid);margin-bottom:10px">
-        Marque as opções desejadas. A escolha vale para <b>todos</b> os ingredientes — se marcar só Marmita, só marmitas serão sugeridas (mesmo que você tenha colocado ingredientes de jantar).
-      </div>
-      ${warning}
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:var(--surface);border-radius:8px;margin-bottom:6px;border:1.5px solid var(--gray-light)">
-        <input type="checkbox" id="share_marmita" style="width:18px;height:18px;accent-color:var(--green)">
-        <span>Gerar Marmita</span>
-      </label>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:var(--surface);border-radius:8px;border:1.5px solid var(--gray-light)">
-        <input type="checkbox" id="share_dinner" style="width:18px;height:18px;accent-color:var(--purple)">
-        <span>Gerar Jantar</span>
-      </label>
-      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;font-style:italic">Se marcar os dois e houver proteína compartilhada, a geração é sequencial e alternada (marmita, jantar, marmita, jantar...) enquanto houver ingrediente suficiente.</div>
-      <button class="save-btn" style="margin-top:12px" onclick="confirmSharedAllocation()">Confirmar</button>
-    </div>
-  `;
-  document.getElementById('gen-result').innerHTML = html;
-  document.getElementById('gen-apply-btn').disabled = true;
-}
-
-function confirmSharedAllocation() {
-  const useM = document.getElementById('share_marmita').checked;
-  const useD = document.getElementById('share_dinner').checked;
+  const useM = document.getElementById('gen_mode_marmita')?.checked;
+  const useD = document.getElementById('gen_mode_dinner')?.checked;
   if (!useM && !useD) {
-    alert('Selecione ao menos uma opção (Marmita ou Jantar).');
+    document.getElementById('gen-result').innerHTML =
+      '<div style="background:var(--accent-danger-soft);color:var(--accent-danger);border-radius:10px;padding:12px;font-size:13px;text-align:center">Marque <b>Marmita</b> e/ou <b>Jantar</b> no topo pra gerar o cardápio</div>';
+    document.getElementById('gen-apply-btn').disabled = true;
     return;
   }
   const mode = (useM && useD) ? 'both' : (useM ? 'marmita' : 'dinner');
