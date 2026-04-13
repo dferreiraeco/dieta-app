@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dieta-v2.1.67';
+const CACHE_NAME = 'dieta-v2.1.68';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -13,9 +13,15 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first, no cache at all for HTML/JS
+  // v2.1.68: CSS também entra na política no-store (era network-first com
+  // cache fallback, mas PWA standalone em iOS honrava HTTP cache do navegador
+  // e nunca refetchava o stylesheet com query string estática).
   const url = new URL(e.request.url);
-  if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
+  const isNoStore = url.pathname.endsWith('.html')
+                 || url.pathname.endsWith('/')
+                 || url.pathname.endsWith('.js')
+                 || url.pathname.endsWith('.css');
+  if (isNoStore) {
     e.respondWith(
       fetch(e.request, { cache: 'no-store' }).catch(() =>
         caches.match(e.request)
@@ -23,7 +29,7 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // For other assets: network first, fallback to cache
+  // Outros assets (imagens, fontes, manifest): network first, cache fallback
   e.respondWith(
     fetch(e.request).then(response => {
       if (response.ok) {
