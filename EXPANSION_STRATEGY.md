@@ -3,8 +3,8 @@
 Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de usuários mais ampla. Atualize o status de cada item conforme progride.
 
 **Criado:** 2026-04-13 (v2.1.68)
-**Status global:** 🟡 Fase 0 em progresso (hardening pré-expansão)
-**Última atualização:** 2026-04-13
+**Status global:** 🟡 Fase 0 em progresso — decisões tomadas, aguardando criação do email DPO pra avançar Sprint 0B
+**Última atualização:** 2026-04-13 (decisões 1-4 registradas)
 
 ---
 
@@ -160,28 +160,35 @@ Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de 
   - Documentar onde/quando/como restaurar
   - Adicionar em SECURITY.md
 
-### 0.5 — Decisões a tomar (inputs do usuário)
+### 0.5 — Decisões tomadas (2026-04-13)
 
-- [ ] **Definir público-alvo geográfico**
-  - [ ] Brasil only (mais simples, PT-BR suficiente)
-  - [ ] Brasil + Portugal (PT-BR + PT-PT, alguns ajustes de termo)
-  - [ ] Internacional (requer i18n, ~weeks de trabalho)
+- [x] **Público-alvo geográfico: Brasil only**
+  - PT-BR suficiente, sem i18n
+  - Impacto: elimina ~1-2 semanas de trabalho de internacionalização
+  - Pode revisitar se houver demanda de fora do BR
 
-- [ ] **Definir modelo de receitas**
-  - [ ] Manter 6 marmitas + 6 jantares fixos brasileiros
-  - [ ] Permitir usuário criar as próprias receitas (refactor grande, ~1 semana)
-  - [ ] Híbrido: mantém as 12 como "receitas sugeridas" + permite custom
+- [x] **Modelo de receitas: fixo agora, custom futuro**
+  - Mantém as 6 marmitas + 6 jantares atuais como core da Fase 0-3
+  - Custom recipes vira item de evolução **pós-expansão** (Fase 4+ ou novo roadmap)
+  - Impacto: não bloqueia Fase 0. Nenhum refactor grande agora.
+  - Caveat: usuários vão perceber o limite. Adicionar texto nos termos/FAQ explicando "por enquanto, as refeições são fixas; custom virá em breve".
 
-- [ ] **Definir modelo de negócio**
-  - [ ] Gratuito 100%, sem monetização (custo Firebase do bolso)
-  - [ ] Gratuito com doação opcional (botão "Apoie o projeto" → PicPay/Pix)
-  - [ ] Freemium (features básicas free, avançadas pagas)
-  - [ ] Pago (assinatura mensal/anual)
+- [x] **Modelo de negócio: gratuito 100%**
+  - Sem monetização (doação, freemium, assinatura — nada agora)
+  - Custo Firebase sai do bolso do desenvolvedor (~$0-5/mês pra até 100-200 usuários ativos)
+  - Termos de Uso deixam claro "software gratuito, sem garantia, best-effort"
+  - Impacto: elimina complexidade de billing, payment integration, tiers
+  - Revisitar se custo Firebase virar problema real
 
-- [ ] **Definir DPO / ponto de contato**
-  - [ ] Seu email pessoal (mais simples)
-  - [ ] Email dedicado (dietplan.contato@gmail.com ou similar)
-  - [ ] Form online
+- [x] **DPO / ponto de contato: email Gmail dedicado (a criar)**
+  - Ação pendente: criar `dietplan.contato@gmail.com` (ou nome similar disponível)
+  - Usar esse email em:
+    - Política de Privacidade (contato DPO)
+    - Termos de Uso (suporte e reclamações)
+    - Auth screen footer
+    - Profile view modal (ajuda/contato)
+  - Tempo de resposta prometido: **15 dias** (conforme LGPD Art. 18 §3)
+  - **Não avançar** a Fase 0.1 sem o email criado (senão os docs legais ficam com placeholder)
 
 ---
 
@@ -337,13 +344,37 @@ Se qualquer um destes acontecer, PARE a expansão e volte pra revisar:
 
 Registre aqui cada decisão significativa com data e justificativa. Facilita revisitar depois.
 
-### Decisão #1 — [ainda não tomada]
+### Decisão #1 — Público-alvo geográfico
 
-**Data:**
-**Contexto:**
-**Opções consideradas:**
-**Decisão:**
-**Justificativa:**
+**Data:** 2026-04-13
+**Contexto:** Pra internacionalizar ou não o app antes da expansão.
+**Opções consideradas:** Brasil only / Brasil+PT / Internacional (i18n).
+**Decisão:** **Brasil only.**
+**Justificativa:** Reduz escopo da Fase 0 eliminando i18n (~1-2 semanas). PT-BR é suficiente, e se houver demanda estrangeira futura, pode-se reabrir essa decisão. LGPD já cobre o contexto legal brasileiro.
+
+### Decisão #2 — Modelo de receitas
+
+**Data:** 2026-04-13
+**Contexto:** Se refatoramos agora pra permitir usuário criar receitas customizadas, ou mantemos as 12 fixas.
+**Opções consideradas:** Fixo / Custom / Híbrido.
+**Decisão:** **Fixo por enquanto**, com custom recipes planejado como evolução pós-expansão.
+**Justificativa:** Custom recipes é refactor grande (~1 semana) que não é bloqueador pra abrir o app. Usuários entendem a limitação se estiver documentada. Melhor validar o app com receitas fixas primeiro e iterar depois.
+
+### Decisão #3 — Modelo de negócio
+
+**Data:** 2026-04-13
+**Contexto:** Como sustentar o custo Firebase e a manutenção do app.
+**Opções consideradas:** Grátis / Doação / Freemium / Pago.
+**Decisão:** **Gratuito 100%**, custo Firebase sai do bolso do dev.
+**Justificativa:** App pessoal sem ambição comercial. Firebase estimado em ~$0-5/mês pra até 100-200 usuários ativos, absorvível. Elimina complexidade enorme de billing, payment integration, tiers, compliance fiscal. Revisitar se a base crescer muito ou custo virar problema real.
+
+### Decisão #4 — Ponto de contato LGPD / DPO
+
+**Data:** 2026-04-13
+**Contexto:** LGPD exige ponto de contato pra exercício de direitos do titular.
+**Opções consideradas:** Email pessoal / Email dedicado / Form online.
+**Decisão:** **Email Gmail dedicado**, a ser criado (`dietplan.contato@gmail.com` ou similar).
+**Justificativa:** Separação profissional/pessoal é boa prática. Gmail é gratuito. Form online adiciona complexidade desnecessária pro volume esperado. **Ação pendente:** criar o email ANTES de publicar os documentos legais (senão ficam com placeholder que expõe juridicamente).
 
 ---
 
@@ -366,8 +397,63 @@ Conforme cada item da Fase 0 for sendo completado, registrar aqui com a versão 
 
 ---
 
-## 📌 Próximo passo sugerido
+## 📌 Plano de execução da Fase 0 (2026-04-13)
 
-A decisão mais importante ANTES de começar é responder as 4 perguntas do 0.5 (público-alvo, modelo de receitas, modelo de negócio, DPO). Sem essas definições, várias tarefas de Fase 0 ficam ambíguas.
+As 4 decisões de 0.5 estão tomadas. Com base nelas, aqui está a ordem recomendada de execução da Fase 0:
 
-**Recomendação:** preencher a seção "Decisões tomadas" com pelo menos 4 decisões iniciais antes de começar a implementar qualquer item da Fase 0. Depois, atacar Fase 0.1 (legal/compliance) primeiro, que é o maior bloqueador.
+### Sprint 0A — Bloqueadores externos (dia 1, ~30min do usuário)
+
+**Ação do usuário** (não posso fazer por você):
+1. **Criar `dietplan.contato@gmail.com`** (ou nome disponível similar) no Gmail
+2. **Me avisar o email escolhido** pra eu usar nos documentos legais
+
+**Ação minha** (paralela):
+- Começar a estruturar os docs legais com placeholder `{DPO_EMAIL}` pra substituir depois
+
+### Sprint 0B — Docs legais (1 dia de trabalho)
+
+Dependência: email DPO criado.
+
+- `PRIVACY.md` — Política de Privacidade (LGPD compliant, ~2-3 páginas)
+- `TERMS.md` — Termos de Uso (disclaimer médico forte, ~1-2 páginas)
+- Adicionar links no auth screen footer + profile view modal
+- Checkbox de consentimento no form de signup (requer pequena mudança em `submitAuthEmail`)
+
+### Sprint 0C — Account management (1 dia)
+
+- Export completo de dados como JSON (botão no profile view)
+- Account deletion real (delete Firestore + `auth.currentUser.delete()`)
+- Email verification no signup (`sendEmailVerification` após createUser)
+- Disclaimer médico visível na aba Dieta
+
+### Sprint 0D — UX pro estranho (1-2 dias)
+
+- Landing/intro antes do login (pode ser seção no próprio auth screen)
+- Tooltip help contextual no onboarding (LBM, BF%, fator atividade)
+- Defaults mais conservadores (déficit extremo atrás de "modo avançado")
+- Tour/walkthrough no primeiro uso (opcional, decide depois)
+- Feedback canal (botão/link pro email DPO)
+
+### Sprint 0E — Operacional (parte pelo usuário)
+
+**Ação do usuário:**
+- Migrar Firebase pra plano Blaze (pay-as-you-go) — gratuito até consumo exceder free tier
+- Definir budget alerta em Firebase Console (ex: $10/mês)
+
+**Ação minha:**
+- Documentar no SECURITY.md (seção nova sobre Blaze + alerts)
+- Atualizar ROADMAP.md referenciando EXPANSION_STRATEGY
+
+### Sprint 0F — Validação
+
+- Smoke test completo end-to-end simulando usuário novo
+- Auditoria manual de todos os checkboxes de Fase 0
+- Marcar Fase 0 como ✅ 100% concluída
+
+### Estimativa total Fase 0
+
+**3-5 dias de trabalho** (distribuídos ao longo de ~1 semana calendário), dependendo de quando o email Gmail for criado e quando você quiser revisar os docs legais.
+
+---
+
+**Recomendação imediata:** começar o Sprint 0A — crie o email Gmail. Enquanto isso, posso começar os drafts dos documentos legais com placeholder `{DPO_EMAIL}`.
