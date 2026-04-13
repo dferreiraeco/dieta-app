@@ -847,7 +847,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   width: 360px; height: 360px; border-radius: 84px;
   max-width: 80vw; max-height: 80vw;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .auth-logo img {
   width: 100% !important;
