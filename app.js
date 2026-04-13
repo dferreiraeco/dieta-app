@@ -1496,6 +1496,83 @@ function autoSundayRollover() {
   onPlanChange();
 }
 
+// v2.1.48: item 17 do roadmap — estatísticas do histórico semanal
+// Computa médias, top 3 e desvio vs meta a partir do marmitaHistory.
+function _computeHistoryStats(history) {
+  const weeks = Object.keys(history).sort();
+  if (weeks.length === 0) return null;
+
+  // Agregados
+  const marmitaCount = {};  // id → total de marmitas consumidas
+  const dinnerCount  = {};  // id → total de jantares
+  MARMITA_DEFS.forEach(m => { marmitaCount[m.id] = 0; });
+  DINNER_DEFS.forEach(d  => { dinnerCount[d.id]  = 0; });
+
+  // Série temporal: semana → { kcal total planejado, total marmitas, total jantares }
+  const series = [];
+
+  weeks.forEach(wk => {
+    const snap = history[wk];
+    let weekKcal = 0, weekP = 0, weekC = 0, weekG = 0;
+    let mTotal = 0, dTotal = 0;
+
+    // marmitas: { A: n, B: n, ..., dinners: { O: n, T: n, ... }, _saved: ... }
+    MARMITA_DEFS.forEach(m => {
+      const q = snap[m.id] || 0;
+      if (q > 0) {
+        marmitaCount[m.id] += q;
+        mTotal += q;
+        weekKcal += m.kcal * q; weekP += m.p * q; weekC += m.c * q; weekG += m.g * q;
+      }
+    });
+    // Alguns snapshots históricos (pre v2.1.32) usam _dinner, outros (pós) usam dinners
+    const dinnerSnap = snap.dinners || snap._dinner || {};
+    DINNER_DEFS.forEach(d => {
+      const q = dinnerSnap[d.id] || 0;
+      if (q > 0) {
+        dinnerCount[d.id] += q;
+        dTotal += q;
+        weekKcal += d.kcal * q; weekP += d.p * q; weekC += d.c * q; weekG += d.g * q;
+      }
+    });
+
+    series.push({ week: wk, kcal: weekKcal, p: weekP, c: weekC, g: weekG, marmitas: mTotal, dinners: dTotal });
+  });
+
+  // Top 3 de cada
+  const topN = (counts, defs, n = 3) => {
+    return Object.entries(counts)
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, n)
+      .map(([id, total]) => {
+        const def = defs.find(x => x.id === id);
+        return { id, name: def ? def.name.split(' - ')[1] || def.name : id, total };
+      });
+  };
+
+  // Média semanal (apenas semanas com plano > 0)
+  const nonEmpty = series.filter(s => s.kcal > 0);
+  const avgWeeklyKcal = nonEmpty.length ? nonEmpty.reduce((a, s) => a + s.kcal, 0) / nonEmpty.length : 0;
+  const avgDailyKcal  = avgWeeklyKcal / 7;  // ~14 marmitas / 7 dias = daily avg
+
+  // Meta atual (do perfil) pra computar desvio
+  let currentTarget = 0;
+  try { currentTarget = getGoals().kcal || 0; } catch (e) {}
+  const deviationPct = currentTarget > 0 ? ((avgDailyKcal - currentTarget) / currentTarget * 100) : 0;
+
+  return {
+    series,
+    topMarmitas: topN(marmitaCount, MARMITA_DEFS),
+    topDinners:  topN(dinnerCount,  DINNER_DEFS),
+    avgWeeklyKcal,
+    avgDailyKcal,
+    currentTarget,
+    deviationPct,
+    weekCount: weeks.length,
+  };
+}
+
 function openMarmitaHistory() {
   const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
   const modal = document.getElementById('history-modal');
@@ -1510,12 +1587,84 @@ function openMarmitaHistory() {
     return;
   }
 
-  // Build header
+  const stats = _computeHistoryStats(history);
+  let html = '';
+
+  // ---- SEÇÃO: Estatísticas gerais ----
+  if (stats) {
+    const fmtK = n => Math.round(n).toLocaleString('pt-BR');
+    const devSign = stats.deviationPct > 0 ? '+' : '';
+    const devColor = Math.abs(stats.deviationPct) <= 5 ? 'var(--green-primary)'
+                   : stats.deviationPct > 0 ? 'var(--accent-warm)' : 'var(--accent-danger)';
+
+    html += `<div style="background:var(--green-soft);border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;color:var(--green-primary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Resumo (${stats.weekCount} semana${stats.weekCount > 1 ? 's' : ''})</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:10px;color:var(--ink-medium);text-transform:uppercase;font-weight:700">Média kcal/dia</div>
+          <div style="font-size:20px;font-weight:800;color:var(--ink-strong)">${fmtK(stats.avgDailyKcal)}</div>
+        </div>
+        ${stats.currentTarget > 0 ? `
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:10px;color:var(--ink-medium);text-transform:uppercase;font-weight:700">Desvio vs meta</div>
+          <div style="font-size:20px;font-weight:800;color:${devColor}">${devSign}${stats.deviationPct.toFixed(1)}%</div>
+          <div style="font-size:10px;color:var(--ink-soft)">meta: ${fmtK(stats.currentTarget)} kcal</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ---- SEÇÃO: Gráfico de kcal/dia por semana (barras horizontais) ----
+  if (stats && stats.series.length > 0) {
+    const nonEmpty = stats.series.filter(s => s.kcal > 0);
+    if (nonEmpty.length > 0) {
+      const maxK = Math.max(...nonEmpty.map(s => s.kcal / 7));
+      html += `<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--ink-strong);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">kcal/dia por semana</div>`;
+      // Últimas 12 semanas (evita sobrecarga visual)
+      const recent = nonEmpty.slice(-12);
+      recent.forEach(s => {
+        const daily = s.kcal / 7;
+        const pct = maxK > 0 ? (daily / maxK) * 100 : 0;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">
+          <span style="width:60px;color:var(--ink-medium);font-weight:600;flex-shrink:0">${s.week}</span>
+          <div style="flex:1;background:var(--gray-bg);border-radius:6px;height:18px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;height:100%;width:${pct}%;background:var(--green-primary);border-radius:6px"></div>
+          </div>
+          <span style="width:60px;text-align:right;color:var(--ink-strong);font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0">${Math.round(daily).toLocaleString('pt-BR')}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  // ---- SEÇÃO: Top 3 marmitas + top 3 jantares ----
+  if (stats && (stats.topMarmitas.length > 0 || stats.topDinners.length > 0)) {
+    html += '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">';
+    if (stats.topMarmitas.length > 0) {
+      html += `<div style="flex:1;min-width:140px;background:var(--green-soft);border-radius:10px;padding:10px">
+        <div style="font-size:10px;font-weight:800;color:var(--green-primary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">Top marmitas</div>`;
+      stats.topMarmitas.forEach((m, i) => {
+        html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>${i+1}. ${m.name}</span><b>${m.total}×</b></div>`;
+      });
+      html += '</div>';
+    }
+    if (stats.topDinners.length > 0) {
+      html += `<div style="flex:1;min-width:140px;background:var(--purple-bg);border-radius:10px;padding:10px">
+        <div style="font-size:10px;font-weight:800;color:var(--purple-soft);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">Top jantares</div>`;
+      stats.topDinners.forEach((d, i) => {
+        html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>${i+1}. ${d.name}</span><b>${d.total}×</b></div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ---- SEÇÃO: Detalhamento por semana (tabela existente) ----
+  html += `<div style="font-size:12px;font-weight:800;color:var(--ink-strong);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 8px">Detalhamento semanal</div>`;
   const ids = MARMITA_DEFS.map(m => m.id);
-  let html = '<table class="history-table"><tr><th>Semana</th>';
+  html += '<table class="history-table"><tr><th>Semana</th>';
   ids.forEach(id => { html += `<th>${id}</th>`; });
   html += '<th>Total</th></tr>';
-
   weeks.forEach(wk => {
     const p = history[wk];
     let total = 0;
@@ -1529,8 +1678,8 @@ function openMarmitaHistory() {
   });
   html += '</table>';
 
-  // Summary chart: total marmitas per type across all weeks
-  html += '<div style="margin-top:16px"><b style="font-size:13px;color:var(--blue)">Acumulado (todas as semanas)</b></div>';
+  // Summary chart acumulado (cards por tipo)
+  html += '<div style="margin-top:16px;font-size:12px;font-weight:800;color:var(--ink-strong);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Acumulado por tipo</div>';
   const totals = {};
   ids.forEach(id => { totals[id] = 0; });
   let grandTotal = 0;
@@ -1540,9 +1689,9 @@ function openMarmitaHistory() {
   html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
   MARMITA_DEFS.forEach(m => {
     const pct = grandTotal ? Math.round(totals[m.id] / grandTotal * 100) : 0;
-    html += `<div style="flex:1;min-width:70px;text-align:center;background:var(--green-bg);border-radius:8px;padding:8px 4px">
-      <div style="font-size:18px;font-weight:700;color:var(--green)">${totals[m.id]}</div>
-      <div style="font-size:10px;color:var(--gray-mid)">${m.name.split(' - ')[1]} (${pct}%)</div>
+    html += `<div style="flex:1;min-width:70px;text-align:center;background:var(--green-soft);border-radius:8px;padding:8px 4px">
+      <div style="font-size:18px;font-weight:700;color:var(--green-primary)">${totals[m.id]}</div>
+      <div style="font-size:10px;color:var(--ink-medium)">${m.name.split(' - ')[1]} (${pct}%)</div>
     </div>`;
   });
   html += '</div>';
