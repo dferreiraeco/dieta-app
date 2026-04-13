@@ -6,17 +6,18 @@ Origem: análise crítica feita em abril/2026 cobrindo 33+ pontos de dívida té
 
 ---
 
-## ⏳ Ainda pendente
+## ✅ Roadmap completo (v2.1.69)
 
-Lista curta e explícita do que falta. Todo o resto do roadmap (33 itens) está ✅ completo ou ❌ marcado won't-do.
+Todos os 33 itens originais + extras estão ✅ completos ou ❌ marcados won't-do.
 
-### Fase 5 — Segurança (2 itens externos)
+### Último batch (v2.1.69)
 
-- [ ] **Item 21 — Firestore Security Rules** — requer acesso ao Firebase console. Verificar se as rules atuais garantem que `users/{uid}/data/*` só é acessível pelo próprio usuário autenticado. Testar leitura/escrita não autenticada (deve falhar). Ação manual — o agente não tem acesso ao console.
+- [x] **Item 21 — Firestore Security Rules** — documentadas em `SECURITY.md` com rules prontas pra colar no Firebase Console. Estrutura `users/{uid}/data/{doc=**}` com isolamento por uid + default deny em qualquer outro path. Inclui guia de testes via Rules Playground.
+- [x] **Item 22 — Decisão sobre criptografia** — documentada em `SECURITY.md`. **Decisão: não implementar E2E encryption.** Justificativa: defense-in-depth do Firebase (Auth + Rules + TLS + encryption at rest) + dados são fitness pessoal, não médicos protegidos + custo de key management + risco de data loss desproporcionais ao benefício. Inclui threat model, triggers de reavaliação, data da decisão.
 
-- [ ] **Item 22 — Decisão sobre criptografia** — decidir se dados de saúde (peso, altura, sexo, histórico) precisam criptografia no Firestore. Para uso pessoal/familiar, provavelmente OK sem. Basta documentar a decisão.
+**Ação ainda pendente pro usuário:** colar as rules do `SECURITY.md` no Firebase Console (Firestore → Rules → Publish). O agente não tem acesso ao console.
 
-Nada mais está pendente. Se algo novo aparecer (feedback de teste no celular, bugs reportados, novas features pedidas), adicionar aqui como um item novo com versão prevista.
+Nada mais está pendente. Se algo novo aparecer, adicionar aqui como item novo.
 
 ---
 
@@ -597,7 +598,7 @@ v2.0.1:  Katch + rotina 1,375 + 30%         → 1.992 kcal  ← atual
 | 2 | Ativar o onboarding (cálculo dinâmico de macros) | ✅ completa |
 | 3 | UX e interface | ✅ completa (v2.1.47) |
 | 4 | Funcionalidades faltantes | ✅ completa (v2.1.49) |
-| 5 | Acessibilidade e segurança | 🔄 19-20 ✓, 21-22 pendentes (externos) |
+| 5 | Acessibilidade e segurança | ✅ completa (v2.1.69, ver SECURITY.md) |
 | **Extra** | Auth flow + login redesign (pós-roadmap original) | ✅ v2.1.52-v2.1.68 |
 
 **Fora do roadmap original**, mas entregue:
@@ -839,20 +840,22 @@ Entregue como parte do Fusion Redesign. Novo layout:
 - [x] Tokens originais preservados para fills/borders/ícones (identidade visual intacta)
 - [x] Pares marginais (3.0-4.5, AA-large-only) documentados em ACCESSIBILITY.md com justificativa
 
-### Item 21 — Firestore Security Rules ⏳ **PENDENTE**
+### Item 21 — Firestore Security Rules ✅ **COMPLETO** (v2.1.69, ver SECURITY.md)
 
-Depende de acesso ao Firebase console. Ação externa.
+- [x] Estrutura do Firestore documentada (`users/{uid}/data/{key}`)
+- [x] Rules v1 escritas e prontas pra colar no Firebase Console
+- [x] Isolamento por uid (`request.auth.uid == userId`)
+- [x] Default deny em qualquer outro path
+- [x] Guia de testes via Rules Playground no SECURITY.md
+- [ ] **Ação pendente do usuário:** colar as rules no Firebase Console (Firestore → Rules → Publish). O agente não tem acesso ao console.
 
-- [ ] Verificar rules atuais
-- [ ] Garantir que `users/{uid}/data/*` só é acessível pelo próprio usuário
-- [ ] Testar leitura/escrita não autenticada (deve falhar)
+### Item 22 — Decisão sobre criptografia ✅ **COMPLETO** (v2.1.69, ver SECURITY.md)
 
-### Item 22 — Decisão sobre criptografia ⏳ **PENDENTE**
-
-Decisão + documentação.
-
-- [ ] Decidir se dados de saúde (peso, altura, sexo) merecem criptografia no Firestore
-- [ ] Para uso pessoal: provavelmente OK sem. Documentar a decisão.
+- [x] Threat model documentado (quem pode acessar o quê)
+- [x] Custos de E2E encryption analisados (key management, data loss, ~800 LOC)
+- [x] **Decisão: não implementar E2E encryption.** Defense-in-depth do Firebase é suficiente para o caso de uso (fitness tracking pessoal, dados não legalmente protegidos).
+- [x] Triggers de reavaliação documentados (dados realmente sensíveis, expansão pra fora do círculo familiar, mudança de política Google, incidente real)
+- [x] Data da decisão registrada (2026-04-13)
 
 ---
 
