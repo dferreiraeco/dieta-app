@@ -6,6 +6,76 @@ Origem: análise crítica feita em abril/2026 cobrindo 33+ pontos de dívida té
 
 ---
 
+## 🎯 v2.1.15 → v2.1.51 — Sprint de polimento e roadmap close-out (2026-04-13)
+
+**Objetivo:** fechar as Fases 3, 4 e 5 do roadmap + responder a feedback iterativo do usuário durante teste real no celular.
+
+### Releases por tema
+
+**Imagens do planner**
+- v2.1.15-v2.1.16: crop + aplicação das 7 imagens faltantes
+- v2.1.28: PNG 512px → JPG 320px q85, **18× menor** (6.7 MB → 367 KB), loading="lazy" nos selectors
+
+**Jantares = roxo (6 spots)**
+- v2.1.15: planner-ok pill + history-btn com classe `.is-dinner`
+- v2.1.19: card de refeição Jantar no tracker (border, glyph, eaten state)
+- v2.1.20: snacks (café/lanche/pré-sono) em amarelo (novo token `--yellow-soft/-bg`)
+- v2.1.22: `.msel-option.selected` escopada em `#dinner-selector`
+- v2.1.23: stock badge das unidades de jantar
+
+**Gerador de cardápio**
+- v2.1.29: soma ao planejamento atual (antes sobrescrevia)
+- v2.1.31: idempotente — snapshot do lastApplied pra não duplicar em re-gerações
+- v2.1.47: **Item 10** — mode picker sticky + accordion + indicadores + popup removido
+
+**Aba Dieta / Tracker**
+- v2.1.17: "Resetar Dia" movido pro fim da página em vermelho (estilo reset-btn)
+- v2.1.18: removido checkmark fantasma do `.meal.eaten::after` legacy
+- v2.1.30: link "ⓘ Detalhes" alinhado à direita do título
+
+**Escalonamento de receitas (dieta dinâmica)**
+- v2.1.34: marmitas/jantares escalam pelo portion scale via `scaleMealDef`
+- v2.1.35: round-down 10g + macros via loss factor
+- v2.1.40: **portion scale iterativo** (fixed-point) corrigindo overshoot/undershoot da meta (+6.6% → -2.4% no caso do usuário)
+- v2.1.42: Math.ceil nos contáveis da lista de compras (ovos, fatias, latas, tortillas)
+
+**Configuração de usuário**
+- v2.1.32: "Limpar Planejamento Semanal" agora é clear puro + auto-rollover silencioso no domingo
+- v2.1.33: **single-person mode** (cardápio pra 1 ou 2 pessoas)
+- v2.1.36: **Item 12** — validação inline no onboarding (async blur/input/change)
+
+**Visual / Auth / Ícones**
+- v2.1.25: respiro user-bar ↔ page-header
+- v2.1.26-v2.1.27: avatar com foto do Google + fallback letra
+- v2.1.39, v2.1.44-v2.1.46: ícone novo com cantos arredondados (22% → 30%, manifest+meta atualizados)
+- v2.1.43: auth screen branca + rebrand **DietPLAN**
+- v2.1.41: close button do profile-view fora do card
+
+**Fase 4 — Funcionalidades**
+- v2.1.48: **Item 17** — estatísticas do histórico semanal
+- v2.1.49: **Item 16** — substituições manuais na lista de compras
+- Item 15 e 18: **won't-do** documentado
+
+**Fase 5 — A11y + WCAG AA**
+- v2.1.24: **Item 11 + 19 parcial** — customConfirm (14 call sites) + aria-labels (17 botões)
+- v2.1.37, v2.1.38, v2.1.51: **Item 13** — dark mode (toggle + tokens + fixes + default light)
+- v2.1.50: **Item 19 complete** — focus trap + Esc global + focus-visible indicators
+- v2.1.51: **Item 20** — WCAG AA audit + tokens `-text` + `ACCESSIBILITY.md`
+
+### Tests: 129/129 ✓
+
+(+1 teste para o novo portion scale iterativo em v2.1.40)
+
+### Arquivos novos ou significativamente mudados
+- `ACCESSIBILITY.md` novo (v2.1.51)
+- `manifest.json` reescrito (v2.1.46)
+- `styles.css` ganha tokens `-text`, segmented control, accordion, picker-option, shop-sub-*
+- `scripts/crop-meals.py` atualizado pra output JPG 320
+- 4 PNGs derivados regerados + `icon-novo.png` como source-of-truth
+- 12 JPGs no lugar dos 12 PNGs em `images/`
+
+---
+
 ## 🍽 v2.1.5 → v2.1.14 — Pratos fotorrealistas no planner (2026-04-13)
 
 **Objetivo:** substituir os emojis placeholder do grid de marmitas/jantares por imagens foto-realistas de pratos, estilo food photography premium, nos moldes do Apphone reference UI kit.
@@ -469,9 +539,9 @@ v2.0.1:  Katch + rotina 1,375 + 30%         → 1.992 kcal  ← atual
 |---|---|---|
 | 1 | Dívida técnica crítica (refactors que destravam o resto) | ✅ completa |
 | 2 | Ativar o onboarding (cálculo dinâmico de macros) | ✅ completa |
-| 3 | UX e interface | ⏳ pendente |
-| 4 | Funcionalidades faltantes | ⏳ pendente |
-| 5 | Acessibilidade e segurança | ⏳ pendente |
+| 3 | UX e interface | ✅ completa (v2.1.47) |
+| 4 | Funcionalidades faltantes | ✅ completa (v2.1.49) |
+| 5 | Acessibilidade e segurança | ⏳ 19-20 ✓, 21-22 pendentes (externos) |
 
 ---
 
@@ -593,99 +663,131 @@ v2.0.1:  Katch + rotina 1,375 + 30%         → 1.992 kcal  ← atual
 
 ---
 
-## ⏳ Fase 3 — UX e Interface
+## ✅ Fase 3 — UX e Interface
 
-### Item 9 — User-bar compacto no mobile
+### Item 9 — User-bar compacto no mobile ✅ **COMPLETO** (v2.1.0)
 
-Atualmente: `Nome Sobrenome | XX anos | Peso atual: XX,X kg | Meta de peso: YY,Y kg` — muito texto para 40px.
+Entregue como parte do Fusion Redesign. Novo layout:
+- Linha 1: `Nome Sobrenome · XX anos · XX,X → YY,Y kg`
+- Avatar à esquerda (foto do Google se logado, letra inicial senão — v2.1.26)
+- Botão sair à direita
+- Click abre profile-view modal (bottom-sheet, v2.1.2)
 
-- [ ] Reduzir para duas linhas ou abreviar
-- [ ] Formato proposto: `Nome · XX anos` (linha 1) + `XX,X → YY,Y kg` (linha 2)
+### Item 10 — Reorganizar modal do Gerador de Cardápio ✅ **COMPLETO** (v2.1.47)
 
-### Item 10 — Reorganizar modal do Gerador de Cardápio
+- [x] Mode picker sticky no TOPO do modal (checkboxes sempre visíveis)
+- [x] Accordion por seção (6 seções: Proteínas/Carbos/Jantares/Outros/Lanches/Frutas)
+- [x] Indicador visual (bolinha verde + ring) quando há valores preenchidos
+- [x] Contador `X/Y` em cada seção atualizado em tempo real no input
+- [x] Pop-up intermediário de confirmação de modo REMOVIDO (mode picker sticky dispensa)
+- [x] Estado inicial inteligente: proteínas abre sempre; outras abrem só se tiverem valores do draft
+- [x] saveGenDraft persiste o estado do mode picker
 
-Atualmente 7 seções num modal 80vh com scroll infinito. Seletor de modo (marmita/jantar) aparece só depois de clicar.
+### Item 11 — Modal customizado substituindo `confirm()` ✅ **COMPLETO** (v2.1.24)
 
-- [ ] Mode picker sticky no TOPO do modal (checkboxes sempre visíveis)
-- [ ] Accordion por seção (Proteínas / Carbos / Jantares / Outros / Lanches / Frutas)
-- [ ] Indicador visual em cada seção (bolinha quando há valor preenchido)
-- [ ] Remover pop-up intermediário de "Confirmar modo"
+- [x] Helper `customConfirm(message, opts)` retorna `Promise<boolean>`
+- [x] Modal `#confirm-modal` com role=alertdialog + aria-modal
+- [x] Suporte a: title, okLabel, cancelLabel, danger (botão OK vermelho)
+- [x] Fecha por: botão, click no overlay, Escape
+- [x] Confirma por: botão ou Enter
+- [x] 14 call sites de `confirm()` nativo convertidos — funções afetadas viraram `async`
 
-### Item 11 — Modal customizado substituindo `confirm()`
+### Item 12 — Validação inline no onboarding ✅ **COMPLETO** (v2.1.36)
 
-- [ ] Helper `showConfirmDialog(title, body, { onConfirm, onCancel, variant: 'danger' })`
-- [ ] Modal customizado com branding (z-index acima do history-modal)
-- [ ] Substituir todos os `confirm()` no código (~5-6 ocorrências)
+- [x] Dispatcher puro `validateOnboardingField(id)` retorna null/string
+- [x] `runInlineValidation(id)` aplica/limpa erro inline via `.error` class e `.ob-error.show`
+- [x] Listeners `blur`/`input`/`change` em todos os 11 campos OB
+- [x] `setupOnboardingValidation()` idempotente, hookado em initApp
+- [x] Submit final roda mesmo dispatcher em loop, foco no primeiro erro
+- [x] Casos especiais: deficit/surplus condicionais (só validam quando peso/meta indicam cut/bulk)
 
-### Item 12 — Validação inline no onboarding
+### Item 13 — Dark mode ✅ **COMPLETO** (v2.1.37, polish v2.1.38/v2.1.51)
 
-- [ ] Borders vermelhas em campos inválidos
-- [ ] Mensagens de erro abaixo de cada campo
-- [ ] Botão "Salvar e Continuar" fica desabilitado até tudo válido
-- [ ] Substituir `alert()` atual
+- [x] Variáveis CSS em `[data-theme="dark"]` com overrides dos accents (green, purple, yellow, warm, danger mais claros pra dark)
+- [x] Toggle segmented control `Claro / Escuro / Auto` no profile-view modal
+- [x] Persistência em `localStorage.theme`
+- [x] Inline script no `<head>` aplica antes do CSS pintar (zero flash)
+- [x] Listener `prefers-color-scheme` pro modo `auto`
+- [x] Audit de `background: #fff` hardcoded substituído por `var(--surface)` (22 matches)
+- [x] Fix de 3 spots reportados pelo usuário em v2.1.38 (botão gerador, close-x, card de frutas)
+- [x] **Default alterado de `auto` → `light`** em v2.1.51 (usuário escolhe dark/auto explicitamente)
 
-### Item 13 — Dark mode
+### Item 14 — Cards compactos no planner ✅ **COMPLETO** (v2.1.0)
 
-- [ ] Variáveis CSS secundárias `[data-theme="dark"]`
-- [ ] Toggle em alguma aba ou no user-bar
-- [ ] Persistir escolha em `localStorage.theme`
-- [ ] Respeitar `prefers-color-scheme` como default
-
-### Item 14 — Cards compactos no planner
-
-Cada card tem ~200px (composição + macros + botão receita). Usuário rola muito.
-
-- [ ] Modo compacto: só nome + macros + stepper
-- [ ] Expand opcional ao clicar (mostra composição + receita)
-- [ ] Toggle "compacto/detalhado" no header da seção
+Entregue como parte do Fusion Redesign. Novo layout:
+- Grid 2 colunas (era lista vertical)
+- Cards com imagem circular 80×80 + nome + descrição + macros + stepper pill
+- Sem toggle compacto/detalhado — o grid já é compacto o suficiente
+- Receita completa acessível via click no card (`showMarmitaRecipe`/`showDinnerRecipe`)
 
 ---
 
-## ⏳ Fase 4 — Funcionalidades Faltantes
+## ✅ Fase 4 — Funcionalidades Faltantes
 
-### Item 15 — Estoque com validade / log de compras ❌ **WON'T DO**
+### Item 15 — Estoque com validade / log de compras ❌ **WON'T DO** (2026-04-13)
 
-**Decisão (2026-04-13):** não implementar. Validade de alimentos depende de critérios sanitários que variam por embalagem, método de armazenamento, temperatura de geladeira, lote e manuseio após abertura. O app não tem dados nem autoridade pra fazer alertas confiáveis, e um alerta errado pode induzir o usuário a consumir algo vencido ou descartar algo bom. Fora do escopo.
+**Decisão:** não implementar. Validade de alimentos depende de critérios sanitários que variam por embalagem, método de armazenamento, temperatura de geladeira, lote e manuseio após abertura. O app não tem dados nem autoridade pra fazer alertas confiáveis, e um alerta errado pode induzir o usuário a consumir algo vencido ou descartar algo bom. Fora do escopo.
 
-### Item 16 — Substituições manuais na lista de compras
+### Item 16 — Substituições manuais na lista de compras ✅ **COMPLETO** (v2.1.49)
 
-- [ ] Permitir marcar item como "comprei outro no lugar" com texto livre
-- [ ] Guardar log de substituições para análise futura
+- [x] Botão ✎ em cada linha da lista de compras
+- [x] Click abre `window.prompt` com texto atual pré-preenchido
+- [x] Item substituído vira checked + riscado + "↳ comprei: <texto>" em itálico
+- [x] Visual: fundo accent-warm-soft, botão ✎ vira sólido laranja
+- [x] Texto vazio / cancelar vazio → remove substituição
+- [x] Persistência em `STORAGE_KEYS.shopSubs` (session) + `shopSubsLog` (append-only pra análise futura)
+- [x] Ambos os keys no `SYNC_KEYS` → sync via Firestore + entram em backup/export
+- [x] Cleanup: `resetChecklist` e `_internalResetWeek` limpam `shopSubs` mas preservam `shopSubsLog`
 
 ### Item 17 — Estatísticas do histórico semanal ✅ **COMPLETO** (v2.1.48)
 
-- [x] Gráfico: média de kcal/dia por semana (barras horizontais, últimas 12)
-- [x] Top 3 marmitas + top 3 jantares mais frequentes
-- [x] Desvio vs macros da meta atual (colorido por severidade)
+- [x] Card "Resumo (N semanas)" com média kcal/dia + desvio vs meta atual (colorido por severidade)
+- [x] Gráfico de barras horizontais — kcal/dia das últimas 12 semanas (divs puros, sem SVG lib)
+- [x] Top 3 marmitas + top 3 jantares mais frequentes (cards verde/roxo side-by-side)
+- [x] Helper puro `_computeHistoryStats(history)` retorna estrutura completa
+- [x] Compat com 2 formatos de dinner snapshot (`dinners` novo e `_dinner` legado)
+- [x] Detalhamento semanal (tabela) e acumulado por tipo preservados
 
-### Item 18 — Variedade sugerida ao longo do tempo ❌ **WON'T DO**
+### Item 18 — Variedade sugerida ao longo do tempo ❌ **WON'T DO** (2026-04-13)
 
-**Decisão (2026-04-13):** não implementar. O usuário prefere controlar manualmente o que cozinha — sugestões automáticas podem ser intrusivas e contradizer preferências circunstanciais (ex: "essa semana só tenho tempo pra uma receita"). O gerador de cardápio já permite planejar a semana considerando estoque em casa, que é o caminho de personalização preferido.
+**Decisão:** não implementar. O usuário prefere controlar manualmente o que cozinha — sugestões automáticas podem ser intrusivas e contradizer preferências circunstanciais (ex: "essa semana só tenho tempo pra uma receita"). O gerador de cardápio já permite planejar a semana considerando estoque em casa, que é o caminho de personalização preferido.
 
 ---
 
-## ⏳ Fase 5 — Acessibilidade e Segurança
+## 🔄 Fase 5 — Acessibilidade e Segurança
 
-### Item 19 — Acessibilidade básica
+### Item 19 — Acessibilidade básica ✅ **COMPLETO** (v2.1.24 aria-labels + v2.1.50 focus/Esc)
 
-- [ ] `aria-label` em todos os botões icônicos (X, steppers, tabs)
-- [ ] Focus trap nos modais (Tab ciclando dentro do modal)
-- [ ] Atalhos de teclado (Esc fecha modal, Enter confirma, arrows em steppers)
-- [ ] Focus indicators visíveis (borders 2px azul)
+- [x] `aria-label` em 17 botões icônicos (steppers ±, remove, close X, nav arrows, logout, etc.)
+- [x] Focus trap nos modais (Tab cicla dentro do topmost, Shift+Tab wraps invertido)
+- [x] `:focus-visible` com outline 2px green-primary + offset (keyboard nav only)
+- [x] Escape fecha modal topmost (3 modais com `data-close-fn`: history, calc-details, profile-view)
+- [x] role="alertdialog" + aria-modal="true" no confirm-modal
+- [x] Enter confirma no custom confirm
+- [x] `prefers-reduced-motion` respeitado na animação slide-up do profile-view
 
-### Item 20 — Contraste WCAG AA
+### Item 20 — Contraste WCAG AA ✅ **COMPLETO** (v2.1.51)
 
-- [ ] Auditar todas as combinações fg/bg
-- [ ] Corrigir casos que falham (especialmente `gray-mid` sobre `gray-bg`)
-- [ ] Adicionar variantes high-contrast se necessário
+- [x] Audit completo de todos os pares fg/bg da paleta v2.1.0+
+- [x] 3 pares críticos (<3:1) corrigidos via tokens `-text`:
+  - `--accent-warm-text` (vs white: 5.31, vs accent-warm-soft: 4.83)
+  - `--ink-soft-text` (vs white: 5.08, vs cream: 4.86)
+  - Dark mode: `--accent-warm-text: #F0B873` (mantém original), `--ink-soft-text: #8E998F`
+- [x] Replace_all de `color: var(--accent-warm|orange|ink-soft)` → `-text` variants em .css/.js/.html
+- [x] Tokens originais preservados para fills/borders/ícones (identidade visual intacta)
+- [x] Pares marginais (3.0-4.5, AA-large-only) documentados em ACCESSIBILITY.md com justificativa
 
-### Item 21 — Firestore Security Rules
+### Item 21 — Firestore Security Rules ⏳ **PENDENTE**
 
-- [ ] Verificar rules atuais no console do Firebase
+Depende de acesso ao Firebase console. Ação externa.
+
+- [ ] Verificar rules atuais
 - [ ] Garantir que `users/{uid}/data/*` só é acessível pelo próprio usuário
 - [ ] Testar leitura/escrita não autenticada (deve falhar)
 
-### Item 22 — Decisão sobre criptografia
+### Item 22 — Decisão sobre criptografia ⏳ **PENDENTE**
+
+Decisão + documentação.
 
 - [ ] Decidir se dados de saúde (peso, altura, sexo) merecem criptografia no Firestore
 - [ ] Para uso pessoal: provavelmente OK sem. Documentar a decisão.
