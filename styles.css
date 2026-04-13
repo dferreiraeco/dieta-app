@@ -844,7 +844,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .auth-logo {
-  width: 360px; height: 360px; border-radius: 84px;
+  width: 320px; height: 320px; border-radius: 75px;
   max-width: 80vw; max-height: 80vw;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
   margin-bottom: 0;
@@ -852,7 +852,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .auth-logo img {
   width: 100% !important;
   height: 100% !important;
-  border-radius: 84px;
+  border-radius: 75px;
 }
 .auth-screen h1 {
   font-size: 28px; margin-bottom: 2px; font-weight: 900;
