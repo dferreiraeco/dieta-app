@@ -545,12 +545,14 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     <p>Monte sua semana (para 2 pessoas)</p>
   </div>
 
-  <button class="history-btn" style="margin:0 0 14px" onclick="openMenuGenerator()">Gerador de Cardápio (do que tenho em casa)</button>
+  <button onclick="openMenuGenerator()" style="display:block;width:100%;padding:16px 48px 16px 18px;background:#fff;border:2.5px solid var(--green);color:var(--green);border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin:0 0 14px;box-shadow:0 4px 14px rgba(39,103,73,0.18);text-align:left;position:relative;line-height:1.3">
+    Gerador de Cardápio
+    <div style="font-size:12px;font-weight:500;color:var(--gray-mid);margin-top:3px">Bora planejar com o que temos em casa?</div>
+    <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:24px;color:var(--green);font-weight:400">›</span>
+  </button>
 
   <div id="planner-status"></div>
   <div id="planner-cards"></div>
-
-  <div class="planner-summary" id="planner-summary"></div>
 
   <!-- Dinner planner -->
   <h3 style="font-size:16px;color:var(--purple);margin:20px 0 10px">Jantares da Semana</h3>
@@ -564,30 +566,24 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
     <div id="fruit-suggestions"></div>
   </div>
 
-  <!-- Stock card -->
-  <div class="card stock-card" id="stock-card" style="display:none"></div>
-
   <div id="current-week-label" style="text-align:center;font-size:13px;color:var(--gray-mid);margin-bottom:8px"></div>
-  <button class="save-btn" onclick="saveMarmitaPlan()">Salvar e Atualizar Lista de Compras</button>
-  <button class="save-btn" onclick="startNewWeek()" style="margin-top:10px;background:var(--orange)">Novo Planejamento Semanal</button>
+  <button class="save-btn" onclick="saveMarmitaPlan()" style="padding:18px;font-size:17px;box-shadow:0 4px 14px rgba(39,103,73,0.35);letter-spacing:0.3px;line-height:1.3">
+    Salvar e Atualizar Lista de Compras
+    <div style="font-size:12px;font-weight:500;opacity:0.9;margin-top:3px">(após concluir o planejamento)</div>
+  </button>
+  <button class="reset-btn" onclick="startNewWeek()" style="margin-top:10px">Limpar Planejamento Semanal</button>
 
-  <!-- Prep checklist integrado -->
-  <div style="margin-top:20px">
-    <h3 style="font-size:16px;color:var(--orange);margin-bottom:10px">Checklist de Preparo</h3>
-    <div class="card">
-      <div class="progress-bar"><div class="progress-fill" id="prep-progress" style="width:0%"></div></div>
-      <div class="progress-text" id="prep-progress-text">0 de 0 itens</div>
-    </div>
-    <div id="prep-list"></div>
-    <button class="reset-btn" onclick="resetChecklist('prep')" style="margin-top:12px;">Limpar Checklist de Preparo</button>
-  </div>
+  <!-- Stock card (moved to bottom, before summary) -->
+  <div class="card stock-card" id="stock-card" style="display:none;margin-top:20px"></div>
+
+  <div class="planner-summary" id="planner-summary" style="margin-top:20px"></div>
 </div>
 
 <!-- ==================== TAB: DIETA ==================== -->
 <div id="page-dieta" class="page">
   <div class="page-header">
-    <h1>PeitudasNOW</h1>
-    <p>Diego Ferreira | 118.3 kg | Meta: ~2.000 kcal/dia</p>
+    <h1>Dieta de Recomposição Corporal</h1>
+    <p>Diego Ferreira | 118.3 kg | Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
   </div>
 
   <!-- Daily macro tracker -->
@@ -651,7 +647,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 <div id="page-compras" class="page">
   <div class="page-header" style="background:var(--green);">
     <h1>Lista de Compras</h1>
-    <p>Semanal para 2 pessoas | Estimativa: ~R$ 660</p>
+    <p>Compra semanal para 2 pessoas. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).</p>
   </div>
   <div class="card">
     <div class="progress-bar"><div class="progress-fill" id="shop-progress" style="width:0%"></div></div>
@@ -1255,29 +1251,78 @@ function renderMarmitaPlanner() {
   const plan = getMarmitaPlan();
   const container = document.getElementById('planner-cards');
   let html = '';
-  MARMITA_DEFS.forEach(m => {
-    const qty = plan[m.id] || 0;
-    html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="planner-info" onclick="showMarmitaRecipe('${m.id}')" style="cursor:pointer">
-          <div class="pl-name">${m.name}</div>
-          <div class="pl-desc">${m.desc}</div>
-          <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
-        </div>
-        <div class="planner-stepper">
-          <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
-          <div class="qty-display" id="mq_${m.id}">${qty}</div>
-          <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
-        <b style="color:var(--green)">Composição (cozido):</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
-      </div>
-      <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showMarmitaRecipe('${m.id}')">Ver Receita</button>
+
+  // Show only marmitas that the user has added (qty > 0)
+  const addedMarmitas = MARMITA_DEFS.filter(m => (plan[m.id] || 0) > 0);
+
+  if (addedMarmitas.length === 0) {
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:12px;text-align:center;color:var(--gray-mid);font-size:13px;margin-bottom:8px">
+      Nenhuma marmita adicionada. Toque em <b style="color:var(--green)">+ Adicionar Novo Sabor de Marmita</b> abaixo para começar.
     </div>`;
-  });
+  } else {
+    addedMarmitas.forEach(m => {
+      const qty = plan[m.id];
+      html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="planner-info" onclick="showMarmitaRecipe('${m.id}')" style="cursor:pointer">
+            <div class="pl-name">${m.name}</div>
+            <div class="pl-desc">${m.desc}</div>
+            <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+          </div>
+          <div class="planner-stepper">
+            <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
+            <div class="qty-display" id="mq_${m.id}">${qty}</div>
+            <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
+          <b style="color:var(--green)">Composição (cozido):</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
+        </div>
+        <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showMarmitaRecipe('${m.id}')">Ver Receita</button>
+      </div>`;
+    });
+  }
+
+  html += `<button class="history-btn" style="margin-top:6px;border-color:var(--green);color:var(--green);background:var(--green-bg);font-weight:700" onclick="openMarmitaPicker()">+ Adicionar Novo Sabor de Marmita</button>`;
+
   container.innerHTML = html;
   updatePlannerSummary();
+}
+
+function openMarmitaPicker() {
+  const plan = getMarmitaPlan();
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Adicionar Novo Sabor de Marmita';
+
+  let html = '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:12px">Escolha o sabor de marmita para adicionar ao planejamento. Se já estiver adicionado, o toque aumenta a quantidade em 1.</div>';
+  MARMITA_DEFS.forEach(m => {
+    const typeName = getMarmitaTypeName(m.id);
+    const current = plan[m.id] || 0;
+    const added = current > 0;
+    html += `<button onclick="addMarmitaToPlan('${m.id}')"
+      style="display:block;width:100%;padding:12px 14px;margin-bottom:8px;text-align:left;background:${added ? 'var(--green-bg)' : '#fff'};border:1.5px solid ${added ? 'var(--green)' : 'var(--gray-light)'};border-radius:10px;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:14px;font-weight:700;color:var(--blue)">${typeName}</div>
+        ${added ? `<span style="background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${current} no plano</span>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--gray-mid);margin-top:3px">${m.desc}</div>
+      <div style="font-size:11px;color:var(--orange);margin-top:4px;font-weight:600">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+    </button>`;
+  });
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function addMarmitaToPlan(id) {
+  const plan = getMarmitaPlan();
+  plan[id] = (plan[id] || 0) + 1;
+  localStorage.setItem('marmita_plan', JSON.stringify(plan));
+  closeHistory();
+  renderMarmitaPlanner();
+  renderMarmitaSelector();
+  renderStockCard();
 }
 
 function showMarmitaRecipe(id) {
@@ -1313,10 +1358,19 @@ function showMarmitaRecipe(id) {
 
 function stepMarmita(id, delta) {
   const plan = getMarmitaPlan();
-  plan[id] = Math.max(0, (plan[id] || 0) + delta);
+  const newQty = Math.max(0, (plan[id] || 0) + delta);
+  plan[id] = newQty;
   localStorage.setItem('marmita_plan', JSON.stringify(plan));
-  document.getElementById('mq_' + id).textContent = plan[id];
-  updatePlannerSummary();
+  if (newQty === 0) {
+    // Re-render to remove the card from the list
+    renderMarmitaPlanner();
+  } else {
+    const el = document.getElementById('mq_' + id);
+    if (el) el.textContent = newQty;
+    updatePlannerSummary();
+  }
+  renderMarmitaSelector();
+  renderStockCard();
 }
 
 function renderDinnerPlanner() {
@@ -1324,29 +1378,76 @@ function renderDinnerPlanner() {
   const container = document.getElementById('dinner-cards');
   if (!container) return;
   let html = '';
-  DINNER_DEFS.forEach(m => {
-    const qty = plan[m.id] || 0;
-    html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="planner-info" onclick="showDinnerRecipe('${m.id}')" style="cursor:pointer">
-          <div class="pl-name">${m.name}</div>
-          <div class="pl-desc">${m.desc}</div>
-          <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
-        </div>
-        <div class="planner-stepper">
-          <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
-          <div class="qty-display" id="dq_${m.id}">${qty}</div>
-          <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
-        <b style="color:var(--purple)">Composição:</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
-      </div>
-      <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showDinnerRecipe('${m.id}')">Ver Receita</button>
+
+  const addedDinners = DINNER_DEFS.filter(m => (plan[m.id] || 0) > 0);
+
+  if (addedDinners.length === 0) {
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:12px;text-align:center;color:var(--gray-mid);font-size:13px;margin-bottom:8px">
+      Nenhum jantar adicionado. Toque em <b style="color:var(--purple)">+ Adicionar Novo Sabor de Jantar</b> abaixo para começar.
     </div>`;
-  });
+  } else {
+    addedDinners.forEach(m => {
+      const qty = plan[m.id];
+      html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="planner-info" onclick="showDinnerRecipe('${m.id}')" style="cursor:pointer">
+            <div class="pl-name">${m.name}</div>
+            <div class="pl-desc">${m.desc}</div>
+            <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+          </div>
+          <div class="planner-stepper">
+            <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
+            <div class="qty-display" id="dq_${m.id}">${qty}</div>
+            <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
+          <b style="color:var(--purple)">Composição:</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
+        </div>
+        <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showDinnerRecipe('${m.id}')">Ver Receita</button>
+      </div>`;
+    });
+  }
+
+  html += `<button class="history-btn" style="margin-top:6px;border-color:var(--purple);color:var(--purple);background:var(--purple-light);font-weight:700" onclick="openDinnerPicker()">+ Adicionar Novo Sabor de Jantar</button>`;
+
   container.innerHTML = html;
   updateDinnerSummary();
+}
+
+function openDinnerPicker() {
+  const plan = getDinnerPlan();
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  document.getElementById('history-title').textContent = 'Adicionar Novo Sabor de Jantar';
+
+  let html = '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:12px">Escolha o sabor de jantar para adicionar ao planejamento. Se já estiver adicionado, o toque aumenta a quantidade em 1.</div>';
+  DINNER_DEFS.forEach(m => {
+    const current = plan[m.id] || 0;
+    const added = current > 0;
+    html += `<button onclick="addDinnerToPlan('${m.id}')"
+      style="display:block;width:100%;padding:12px 14px;margin-bottom:8px;text-align:left;background:${added ? 'var(--purple-light)' : '#fff'};border:1.5px solid ${added ? 'var(--purple)' : 'var(--gray-light)'};border-radius:10px;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:14px;font-weight:700;color:var(--blue)">${m.name}</div>
+        ${added ? `<span style="background:var(--purple);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${current} no plano</span>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--gray-mid);margin-top:3px">${m.desc}</div>
+      <div style="font-size:11px;color:var(--orange);margin-top:4px;font-weight:600">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+    </button>`;
+  });
+
+  content.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function addDinnerToPlan(id) {
+  const plan = getDinnerPlan();
+  plan[id] = (plan[id] || 0) + 1;
+  localStorage.setItem('dinner_plan', JSON.stringify(plan));
+  closeHistory();
+  renderDinnerPlanner();
+  renderDinnerSelector();
+  renderStockCard();
 }
 
 function showDinnerRecipe(id) {
@@ -1382,10 +1483,18 @@ function showDinnerRecipe(id) {
 
 function stepDinner(id, delta) {
   const plan = getDinnerPlan();
-  plan[id] = Math.max(0, (plan[id] || 0) + delta);
+  const newQty = Math.max(0, (plan[id] || 0) + delta);
+  plan[id] = newQty;
   localStorage.setItem('dinner_plan', JSON.stringify(plan));
-  document.getElementById('dq_' + id).textContent = plan[id];
-  updateDinnerSummary();
+  if (newQty === 0) {
+    renderDinnerPlanner();
+  } else {
+    const el = document.getElementById('dq_' + id);
+    if (el) el.textContent = newQty;
+    updateDinnerSummary();
+  }
+  renderDinnerSelector();
+  renderStockCard();
 }
 
 // tier: 'low' (<60 kcal, <15g C), 'mid' (60-75 kcal, 15-18g C), 'high' (>75 kcal, >18g C)
@@ -1444,13 +1553,10 @@ function updateDinnerSummary() {
   DINNER_DEFS.forEach(m => { total += plan[m.id] || 0; });
   const el = document.getElementById('dinner-status');
   if (el) {
-    const target = 14; // 7 dias x 2 pessoas
-    if (total === target) {
-      el.innerHTML = `<div class="planner-ok">${total} jantares planejados (7 dias x 2 pessoas)</div>`;
-    } else {
-      el.innerHTML = `<div class="planner-warning">${total} jantares planejados</div>`;
-    }
+    el.innerHTML = `<div class="planner-ok">${total} jantar${total === 1 ? '' : 'es'} planejado${total === 1 ? '' : 's'}</div>`;
   }
+  // Dinner totals feed into the unified weekly summary
+  if (document.getElementById('planner-summary')) updatePlannerSummary();
 }
 
 // ---- STOCK MANAGEMENT ----
@@ -1568,7 +1674,7 @@ function renderMarmitaSelector() {
       const m = MARMITA_DEFS.find(x => x.id === type);
       if (!m) return;
       html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--green-bg);border-radius:8px;margin-bottom:4px">
-        <span style="font-size:13px;font-weight:600;color:var(--green)">${count}x ${m.name.split(' - ')[1]} (${m.kcal} kcal | ${m.p}g P)</span>
+        <span style="font-size:13px;font-weight:600;color:var(--green)">${count}x ${getMarmitaTypeName(m.id)} (${m.kcal} kcal | ${m.p}g P)</span>
         <button onclick="removeTodayMarmita('${type}')" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
       </div>`;
     });
@@ -1594,7 +1700,7 @@ function renderMarmitaSelector() {
       onclick="selectTodayMarmita('${m.id}')">
       <div class="msel-icon">${m.id}</div>
       <div class="msel-info">
-        <div class="msel-name">${m.name.split(' - ')[1]}</div>
+        <div class="msel-name">${getMarmitaTypeName(m.id)}</div>
         <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
       </div>
       <div class="msel-stock">${disabled ? 'Esgotada' : remaining + ' rest.'}</div>
@@ -1717,48 +1823,93 @@ function renderDinnerSelector() {
 }
 
 function renderStockCard() {
-  const stock = getStock();
   const card = document.getElementById('stock-card');
-  let totalRemaining = 0;
-  MARMITA_DEFS.forEach(m => { totalRemaining += Math.max(0, stock[m.id] || 0); });
+  if (!card) return;
+  const mStock = getStock();
+  const dStock = getDinnerStock();
+  const mPlan = getMarmitaPlan();
+  const dPlan = getDinnerPlan();
 
-  if (totalRemaining <= 0) {
+  let mRemaining = 0, dRemaining = 0;
+  MARMITA_DEFS.forEach(m => { mRemaining += Math.max(0, mStock[m.id] || 0); });
+  DINNER_DEFS.forEach(d => { dRemaining += Math.max(0, dStock[d.id] || 0); });
+
+  const hasAnyPlan = MARMITA_DEFS.some(m => (mPlan[m.id] || 0) > 0)
+                  || DINNER_DEFS.some(d => (dPlan[d.id] || 0) > 0);
+
+  if (!hasAnyPlan && mRemaining <= 0 && dRemaining <= 0) {
     card.style.display = 'none';
     return;
   }
   card.style.display = 'block';
-  let html = `<h3 style="font-size:14px;color:var(--orange);margin-bottom:8px">Estoque de Marmitas (${totalRemaining} restantes)</h3>`;
-  MARMITA_DEFS.forEach(m => {
-    const rem = Math.max(0, stock[m.id] || 0);
-    if (rem > 0 || (getMarmitaPlan()[m.id] || 0) > 0) {
+
+  let html = `<h3 style="font-size:14px;color:var(--orange);margin-bottom:8px">Estoque de Refeições (${mRemaining + dRemaining} restantes)</h3>`;
+
+  // Marmitas
+  const marmitasShown = MARMITA_DEFS.filter(m => (mStock[m.id] || 0) > 0 || (mPlan[m.id] || 0) > 0);
+  if (marmitasShown.length > 0) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;margin:6px 0 4px">Marmitas (${mRemaining})</div>`;
+    marmitasShown.forEach(m => {
+      const rem = Math.max(0, mStock[m.id] || 0);
+      const typeName = getMarmitaTypeName(m.id);
       html += `<div class="stock-item">
-        <span>${m.id} - ${m.name.split(' - ')[1]}</span>
+        <span>${typeName}</span>
         <span class="stock-badge ${rem > 0 ? 'has' : 'empty'}">${rem > 0 ? rem + ' un.' : 'Esgotada'}</span>
       </div>`;
-    }
-  });
+    });
+  }
+
+  // Jantares
+  const dinnersShown = DINNER_DEFS.filter(d => (dStock[d.id] || 0) > 0 || (dPlan[d.id] || 0) > 0);
+  if (dinnersShown.length > 0) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;margin:10px 0 4px">Jantares (${dRemaining})</div>`;
+    dinnersShown.forEach(d => {
+      const rem = Math.max(0, dStock[d.id] || 0);
+      html += `<div class="stock-item">
+        <span>${d.name}</span>
+        <span class="stock-badge ${rem > 0 ? 'has' : 'empty'}">${rem > 0 ? rem + ' un.' : 'Esgotado'}</span>
+      </div>`;
+    });
+  }
+
   card.innerHTML = html;
 }
 
 function updatePlannerSummary() {
   const plan = getMarmitaPlan();
-  let total = 0, kcal = 0, p = 0, c = 0, g = 0;
+  let mTotal = 0, mKcal = 0, mP = 0, mC = 0, mG = 0;
   MARMITA_DEFS.forEach(m => {
     const qty = plan[m.id] || 0;
-    total += qty;
-    kcal += m.kcal * qty; p += m.p * qty; c += m.c * qty; g += m.g * qty;
+    mTotal += qty;
+    mKcal += m.kcal * qty; mP += m.p * qty; mC += m.c * qty; mG += m.g * qty;
+  });
+
+  const dinnerPlan = getDinnerPlan();
+  let dTotal = 0, dKcal = 0, dP = 0, dC = 0, dG = 0;
+  DINNER_DEFS.forEach(d => {
+    const qty = dinnerPlan[d.id] || 0;
+    dTotal += qty;
+    dKcal += d.kcal * qty; dP += d.p * qty; dC += d.c * qty; dG += d.g * qty;
   });
 
   const statusEl = document.getElementById('planner-status');
-  statusEl.innerHTML = `<div class="planner-ok">${total} marmitas planejadas (${total / 2} dias para 2 pessoas)</div>`;
+  statusEl.innerHTML = `<div class="planner-ok">${mTotal} marmita${mTotal === 1 ? '' : 's'} planejada${mTotal === 1 ? '' : 's'}</div>`;
 
   document.getElementById('planner-summary').innerHTML = `
     <h3 style="font-size:14px;color:var(--blue);margin-bottom:8px">Resumo da Semana</h3>
-    <div class="sum-row"><span>Total de marmitas</span><span class="sum-val">${total}</span></div>
-    <div class="sum-row"><span>Dias cobertos (2 pessoas)</span><span class="sum-val">${total / 2} dias</span></div>
-    <div class="sum-row"><span>Kcal/almoço (média)</span><span class="sum-val">${total ? Math.round(kcal / total) : 0}</span></div>
-    <div class="sum-row"><span>Proteína/almoço (média)</span><span class="sum-val">${total ? Math.round(p / total) : 0}g</span></div>
-    <button class="history-btn" onclick="openMarmitaHistory()" style="margin-top:10px">Histórico de Semanas</button>
+    <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;margin:8px 0 4px">Marmitas</div>
+    <div class="sum-row"><span>Total de marmitas</span><span class="sum-val">${mTotal}</span></div>
+    <div class="sum-row"><span>Kcal/almoço (média)</span><span class="sum-val">${mTotal ? Math.round(mKcal / mTotal) : 0}</span></div>
+    <div class="sum-row"><span>Proteína/almoço (média)</span><span class="sum-val">${mTotal ? Math.round(mP / mTotal) : 0}g</span></div>
+    <div class="sum-row"><span>Carboidrato/almoço (média)</span><span class="sum-val">${mTotal ? Math.round(mC / mTotal) : 0}g</span></div>
+    <div class="sum-row"><span>Gordura/almoço (média)</span><span class="sum-val">${mTotal ? Math.round(mG / mTotal) : 0}g</span></div>
+    <div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;margin:14px 0 4px">Jantares</div>
+    <div class="sum-row"><span>Total de jantares</span><span class="sum-val">${dTotal}</span></div>
+    <div class="sum-row"><span>Kcal/jantar (média)</span><span class="sum-val">${dTotal ? Math.round(dKcal / dTotal) : 0}</span></div>
+    <div class="sum-row"><span>Proteína/jantar (média)</span><span class="sum-val">${dTotal ? Math.round(dP / dTotal) : 0}g</span></div>
+    <div class="sum-row"><span>Carboidrato/jantar (média)</span><span class="sum-val">${dTotal ? Math.round(dC / dTotal) : 0}g</span></div>
+    <div class="sum-row"><span>Gordura/jantar (média)</span><span class="sum-val">${dTotal ? Math.round(dG / dTotal) : 0}g</span></div>
+    <button class="history-btn" onclick="openMarmitaHistory()" style="margin-top:14px">Histórico de Semanas</button>
   `;
   renderStockCard();
 }
@@ -1818,7 +1969,7 @@ function startNewWeek() {
     return;
   }
 
-  if (!confirm(`Iniciar novo planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras, checklist de preparo e consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.\n\nDeseja continuar?`)) return;
+  if (!confirm(`Limpar planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras e o consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.\n\nDeseja continuar?`)) return;
 
   // Archive current plan if it exists and is different from new week
   if (currentWeek !== thisWeek) {
@@ -2301,9 +2452,12 @@ function downloadPDF(blob, fileName) {
 }
 
 function updateProgress(type, checked, total) {
+  const bar = document.getElementById(type + '-progress');
+  const txt = document.getElementById(type + '-progress-text');
+  if (!bar || !txt) return;
   const pct = total ? Math.round(checked / total * 100) : 0;
-  document.getElementById(type + '-progress').style.width = pct + '%';
-  document.getElementById(type + '-progress-text').textContent = `${checked} de ${total} itens (${pct}%)`;
+  bar.style.width = pct + '%';
+  txt.textContent = `${checked} de ${total} itens (${pct}%)`;
 }
 
 function resetChecklist(type) {
@@ -2359,8 +2513,9 @@ function buildPrepItems() {
 }
 
 function renderPrepList() {
-  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
   const container = document.getElementById('prep-list');
+  if (!container) return; // prep checklist removido da UI
+  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
   const PREP_ITEMS = buildPrepItems();
   let html = '', total = 0, checked = 0;
   PREP_ITEMS.forEach(day => {
@@ -3286,7 +3441,7 @@ function openMenuGenerator() {
 
   const stock = getHomeStock();
 
-  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas do que você tem em casa. As proteínas são usadas para calcular o número de marmitas (arredondando para baixo). Os demais ingredientes são salvos como estoque e descontados da lista de compras.</div>';
+  let html = '<div style="font-size:13px;color:var(--gray-mid);margin-bottom:14px">Informe a quantidade <b>crua</b> em gramas do que você tem em casa. As proteínas são usadas para calcular o número de marmitas e/ou jantares (arredondando para baixo). Os demais ingredientes são salvos como estoque e descontados da lista de compras.</div>';
 
   html += '<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;margin:12px 0 6px">Proteínas</div>';
   GEN_PROTEINS.forEach(ing => {
