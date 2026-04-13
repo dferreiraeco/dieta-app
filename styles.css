@@ -844,14 +844,15 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .auth-logo {
-  width: 240px; height: 240px; border-radius: 56px;
+  width: 360px; height: 360px; border-radius: 84px;
+  max-width: 80vw; max-height: 80vw;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
-  margin-bottom: 24px;
+  margin-bottom: 4px;
 }
 .auth-logo img {
-  width: 240px !important;
-  height: 240px !important;
-  border-radius: 56px;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 84px;
 }
 .auth-screen h1 {
   font-size: 32px; margin-bottom: 8px; font-weight: 900;
