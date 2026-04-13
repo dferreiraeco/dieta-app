@@ -1347,6 +1347,8 @@ async function startNewWeek() {
   localStorage.removeItem(STORAGE_KEYS.dinnerConsumed);
   localStorage.removeItem(STORAGE_KEYS.homeStock);
   localStorage.removeItem(STORAGE_KEYS.genDraft);
+  localStorage.removeItem(STORAGE_KEYS.genLastAppliedMarmita);
+  localStorage.removeItem(STORAGE_KEYS.genLastAppliedDinner);
   localStorage.setItem(STORAGE_KEYS.marmitaCurrentWeek, thisWeek);
 
   renderMarmitaPlanner();
@@ -3172,26 +3174,42 @@ function setGenerateButtonState(generated) {
 async function applyGeneratedMenu() {
   if (!window._genMarmitaResult && !window._genDinnerResult) return;
   if (!await customConfirm(
-    'O Gerador de Cardápio é apenas uma sugestão. Confira a seleção antes de aplicar — você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nAs quantidades sugeridas serão SOMADAS ao seu planejamento atual (marmitas e jantares já adicionados manualmente são preservados). As quantidades informadas serão salvas como "estoque em casa".',
+    'O Gerador de Cardápio é apenas uma sugestão. Confira a seleção antes de aplicar — você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nA sugestão será aplicada SEM apagar marmitas ou jantares que você já tinha adicionado manualmente. Aplicar a mesma sugestão duas vezes não duplica o resultado.',
     { title: 'Aplicar cardápio gerado?', okLabel: 'Aplicar' }
   )) return;
 
-  // v2.1.29: somar ao planejamento existente em vez de sobrescrever.
-  // Antes: o gerador apagava marmitas/jantares já adicionados manualmente.
-  // Agora: as quantidades geradas são adicionadas às atuais.
+  // v2.1.31: aplicação idempotente. Lemos o "lastApplied" da última geração,
+  // subtraímos do plano atual pra recuperar o baseline manual, e somamos a
+  // nova geração. Resultado: re-gerar com mesmo input não acumula, mas o que
+  // o usuário adicionou manualmente sempre é preservado.
+  const newGenMarmita = window._genMarmitaResult || {};
+  const newGenDinner  = window._genDinnerResult  || {};
+  const lastMarmita = JSON.parse(localStorage.getItem(STORAGE_KEYS.genLastAppliedMarmita) || '{}');
+  const lastDinner  = JSON.parse(localStorage.getItem(STORAGE_KEYS.genLastAppliedDinner)  || '{}');
+
   const currentMarmitaPlan = getMarmitaPlan();
   const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, ...currentMarmitaPlan };
-  Object.entries(window._genMarmitaResult || {}).forEach(([id, qty]) => {
+  // 1) restaurar baseline manual: subtrair o que a última geração contribuiu
+  Object.entries(lastMarmita).forEach(([id, qty]) => {
+    newMarmitaPlan[id] = Math.max(0, (newMarmitaPlan[id] || 0) - (qty || 0));
+  });
+  // 2) somar a nova geração
+  Object.entries(newGenMarmita).forEach(([id, qty]) => {
     newMarmitaPlan[id] = (newMarmitaPlan[id] || 0) + (qty || 0);
   });
   localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(newMarmitaPlan));
+  localStorage.setItem(STORAGE_KEYS.genLastAppliedMarmita, JSON.stringify(newGenMarmita));
 
   const currentDinnerPlan = getDinnerPlan();
   const newDinnerPlan = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0, ...currentDinnerPlan };
-  Object.entries(window._genDinnerResult || {}).forEach(([id, qty]) => {
+  Object.entries(lastDinner).forEach(([id, qty]) => {
+    newDinnerPlan[id] = Math.max(0, (newDinnerPlan[id] || 0) - (qty || 0));
+  });
+  Object.entries(newGenDinner).forEach(([id, qty]) => {
     newDinnerPlan[id] = (newDinnerPlan[id] || 0) + (qty || 0);
   });
   localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(newDinnerPlan));
+  localStorage.setItem(STORAGE_KEYS.genLastAppliedDinner, JSON.stringify(newGenDinner));
 
   localStorage.setItem(STORAGE_KEYS.homeStock, JSON.stringify(window._genStock || {}));
   clearGenDraft();

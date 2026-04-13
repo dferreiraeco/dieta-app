@@ -23,6 +23,11 @@ const STORAGE_KEYS = {
   homeStock:           'home_stock',
   shopChecks:          'shop_checks',
   genDraft:            'gen_draft',
+  // v2.1.31: snapshot do que a última geração contribuiu pro plano. Usado pra
+  // re-gerar idempotentemente: subtraímos o lastApplied antes de somar a nova
+  // geração, então gerar 2x com o mesmo input não duplica.
+  genLastAppliedMarmita: 'gen_last_applied_marmita',
+  genLastAppliedDinner:  'gen_last_applied_dinner',
   // Treino / Agenda
   workouts:            'workouts',
   cardioLog:           'cardio_log',
@@ -57,6 +62,8 @@ const SYNC_KEYS = [
   STORAGE_KEYS.calLog,
   STORAGE_KEYS.userProfile,
   STORAGE_KEYS.weightLog,
+  STORAGE_KEYS.genLastAppliedMarmita,
+  STORAGE_KEYS.genLastAppliedDinner,
 ];
 const BACKUP_KEYS = SYNC_KEYS;
 
