@@ -671,17 +671,17 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   background: var(--red-light); color: var(--red); border-radius: 10px;
   font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
 }
-/* ---- AUTH ---- */
+/* ---- AUTH (v2.1.43: branco + shadow pra profundidade) ---- */
 .auth-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   position: fixed; inset: 0; padding: 24px; text-align: center; z-index: 300;
-  background: linear-gradient(160deg, var(--blue) 0%, #2b6cb0 40%, #276749 100%);
+  background: var(--surface);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .auth-logo {
-  width: 80px; height: 80px; border-radius: 20px; background: rgba(255,255,255,0.15);
+  width: 80px; height: 80px; border-radius: 20px;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
-  margin-bottom: 20px; backdrop-filter: blur(10px);
+  margin-bottom: 20px;
 }
 .auth-screen h1 {
   font-size: 30px; margin-bottom: 6px; font-weight: 900;
@@ -689,14 +689,20 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.auth-screen .auth-subtitle { font-size: 15px; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+.auth-screen .auth-subtitle { font-size: 15px; color: var(--ink-medium); margin-bottom: 8px; }
 .auth-screen .auth-desc {
-  font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 32px;
+  font-size: 13px; color: var(--ink-soft); margin-bottom: 32px;
   max-width: 280px; line-height: 1.5;
 }
 .auth-card {
   background: var(--surface); border-radius: 20px; padding: 28px 24px; width: 100%;
-  max-width: 340px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  max-width: 340px;
+  /* Sombra forte embaixo + leve sombra geral pra criar profundidade sobre o
+     fundo branco (sem o gradiente colorido pra contrastar). */
+  box-shadow:
+    0 24px 48px -12px rgba(26, 46, 34, 0.18),
+    0 8px 16px -8px rgba(26, 46, 34, 0.12),
+    0 0 0 1px rgba(26, 46, 34, 0.04);
 }
 .auth-card h2 { font-size: 16px; color: var(--gray); margin-bottom: 16px; }
 .google-btn {
