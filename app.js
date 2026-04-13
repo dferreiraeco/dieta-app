@@ -429,13 +429,13 @@ function renderDietHeader(goals) {
   // Renderizadas em linha separada com fonte menor pra não poluir o header.
   const fiberTxt = g.fiber != null ? `${g.fiber}g` : '≥25g';
   const waterLiters = g.water_ml != null ? (g.water_ml / 1000).toFixed(1).replace('.', ',') : '2,5';
-  // v2.0.5: link "ⓘ" abre o modal com breakdown completo do cálculo
-  const infoLink = getUserProfile()
-    ? ` <a href="#" onclick="openCalcDetails();return false" class="calc-details-link" aria-label="Ver detalhes do cálculo">ⓘ Detalhes</a>`
-    : '';
   el.innerHTML =
-    `Meta: ~${kcalTxt} kcal/dia | Objetivo: ${objetivo}${infoLink}` +
+    `Meta: ~${kcalTxt} kcal/dia | Objetivo: ${objetivo}` +
     `<br><span style="font-size:11px;opacity:0.85">Fibra: ${fiberTxt}/dia • Água: ${waterLiters} L/dia</span>`;
+  // v2.1.30: link "ⓘ Detalhes" agora vive no row do título, alinhado à direita.
+  // Aqui só liga/desliga a visibilidade conforme existe perfil.
+  const infoLink = document.getElementById('calc-details-link');
+  if (infoLink) infoLink.style.display = getUserProfile() ? '' : 'none';
 }
 
 // v2.0.5: modal de transparência do cálculo. Mostra cada passo da derivação

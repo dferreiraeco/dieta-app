@@ -172,18 +172,24 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .macros-sm .p-low { color: #dd6b20; font-weight: 600; }
 .macros-sm .p-mid { color: var(--gray); }
 
-/* Calc details link in diet header (v2.0.5) */
+/* Calc details link in diet header (v2.0.5, repositioned v2.1.30) */
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
 .calc-details-link {
-  display: inline-block;
-  margin-left: 6px;
+  flex-shrink: 0;
   font-size: 12px;
-  color: rgba(255,255,255,0.9);
+  color: var(--green-primary);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
 }
-.calc-details-link:hover, .calc-details-link:active { color: #fff; }
+.calc-details-link:hover, .calc-details-link:active { color: var(--green-dark); }
 
 /* Calc details modal content (v2.0.5) */
 #calc-details-modal .calc-section { margin-bottom: 14px; }
