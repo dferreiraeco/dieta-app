@@ -685,9 +685,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .auth-screen h1 {
   font-size: 30px; margin-bottom: 6px; font-weight: 900;
-  background: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #00c853, #2196f3, #9c27b0, #e91e63);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--ink-strong);
 }
 .auth-screen .auth-subtitle { font-size: 15px; color: var(--ink-medium); margin-bottom: 8px; }
 .auth-screen .auth-desc {
