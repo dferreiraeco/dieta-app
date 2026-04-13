@@ -1,14 +1,93 @@
+/* =====================================================================
+   v2.1.0 — Fusion Redesign
+   Paleta baseada em fusão de referências verdes (#1 + #2) com neutrals warm.
+   Variáveis legacy (--blue, --green etc) viram aliases pras novas semânticas
+   pra não quebrar regras existentes durante a migração gradual.
+   ===================================================================== */
 :root {
-  --blue: #1a365d; --blue-mid: #2b6cb0; --blue-light: #bee3f8; --blue-bg: #ebf8ff;
-  --green: #276749; --green-light: #c6f6d5; --green-bg: #f0fff4;
-  --orange: #dd6b20; --orange-light: #feebc8;
-  --purple: #6b46c1; --purple-light: #e9d8fd;
-  --red: #e53e3e; --red-light: #fed7d7;
-  --gray: #2d3748; --gray-mid: #4a5568; --gray-light: #e2e8f0; --gray-bg: #f7fafc;
-  --radius: 12px;
+  /* === Core tokens (v2.1.0) === */
+  --green-primary:  #2B7A4B;
+  --green-dark:     #1E5A37;
+  --green-soft:     #E8F3ED;
+  --cream:          #FAFAF5;
+  --surface:        #FFFFFF;
+  --ink-strong:     #1A2E22;
+  --ink-medium:     #5A6B63;
+  --ink-soft:       #9AA8A1;
+  --accent-warm:    #E8A04E;
+  --accent-warm-soft: #FDF3E3;
+  --accent-danger:  #D35A47;
+  --accent-danger-soft: #FCEBE8;
+  --purple-soft:    #7B6BA8;
+  --purple-bg:      #F0EDF7;
+  --yellow-soft:    #A68318;
+  --yellow-bg:      #FBF6D7;
+
+  /* === Shape tokens === */
+  --radius-sm:   12px;
+  --radius-md:   18px;
+  --radius-lg:   24px;
+  --radius-pill: 999px;
+  --radius: var(--radius-md);  /* legacy alias */
+
+  /* === Elevation === */
+  --shadow-soft: 0 4px 12px rgba(26, 46, 34, 0.06);
+  --shadow-mid:  0 8px 24px rgba(26, 46, 34, 0.08);
+  --shadow-lg:   0 12px 32px rgba(26, 46, 34, 0.10);
+
+  /* === Safe-area insets === */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* === Legacy aliases — mapeiam as antigas vars pras novas semânticas ===
+     Qualquer regra antiga usando var(--blue) automaticamente pega o novo
+     ink-strong, etc. Permite redesign incremental sem breaking changes. */
+  --blue:         var(--ink-strong);
+  --blue-mid:     var(--green-primary);
+  --blue-light:   var(--green-soft);
+  --blue-bg:      var(--green-soft);
+  --green:        var(--green-primary);
+  --green-mid:    var(--green-primary);
+  --green-light:  var(--green-soft);
+  --green-bg:     var(--green-soft);
+  --orange:       var(--accent-warm);
+  --orange-light: var(--accent-warm-soft);
+  --purple:       var(--purple-soft);
+  --purple-light: var(--purple-bg);
+  --red:          var(--accent-danger);
+  --red-light:    var(--accent-danger-soft);
+  --gray:         var(--ink-strong);
+  --gray-mid:     var(--ink-medium);
+  --gray-light:   #E5E8E6;
+  --gray-bg:      var(--cream);
 }
+
+/* =====================================================================
+   Dark mode scaffold — declarado mas NÃO ativado automaticamente em v2.1.0.
+   Pra ativar: document.documentElement.dataset.theme = 'dark'.
+   Pra respeitar prefers-color-scheme, descomentar o @media block abaixo.
+   ===================================================================== */
+[data-theme="dark"] {
+  --surface:        #1E2824;
+  --cream:          #151B18;
+  --ink-strong:     #F5F7F6;
+  --ink-medium:     #B8C4BE;
+  --ink-soft:       #7A8680;
+  --gray-light:     #2D3834;
+  --green-soft:     rgba(43, 122, 75, 0.18);
+  --accent-warm-soft:  rgba(232, 160, 78, 0.15);
+  --accent-danger-soft: rgba(211, 90, 71, 0.18);
+  --purple-bg:      rgba(123, 107, 168, 0.18);
+  --yellow-bg:      rgba(166, 131, 24, 0.18);
+  --shadow-soft:    0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-mid:     0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg:      0 12px 32px rgba(0, 0, 0, 0.55);
+}
+/* @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    [aplicar as mesmas substituições do bloco acima]
+  }
+} */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -61,24 +140,9 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .macro-box.carb { background: var(--orange-light); color: var(--orange); }
 .macro-box.fat  { background: var(--purple-light); color: var(--purple); }
 /* ---- MEAL CARD ---- */
-.meal {
-  border-left: 4px solid var(--blue-mid); padding: 12px; margin-bottom: 10px;
-  border-radius: 0 10px 10px 0; cursor: pointer; transition: all 0.25s;
-  background: #fff; position: relative;
-}
-.meal:active { transform: scale(0.98); }
-.meal.eaten {
-  background: var(--green-bg); border-left-color: var(--green); opacity: 0.75;
-}
-.meal.eaten::after {
-  content: '\2713'; position: absolute; top: 10px; right: 12px;
-  font-size: 20px; font-weight: 700; color: var(--green);
-}
+/* (legacy .meal block removed in v2.1.18 — substituído pelo bloco v2.1.0 abaixo.
+    mantinha um ::after fantasma com checkmark verde atrás do .meal-check real.) */
 .meal.eaten .title, .meal.eaten .foods { text-decoration: line-through; opacity: 0.6; }
-.meal .time { font-size: 11px; color: var(--blue-mid); font-weight: 600; text-transform: uppercase; }
-.meal .title { font-size: 14px; font-weight: 600; margin: 2px 0 4px; }
-.meal .foods { font-size: 13px; color: var(--gray-mid); line-height: 1.5; }
-.meal .macros-sm { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 4px; }
 /* ---- DAILY TRACKER ---- */
 .daily-tracker {
   background: #fff; border-radius: var(--radius); padding: 14px 16px;
@@ -99,11 +163,55 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .bar-fill.carb-f { background: var(--orange); }
 .bar-fill.fat-f  { background: var(--purple); }
 .meals-count { font-size: 12px; color: var(--gray-mid); text-align: center; margin-top: 6px; }
-.daily-reset-btn {
-  display: block; width: 100%; padding: 10px; border: 1.5px solid var(--gray-light);
-  background: #fff; color: var(--gray-mid); border-radius: 10px;
-  font-size: 13px; cursor: pointer; margin-top: 8px; text-align: center;
+/* v2.1.3: .diet-balance, .balance-*, .diet-break-hint removidos junto com a
+   função renderDietBalance — o bloco confundia o usuário. Per-meal protein
+   e diet break hint ficam acessíveis só via modal de detalhes do cálculo. */
+
+/* Per-meal protein markers (v2.0.4) */
+.macros-sm .p-ok  { color: #48bb78; font-weight: 600; }
+.macros-sm .p-low { color: #dd6b20; font-weight: 600; }
+.macros-sm .p-mid { color: var(--gray); }
+
+/* Calc details link in diet header (v2.0.5) */
+.calc-details-link {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.9);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  font-weight: 600;
 }
+.calc-details-link:hover, .calc-details-link:active { color: #fff; }
+
+/* Calc details modal content (v2.0.5) */
+#calc-details-modal .calc-section { margin-bottom: 14px; }
+#calc-details-modal .calc-section h3 {
+  font-size: 13px; color: var(--blue); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--gray-light); padding-bottom: 4px;
+}
+#calc-details-modal .calc-section ul {
+  list-style: none; padding: 0; margin: 0;
+}
+#calc-details-modal .calc-section li {
+  font-size: 13px; color: var(--gray); line-height: 1.6;
+  padding: 3px 0;
+}
+#calc-details-modal .calc-section li b { color: var(--blue); }
+#calc-details-modal .calc-formula {
+  font-size: 11px; color: var(--gray-mid); font-family: monospace;
+  margin-left: 4px;
+}
+#calc-details-modal .calc-note {
+  font-size: 11px; color: var(--gray-mid); font-style: italic;
+  margin-bottom: 8px; line-height: 1.4;
+}
+#calc-details-modal .calc-refs li {
+  font-size: 11px; line-height: 1.5;
+}
+#calc-details-modal .calc-refs b { color: var(--blue); }
 /* ---- MARMITA TABS ---- */
 .marmita-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .marmita-tab {
@@ -202,10 +310,44 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .save-btn:active { opacity: 0.7; }
 .save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.history-btn {
-  display: block; width: 100%; padding: 12px; border: 2px solid var(--blue-mid);
-  background: var(--blue-bg); color: var(--blue-mid); border-radius: 12px;
-  font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
+/* ---- CONFIRM DIALOG (v2.1.24) ---- */
+.confirm-dialog {
+  max-width: 420px;
+  border-radius: 20px;
+  padding: 24px 22px;
+  position: relative;
+}
+.confirm-dialog h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.confirm-actions button {
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 110px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.confirm-actions button:active { transform: scale(0.97); }
+#confirm-cancel {
+  background: var(--gray-light);
+  color: var(--ink-medium);
+}
+#confirm-ok {
+  background: var(--green-primary);
+  color: #fff;
+}
+.confirm-dialog.danger #confirm-ok {
+  background: var(--accent-danger);
 }
 /* ---- HISTORY MODAL ---- */
 .modal-overlay {
@@ -233,8 +375,20 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .ob-field input:focus, .ob-field select:focus {
   outline: none; border-color: var(--green);
 }
+.ob-field input.error, .ob-field select.error { border-color: #e74c3c; background: #fff5f5; }
+.ob-field input.error:focus, .ob-field select.error:focus { border-color: #e74c3c; }
+.ob-error { display: none; font-size: 11px; color: #e74c3c; margin-top: 4px; font-weight: 600; }
+.ob-error.show { display: block; }
 .ob-row { display: flex; gap: 10px; }
 .ob-row .ob-field { flex: 1; }
+.ob-close-btn {
+  position: absolute; top: 10px; right: 10px;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: var(--gray-bg); color: var(--gray);
+  font-size: 22px; line-height: 1; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+}
+#onboarding-modal[data-mode="edit"] .ob-close-btn { display: flex; }
 .modal .close-btn {
   float: right; background: none; border: none; font-size: 24px;
   color: var(--gray-mid); cursor: pointer; padding: 0 4px;
@@ -334,6 +488,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   background: var(--green-bg); color: var(--green); padding: 10px 14px;
   border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 10px; text-align: center;
 }
+.planner-ok.is-dinner { background: var(--purple-bg); color: var(--purple-soft); }
 /* ---- MARMITA SELECTOR ---- */
 .msel-option {
   display: flex; align-items: center; gap: 10px; padding: 10px;
@@ -342,13 +497,21 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .msel-option:active { transform: scale(0.98); }
 .msel-option.selected { border-color: var(--green); background: var(--green-bg); }
+/* v2.1.22: dinner selector fica roxo quando selecionado (casa com o tema do jantar) */
+#dinner-selector .msel-option.selected { border-color: var(--purple-soft); background: var(--purple-bg); }
 .msel-option.disabled { opacity: 0.35; pointer-events: none; border-style: dashed; }
 .msel-option .msel-icon {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--blue-bg);
+  width: 48px; height: 48px; border-radius: 50%; background: var(--blue-bg);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px; color: var(--blue); flex-shrink: 0;
+  font-weight: 700; font-size: 15px; color: var(--blue); flex-shrink: 0;
+  overflow: hidden;
 }
-.msel-option.selected .msel-icon { background: var(--green); color: #fff; }
+.msel-option .msel-icon img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.msel-option .msel-icon.has-image { background: transparent; }
+.msel-option.selected .msel-icon:not(.has-image) { background: var(--green); color: #fff; }
+#dinner-selector .msel-option.selected .msel-icon:not(.has-image) { background: var(--purple-soft); color: #fff; }
 .msel-option .msel-info { flex: 1; min-width: 0; }
 .msel-option .msel-name { font-size: 13px; font-weight: 600; }
 .msel-option .msel-macros { font-size: 11px; color: var(--gray-mid); }
@@ -368,6 +531,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 10px;
 }
 .stock-badge.has { background: var(--green-bg); color: var(--green); }
+.stock-badge.has.is-dinner { background: var(--purple-bg); color: var(--purple-soft); }
 .stock-badge.empty { background: var(--gray-light); color: var(--gray-mid); }
 /* ---- CALENDAR ---- */
 .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -501,10 +665,12 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   background: var(--blue); color: #fff; font-size: 12px;
 }
 .user-bar .user-name { font-weight: 600; }
-.user-bar .logout-btn {
+.user-bar .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.user-bar .logout-btn, .user-bar .edit-btn {
   background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff;
   padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
 }
+.user-bar .edit-btn { background: rgba(255,255,255,0.12); }
 .sync-dot {
   width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px;
 }
@@ -514,3 +680,766 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .chart-container { margin: 10px 0 16px; }
 .chart-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 6px; }
 .chart-canvas { width: 100%; height: 140px; background: var(--gray-bg); border-radius: 8px; }
+
+/* ---- WEIGHT LOG CARD ---- */
+.weight-log-card h3 {
+  font-size: 16px; color: var(--blue); margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.weight-log-card .weight-summary {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; color: var(--gray-mid); margin-bottom: 10px;
+}
+.weight-log-card .weight-summary b { color: var(--blue); font-size: 15px; }
+.weight-log-card .weight-summary .weight-delta { font-weight: 600; }
+.weight-log-card .weight-summary .weight-delta.neg { color: #48bb78; }
+.weight-log-card .weight-summary .weight-delta.pos { color: #dd6b20; }
+.weight-chart {
+  width: 100%; height: 130px; display: block;
+  background: var(--gray-bg); border-radius: 8px; margin-bottom: 12px;
+}
+.weight-chart-empty {
+  height: 130px; background: var(--gray-bg); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gray-mid); font-size: 13px; text-align: center;
+  padding: 12px; margin-bottom: 12px;
+}
+.weight-log-form {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.weight-log-form input {
+  flex: 1; padding: 10px 12px; border: 1.5px solid var(--gray-light);
+  border-radius: 10px; font-size: 15px;
+  -webkit-appearance: none; appearance: none;
+}
+.weight-log-form input:focus { outline: none; border-color: var(--blue-mid); }
+.weight-log-form button {
+  padding: 10px 16px; background: var(--blue-mid); color: #fff; border: none;
+  border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.weight-log-hint {
+  font-size: 12px; color: #dd6b20; background: #fffaf0;
+  padding: 8px 10px; border-radius: 8px; margin-bottom: 10px;
+  border-left: 3px solid #dd6b20;
+}
+.weight-log-recent {
+  font-size: 11px; color: var(--gray-mid); margin-top: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.weight-log-recent span { background: var(--gray-bg); padding: 3px 8px; border-radius: 6px; }
+
+/* =====================================================================
+   v2.1.0 — Fusion Redesign: component overrides
+   ===================================================================== */
+
+/* ---- Body + page background ---- */
+body {
+  background: var(--cream);
+  color: var(--ink-strong);
+}
+
+/* ---- Page header (branco com título grande) ---- */
+.page-header {
+  background: var(--surface);
+  color: var(--ink-strong);
+  padding: 22px 20px 18px;
+  margin: -16px -16px 18px;
+  border-radius: 0;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+}
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.page-header p, .page-header #diet-goal-text {
+  font-size: 13px;
+  color: var(--ink-medium);
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 1;
+  margin-top: 2px;
+}
+.page-header .calc-details-link {
+  color: var(--green-primary);
+  font-weight: 600;
+}
+
+/* ---- Tab bar (v2.1.0) ---- */
+.tab-bar {
+  background: var(--surface);
+  border-top: 1px solid var(--gray-light);
+  box-shadow: 0 -4px 16px rgba(26, 46, 34, 0.06);
+  padding-top: 6px;
+}
+.tab-btn {
+  border-top: none;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 8px 4px 10px;
+  gap: 2px;
+}
+.tab-btn .icon {
+  font-size: 0;
+  line-height: 0;
+  color: inherit;
+  margin-bottom: 3px;
+  display: inline-flex;
+}
+.tab-btn .icon svg { width: 22px; height: 22px; }
+.tab-btn .label { font-size: 10px; font-weight: 600; }
+.tab-btn.active {
+  color: var(--green-primary);
+  background: transparent;
+  font-weight: 700;
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green-primary);
+}
+
+/* ---- Cards genéricos (upgrade global) ---- */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-soft);
+  border: none;
+  margin-bottom: 14px;
+}
+
+/* ---- Daily tracker v2.1.0 (donut + linhas) ---- */
+.daily-tracker {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px 20px 16px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 14px;
+}
+.daily-tracker .tracker-header h3 {
+  font-size: 15px;
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+.daily-tracker .tracker-date { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+.tracker-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0 14px;
+}
+.donut-wrap {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+}
+.kcal-donut { display: block; }
+.macro-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.macro-line { display: flex; flex-direction: column; gap: 4px; }
+.macro-line-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-medium);
+}
+.macro-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.macro-label { font-weight: 600; color: var(--ink-strong); }
+.macro-values { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-medium); }
+.macro-values b { color: var(--ink-strong); font-weight: 700; }
+.macro-line-bar {
+  height: 5px;
+  background: var(--gray-light);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.macro-line-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+
+/* ---- Meal cards (v2.1.0) ---- */
+.meal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 10px;
+  border-left: 4px solid var(--green-primary);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+.meal:active { transform: scale(0.985); }
+.meal.eaten {
+  border-left-color: var(--green-primary);
+  background: var(--green-soft);
+}
+.meal .meal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.meal .meal-glyph {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* v2.1.19: jantar herda o tema roxo do dinner-planner */
+.meal.dinner { border-left-color: var(--purple-soft); }
+.meal.dinner .meal-glyph { background: var(--purple-bg); color: var(--purple-soft); }
+.meal.dinner.eaten { background: var(--purple-bg); border-left-color: var(--purple-soft); }
+.meal.dinner.eaten .meal-check { background: var(--purple-soft); border-color: var(--purple-soft); }
+/* v2.1.20: snacks (café/lanche/pré-sono) em amarelo claro, na mesma tonalidade */
+.meal.snack { border-left-color: var(--yellow-soft); }
+.meal.snack .meal-glyph { background: var(--yellow-bg); color: var(--yellow-soft); }
+.meal.snack.eaten { background: var(--yellow-bg); border-left-color: var(--yellow-soft); }
+.meal.snack.eaten .meal-check { background: var(--yellow-soft); border-color: var(--yellow-soft); }
+.meal .meal-title-wrap { flex: 1; min-width: 0; }
+.meal .time {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 2px;
+}
+.meal .title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  line-height: 1.3;
+}
+.meal .meal-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--gray-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.2s;
+}
+.meal.eaten .meal-check {
+  background: var(--green-primary);
+  border-color: var(--green-primary);
+  color: #fff;
+}
+.meal .foods {
+  font-size: 12px;
+  color: var(--ink-medium);
+  line-height: 1.5;
+  margin: 6px 0 8px;
+}
+.meal .macros-sm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.meal .macros-sm .macro-pill {
+  background: var(--gray-bg);
+  color: var(--ink-medium);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.meal .macros-sm .macro-pill.kcal { background: var(--green-soft); color: var(--green-primary); }
+.meal .macros-sm .macro-pill.p-ok  { background: var(--green-soft); color: var(--green-primary); }
+.meal .macros-sm .macro-pill.p-low { background: var(--accent-warm-soft); color: var(--accent-warm); }
+.meal .macros-sm .macro-pill.p-mid { background: var(--gray-bg); color: var(--ink-medium); }
+
+/* ---- User-bar compacto (v2.1.0) ---- */
+.user-bar {
+  background: var(--surface);
+  color: var(--ink-strong);
+  box-shadow: var(--shadow-soft);
+  padding: 10px 16px;
+  padding-top: calc(10px + var(--safe-top));
+  font-size: 12px;
+  gap: 10px;
+}
+.user-bar .sync-dot { display: none; }
+.user-bar .user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.user-bar .user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.25;
+}
+.user-bar .user-info .line1 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-bar .user-info .line2 {
+  font-size: 11px;
+  color: var(--ink-medium);
+  font-weight: 500;
+}
+.user-bar .user-actions { gap: 4px; }
+.user-bar .user-bar-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+.user-bar .user-bar-main:active { opacity: 0.75; }
+.user-bar .edit-btn, .user-bar .logout-btn {
+  background: var(--green-soft);
+  border: none;
+  color: var(--green-primary);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.user-bar .logout-btn { background: var(--gray-light); color: var(--ink-medium); }
+.user-bar .edit-btn svg, .user-bar .logout-btn svg { width: 16px; height: 16px; }
+
+/* ---- Profile view modal (v2.1.2) ---- */
+.profile-view-modal { max-width: 520px; }
+
+/* v2.1.4: animação slide-up (bottom sheet). Backdrop faz fade-in suave,
+   modal sobe de baixo pra cima. Curva cubic-bezier(0.16, 1, 0.3, 1) =
+   "ease-out-expo" — decelera rápido no final, sensação iOS/Material. */
+#profile-view-modal.open {
+  animation: overlayFadeIn 0.25s ease-out;
+}
+#profile-view-modal.open .modal {
+  animation: sheetSlideUp 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+/* Respeita usuários com prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  #profile-view-modal.open,
+  #profile-view-modal.open .modal {
+    animation: none;
+  }
+}
+.profile-view-modal .pv-section { margin-bottom: 18px; }
+.profile-view-modal .pv-section h3 {
+  font-size: 12px;
+  color: var(--green-primary);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gray-light);
+}
+.profile-view-modal .pv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 14px;
+}
+.profile-view-modal .pv-label {
+  color: var(--ink-medium);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.profile-view-modal .pv-value {
+  color: var(--ink-strong);
+  font-weight: 700;
+  text-align: right;
+}
+.profile-view-modal .pv-footer {
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* ---- Botões pill-shaped (v2.1.0) ---- */
+.save-btn {
+  border-radius: var(--radius-pill);
+  background: var(--green-primary);
+  box-shadow: var(--shadow-soft);
+  font-weight: 700;
+  padding: 14px 24px;
+  letter-spacing: 0.2px;
+}
+.save-btn:active { background: var(--green-dark); }
+.reset-btn {
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--accent-danger);
+  border: 1.5px solid var(--accent-danger-soft);
+  font-weight: 700;
+  padding: 12px 20px;
+}
+.history-btn {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--green-soft);
+  color: var(--green-primary);
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 20px;
+  cursor: pointer;
+  margin-top: 10px;
+  text-align: center;
+}
+.history-btn.is-dinner { background: var(--purple-bg); color: var(--purple-soft); }
+
+/* ---- Inputs redesign (v2.1.0) ---- */
+.ob-field input, .ob-field select {
+  background: var(--gray-light);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 15px;
+  color: var(--ink-strong);
+  transition: all 0.2s ease;
+}
+.ob-field input:focus, .ob-field select:focus {
+  background: var(--green-soft);
+  border-color: var(--green-primary);
+  box-shadow: 0 0 0 3px rgba(43, 122, 75, 0.12);
+}
+.ob-field input.error, .ob-field select.error {
+  background: var(--accent-danger-soft);
+  border-color: var(--accent-danger);
+}
+.ob-field label {
+  color: var(--ink-strong);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* ---- Modais v2.1.0 (bottom-sheet style) ---- */
+.modal-overlay {
+  background: rgba(26, 46, 34, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal {
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  padding-top: 28px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--gray-light);
+}
+.modal h2 {
+  color: var(--ink-strong);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+/* Modal aberto pelo centro (onboarding) mantém cantos arredondados em todos lados */
+#onboarding-modal .modal, #calc-details-modal .modal {
+  border-radius: 24px;
+}
+#onboarding-modal .modal::before, #calc-details-modal .modal::before {
+  display: none;
+}
+
+/* ---- Planner grid (v2.1.5) — 2 cards por linha, imagem circular transbordando ---- */
+.planner-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 56px 12px;      /* row-gap 56px acomoda o overflow dos círculos da linha seguinte */
+  padding-top: 42px;   /* acomoda overflow dos círculos da 1ª linha */
+  margin-bottom: 12px;
+}
+@media (max-width: 360px) {
+  .planner-cards-grid { grid-template-columns: 1fr; gap: 56px 0; }
+}
+
+.pl-card {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 46px 12px 14px;
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  border-top: 3px solid var(--green-primary);
+}
+.pl-card.dinner { border-top-color: var(--purple-soft); }
+.pl-card:active { transform: scale(0.97); }
+.pl-card .pc-image {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  box-shadow: var(--shadow-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 3px solid var(--surface);
+}
+.pl-card.dinner .pc-image { background: var(--purple-bg); }
+.pl-card .pc-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* v2.1.9: quando há imagem real, o prato ocupa o círculo inteiro. Usamos
+   uma classe explícita `.has-image` (aplicada via JS no render) pra máxima
+   compatibilidade — evita dependência de :has(). O shadow permanece pra
+   dar profundidade (sensação de prato flutuante). */
+.pl-card .pc-image.has-image {
+  border: none;
+  background: transparent;
+}
+.pl-card .pc-emoji {
+  font-size: 42px;
+  line-height: 1;
+}
+.pl-card .pc-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  line-height: 1.2;
+  margin-bottom: 4px;
+  min-height: 38px;  /* reserva espaço pra 2 linhas */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+}
+.pl-card .pc-desc {
+  font-size: 12px;
+  color: var(--ink-medium);
+  line-height: 1.35;
+  margin-bottom: 12px;
+  padding: 0 4px;
+  min-height: 32px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pl-card .pc-macros {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding: 8px 0 10px;
+  border-top: 1px solid var(--gray-light);
+  border-bottom: 1px solid var(--gray-light);
+  margin-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.pl-card .pc-macro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+.pl-card .pc-macro .pc-macro-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  line-height: 1;
+}
+.pl-card .pc-macro .pc-macro-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.pl-card .pc-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.pl-card .pc-stepper button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pl-card.dinner .pc-stepper button { background: var(--purple-bg); color: var(--purple-soft); }
+.pl-card .pc-stepper button:active { transform: scale(0.92); }
+.pl-card .pc-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.pl-card .pc-qty {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- (Legacy) .marmita-card / .dinner-card — mantidos por segurança ---- */
+.marmita-card, .dinner-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 12px;
+  border-left: 4px solid var(--green-primary);
+  position: relative;
+}
+.dinner-card { border-left-color: var(--purple-soft); }
+.marmita-card .mc-head, .dinner-card .mc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.marmita-card .mc-name, .dinner-card .mc-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  flex: 1;
+  line-height: 1.2;
+}
+.marmita-card .mc-desc, .dinner-card .mc-desc {
+  font-size: 12px;
+  color: var(--ink-medium);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+.marmita-card .mc-macros, .dinner-card .mc-macros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.mc-pill {
+  background: var(--gray-bg);
+  color: var(--ink-medium);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+.mc-pill.kcal { background: var(--green-soft); color: var(--green-primary); }
+
+/* Stepper pill pra quantidade */
+.mc-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+}
+.mc-stepper button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-strong);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+.mc-stepper button:disabled { opacity: 0.35; box-shadow: none; background: transparent; }
+.mc-stepper .mc-qty {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}

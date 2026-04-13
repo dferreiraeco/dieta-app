@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=148">
+<link rel="stylesheet" href="styles.css?v=2114">
 </head>
 <body>
 
@@ -55,11 +55,12 @@
 <div id="app-container" style="display:none">
 <div id="user-bar" class="user-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99"></div>
 
-<!-- ==================== ONBOARDING MODAL (first login) ==================== -->
-<div id="onboarding-modal" class="modal-overlay" style="z-index:300;align-items:center">
-  <div class="modal" style="max-width:480px;border-radius:20px;max-height:92vh">
-    <h2 style="margin-bottom:6px">Bem-vindo!</h2>
-    <p style="font-size:13px;color:var(--gray-mid);margin-bottom:18px;line-height:1.5">
+<!-- ==================== ONBOARDING / EDIT PROFILE MODAL ==================== -->
+<div id="onboarding-modal" class="modal-overlay" data-mode="create" style="z-index:300;align-items:center">
+  <div class="modal" style="max-width:480px;border-radius:20px;max-height:92vh;position:relative">
+    <button id="ob-close" class="ob-close-btn" onclick="closeEditProfile()" aria-label="Fechar">×</button>
+    <h2 id="ob-title" style="margin-bottom:6px">Bem-vindo!</h2>
+    <p id="ob-subtitle" style="font-size:13px;color:var(--gray-mid);margin-bottom:18px;line-height:1.5">
       Para personalizar sua dieta, precisamos de algumas informações iniciais. Você só preenche uma vez — os dados ficam salvos na sua conta.
     </p>
 
@@ -67,10 +68,12 @@
       <div class="ob-field">
         <label>Nome</label>
         <input type="text" id="ob-nome" placeholder="João" autocomplete="given-name">
+        <div class="ob-error" id="ob-nome-err"></div>
       </div>
       <div class="ob-field">
         <label>Sobrenome</label>
         <input type="text" id="ob-sobrenome" placeholder="Silva" autocomplete="family-name">
+        <div class="ob-error" id="ob-sobrenome-err"></div>
       </div>
     </div>
 
@@ -83,10 +86,12 @@
           <option value="F">Feminino</option>
           <option value="O">Outro / Prefiro não dizer</option>
         </select>
+        <div class="ob-error" id="ob-sexo-err"></div>
       </div>
       <div class="ob-field">
         <label>Data de nascimento</label>
         <input type="date" id="ob-nascimento">
+        <div class="ob-error" id="ob-nascimento-err"></div>
       </div>
     </div>
 
@@ -94,36 +99,77 @@
       <div class="ob-field">
         <label>Peso atual (kg)</label>
         <input type="number" id="ob-peso" inputmode="decimal" step="0.1" placeholder="80.0">
+        <div class="ob-error" id="ob-peso-err"></div>
       </div>
       <div class="ob-field">
         <label>Altura (cm)</label>
         <input type="number" id="ob-altura" inputmode="numeric" placeholder="175">
+        <div class="ob-error" id="ob-altura-err"></div>
       </div>
     </div>
 
-    <div class="ob-field">
-      <label>Meta de peso (kg)</label>
-      <input type="number" id="ob-meta" inputmode="decimal" step="0.1" placeholder="75.0">
+    <div class="ob-row">
+      <div class="ob-field">
+        <label>Meta de peso (kg)</label>
+        <input type="number" id="ob-meta" inputmode="decimal" step="0.1" placeholder="75.0">
+        <div class="ob-error" id="ob-meta-err"></div>
+      </div>
+      <div class="ob-field">
+        <label>Gordura corporal % <span style="font-weight:400;color:var(--gray-mid)">(opcional)</span></label>
+        <input type="number" id="ob-bf" inputmode="decimal" step="0.1" placeholder="ex: 25">
+        <div class="ob-error" id="ob-bf-err"></div>
+      </div>
     </div>
 
     <div class="ob-field">
       <label>Nível de atividade física</label>
       <select id="ob-atividade">
         <option value="">Selecione...</option>
-        <option value="sedentario">Sedentário (sem exercício regular)</option>
-        <option value="sedentario_leve">Sedentário + atividade leve (1-2x/semana)</option>
-        <option value="moderado">Atividade moderada (3-5x/semana)</option>
-        <option value="alto">Atividade alta (6-7x/semana ou trabalho físico)</option>
+        <option value="sentado">Sedentário — sem exercício (×1,2)</option>
+        <option value="leve">Levemente ativo — 1-3x/sem (×1,375)</option>
+        <option value="rotina">Moderadamente ativo — 3-5x/sem (×1,55)</option>
+        <option value="intenso">Muito ativo — 6-7x/sem (×1,725)</option>
+        <option value="atleta">Extra ativo — treino diário + trabalho físico (×1,9)</option>
       </select>
+      <div class="ob-error" id="ob-atividade-err"></div>
     </div>
 
-    <button class="save-btn" onclick="submitOnboarding()" style="margin-top:14px">Salvar e Continuar</button>
+    <div class="ob-field" id="ob-deficit-field">
+      <label>Intensidade do déficit</label>
+      <select id="ob-deficit">
+        <option value="">Selecione...</option>
+        <option value="suave">Suave — 15% do TDEE (~0,35 kg/sem)</option>
+        <option value="moderado" selected>Moderado — 20% do TDEE (~0,5 kg/sem)</option>
+        <option value="agressivo">Agressivo — 30% do TDEE (~0,85 kg/sem)</option>
+        <option value="extremo">Extremo — 40% do TDEE (~1,0+ kg/sem, teto Longland 2016)</option>
+      </select>
+      <div class="ob-error" id="ob-deficit-err"></div>
+    </div>
+
+    <div class="ob-field" id="ob-surplus-field">
+      <label>Intensidade do superávit</label>
+      <select id="ob-surplus">
+        <option value="">Selecione...</option>
+        <option value="lento">Lento — 10% do TDEE (~0,25 kg/sem, lean bulk)</option>
+        <option value="moderado" selected>Moderado — 15% do TDEE (~0,35 kg/sem)</option>
+        <option value="agressivo">Agressivo — 20% do TDEE (~0,5 kg/sem)</option>
+      </select>
+      <div class="ob-error" id="ob-surplus-err"></div>
+    </div>
+
+    <div class="ob-field" id="ob-maintenance-note" style="display:none">
+      <p style="font-size:12px;color:var(--gray-mid);font-style:italic;margin:0;padding:10px 12px;background:var(--gray-bg);border-radius:8px;line-height:1.5">
+        Em <b>manutenção</b> (meta ≈ peso atual): alvo calórico será igual ao TDEE, sem déficit nem superávit.
+      </p>
+    </div>
+
+    <button id="ob-submit" class="save-btn" onclick="submitOnboarding()" style="margin-top:14px">Salvar e Continuar</button>
   </div>
 </div>
 
 <!-- ==================== TAB: MARMITAS (PLANNER) ==================== -->
 <div id="page-marmitas" class="page active">
-  <div class="page-header" style="background:var(--green);">
+  <div class="page-header">
     <h1>Planejamento de Refeições</h1>
     <p>Monte sua semana (para 2 pessoas)</p>
   </div>
@@ -163,36 +209,23 @@
 <!-- ==================== TAB: DIETA ==================== -->
 <div id="page-dieta" class="page">
   <div class="page-header">
-    <h1>Dieta de Recomposição Corporal</h1>
-    <p>Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
+    <h1>Dieta de Recomposição</h1>
+    <p id="diet-goal-text">Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
   </div>
 
-  <!-- Daily macro tracker -->
+  <!-- v2.1.0 daily tracker com donut + linhas textuais -->
   <div class="daily-tracker">
     <div class="tracker-header">
       <h3>Progresso do Dia</h3>
       <span class="tracker-date" id="diet-date"></span>
     </div>
-    <div class="macro-progress">
-      <div class="macro-prog-item">
-        <div class="label"><span>Kcal</span><span id="prog-kcal">0/2000</span></div>
-        <div class="bar"><div class="bar-fill kcal-f" id="bar-kcal" style="width:0%"></div></div>
-      </div>
-      <div class="macro-prog-item">
-        <div class="label"><span>Prot</span><span id="prog-prot">0/190g</span></div>
-        <div class="bar"><div class="bar-fill prot-f" id="bar-prot" style="width:0%"></div></div>
-      </div>
-      <div class="macro-prog-item">
-        <div class="label"><span>Carb</span><span id="prog-carb">0/150g</span></div>
-        <div class="bar"><div class="bar-fill carb-f" id="bar-carb" style="width:0%"></div></div>
-      </div>
-      <div class="macro-prog-item">
-        <div class="label"><span>Gord</span><span id="prog-fat">0/70g</span></div>
-        <div class="bar"><div class="bar-fill fat-f" id="bar-fat" style="width:0%"></div></div>
-      </div>
+    <div class="tracker-main">
+      <!-- Donut SVG + center text, populado por updateDailyProgress() -->
+      <div class="donut-wrap" id="donut-kcal"></div>
+      <!-- 3 linhas textuais de macros P/C/G com dots -->
+      <div class="macro-lines" id="macro-lines"></div>
     </div>
     <div class="meals-count" id="meals-count">0 de 6 refeições realizadas</div>
-    <button class="daily-reset-btn" onclick="resetDailyMeals()">Resetar dia</button>
   </div>
 
   <!-- Marmita selector for today -->
@@ -222,11 +255,13 @@
       <b>Cafeina:</b> 350-500mg pré-treino (opcional)
     </div>
   </div>
+
+  <button class="reset-btn" onclick="resetDailyMeals()" style="margin-top:20px">Resetar Dia</button>
 </div>
 
 <!-- ==================== TAB: COMPRAS ==================== -->
 <div id="page-compras" class="page">
-  <div class="page-header" style="background:var(--green);">
+  <div class="page-header">
     <h1>Lista de Compras</h1>
     <p>Compra semanal para 2 pessoas. Itens pré-selecionados se referem a refeições pré-definidas (café da manhã, lanche da manhã e lanche/pré-treino).</p>
   </div>
@@ -242,7 +277,7 @@
 <!-- ==================== TAB: PREP ==================== -->
 <!-- ==================== TAB: TREINO ==================== -->
 <div id="page-treino" class="page">
-  <div class="page-header" style="background:var(--blue);">
+  <div class="page-header">
     <h1>Registro de Treino</h1>
     <p>Acompanhe sua progressão semana a semana</p>
   </div>
@@ -254,9 +289,9 @@
   </div>
 
   <div class="week-nav">
-    <button onclick="changeWeek(-1)">&larr;</button>
+    <button onclick="changeWeek(-1)" aria-label="Semana anterior">&larr;</button>
     <span class="week-label" id="week-label">Semana 1</span>
-    <button onclick="changeWeek(1)">&rarr;</button>
+    <button onclick="changeWeek(1)" aria-label="Próxima semana">&rarr;</button>
   </div>
 
   <div id="exercises-container"></div>
@@ -275,16 +310,16 @@
 
 <!-- ==================== TAB: CALENDARIO ==================== -->
 <div id="page-calendário" class="page">
-  <div class="page-header" style="background:#553c9a;">
+  <div class="page-header">
     <h1>Calendário de Treinos</h1>
     <p>Visualize sua consistência ao longo do mês</p>
   </div>
 
   <div class="card">
     <div class="cal-nav">
-      <button onclick="changeMonth(-1)">&larr;</button>
+      <button onclick="changeMonth(-1)" aria-label="Mês anterior">&larr;</button>
       <span class="month-label" id="cal-month-label"></span>
-      <button onclick="changeMonth(1)">&rarr;</button>
+      <button onclick="changeMonth(1)" aria-label="Próximo mês">&rarr;</button>
     </div>
     <div class="cal-grid" id="cal-grid"></div>
     <div class="cal-legend">
@@ -297,6 +332,9 @@
   <div class="day-detail" id="day-detail"></div>
 
   <div class="card cal-summary" id="cal-summary"></div>
+
+  <!-- Weight log card (render target; populated by JS, hidden if no profile) -->
+  <div class="card weight-log-card" id="weight-log-card" style="display:none;margin-top:16px"></div>
 
   <div class="card" style="margin-top:16px">
     <h3 style="font-size:14px;color:var(--blue);margin-bottom:10px">Backup dos Dados</h3>
@@ -327,27 +365,46 @@
   </div>
 </div>
 
+<!-- ==================== CALC DETAILS MODAL (v2.0.5) ==================== -->
+<div class="modal-overlay" id="calc-details-modal" style="z-index:250;align-items:center">
+  <div class="modal" style="max-width:560px;border-radius:20px;max-height:92vh;position:relative">
+    <button class="ob-close-btn" onclick="closeCalcDetails()" aria-label="Fechar" style="display:flex">×</button>
+    <h2 style="margin-bottom:14px">Detalhes do cálculo</h2>
+    <div id="calc-details-content"></div>
+  </div>
+</div>
+
+<!-- ==================== PROFILE VIEW MODAL (v2.1.2) — bottom sheet ==================== -->
+<div class="modal-overlay" id="profile-view-modal" style="z-index:240">
+  <div class="modal profile-view-modal">
+    <button class="ob-close-btn" onclick="closeProfileView()" aria-label="Fechar" style="display:flex">×</button>
+    <h2 style="margin-bottom:14px">Seu Perfil</h2>
+    <div id="profile-view-content"></div>
+    <button class="save-btn" style="margin-top:18px" onclick="closeProfileView();openEditProfile()">Editar Perfil</button>
+  </div>
+</div>
+
+<!-- ==================== CONFIRM MODAL (v2.1.24) ==================== -->
+<div class="modal-overlay" id="confirm-modal" style="z-index:300;align-items:center">
+  <div class="modal confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+    <h2 id="confirm-title" style="margin-bottom:10px">Confirmar</h2>
+    <div id="confirm-message" style="font-size:14px;color:var(--ink-medium);line-height:1.5;margin-bottom:18px;white-space:pre-wrap"></div>
+    <div class="confirm-actions">
+      <button id="confirm-cancel" type="button">Cancelar</button>
+      <button id="confirm-ok" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== TAB BAR ==================== -->
-<nav class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('marmitas')">
-    <span class="icon">&#127857;</span>Marmitas
-  </button>
-  <button class="tab-btn" onclick="switchTab('compras')">
-    <span class="icon">&#128722;</span>Compras
-  </button>
-  <button class="tab-btn" onclick="switchTab('dieta')">
-    <span class="icon">&#127858;</span>Dieta
-  </button>
-  <button class="tab-btn" onclick="switchTab('treino')">
-    <span class="icon">&#127947;</span>Treino
-  </button>
-  <button class="tab-btn" onclick="switchTab('calendário')">
-    <span class="icon">&#128197;</span>Agenda
-  </button>
+<nav class="tab-bar" id="tab-bar">
+  <!-- Populada por app.js em initApp() usando glyph() —
+       mantemos o nav aqui só como container estável. -->
 </nav>
 </div><!-- /app-container -->
 
-<script src="data.js?v=148"></script>
-<script src="app.js?v=148"></script>
+<script src="glyphs.js?v=2114"></script>
+<script src="data.js?v=2114"></script>
+<script src="app.js?v=2114"></script>
 </body>
 </html>

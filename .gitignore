@@ -1,2 +1,5 @@
 # Local Netlify folder
 .netlify
+
+# Backups dos PNGs originais 1024×1024 (regeneráveis via scripts/crop-meals.py)
+images/.originals/

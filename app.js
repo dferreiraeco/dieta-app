@@ -4,14 +4,87 @@
 // ==================================================================
 
 // ============================================================
+// CUSTOM CONFIRM (v2.1.24) — substitui window.confirm() por modal
+// async. Retorna Promise<boolean>. Suporta título, texto multi-linha
+// (\n preservado via white-space:pre-wrap), e variante perigosa
+// (botão OK em vermelho via classe .danger no .confirm-dialog).
+// ============================================================
+function customConfirm(message, opts = {}) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('confirm-modal');
+    const dialog  = overlay.querySelector('.confirm-dialog');
+    const titleEl = document.getElementById('confirm-title');
+    const msgEl   = document.getElementById('confirm-message');
+    const okBtn   = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+
+    titleEl.textContent = opts.title || 'Confirmar';
+    msgEl.textContent = message;
+    okBtn.textContent = opts.okLabel || 'Confirmar';
+    cancelBtn.textContent = opts.cancelLabel || 'Cancelar';
+    dialog.classList.toggle('danger', !!opts.danger);
+
+    overlay.classList.add('open');
+
+    const cleanup = (result) => {
+      overlay.classList.remove('open');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    };
+    const onOk     = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onOverlayClick = (e) => { if (e.target === overlay) cleanup(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') cleanup(false);
+      else if (e.key === 'Enter') cleanup(true);
+    };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+// ============================================================
 // TAB NAVIGATION
 // ============================================================
 const TABS = ['marmitas','compras','dieta','treino','calendário'];
+
+// v2.1.0: tab bar mapeada pra glyphs Lucide (via glyph() em glyphs.js).
+// Cada entry: { key: TABS[i], label: string, icon: glyph name }.
+const TAB_META = [
+  { key: 'marmitas',   label: 'Marmitas', icon: 'utensils' },
+  { key: 'compras',    label: 'Compras',  icon: 'shopping-cart' },
+  { key: 'dieta',      label: 'Dieta',    icon: 'apple' },
+  { key: 'treino',     label: 'Treino',   icon: 'dumbbell' },
+  { key: 'calendário', label: 'Agenda',   icon: 'calendar' },
+];
+
+function renderTabBar() {
+  const nav = document.getElementById('tab-bar');
+  if (!nav) return;
+  const activeTab = document.querySelector('.page.active');
+  const activeKey = activeTab ? activeTab.id.replace('page-', '') : 'marmitas';
+  nav.innerHTML = TAB_META.map(t => {
+    const isActive = t.key === activeKey;
+    return `<button class="tab-btn${isActive ? ' active' : ''}" onclick="switchTab('${t.key}')" aria-label="${t.label}">
+      <span class="icon">${glyph(t.icon, 22)}</span>
+      <span class="label">${t.label}</span>
+    </button>`;
+  }).join('');
+}
+
 function switchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
-  document.querySelectorAll('.tab-btn')[TABS.indexOf(tab)].classList.add('active');
+  const idx = TABS.indexOf(tab);
+  const btns = document.querySelectorAll('.tab-btn');
+  if (btns[idx]) btns[idx].classList.add('active');
   if (tab === 'calendário') { renderCalendar(); showDayDetail(localDateStr()); }
   window.scrollTo(0, 0);
 }
@@ -27,24 +100,36 @@ function showMarmita(idx) {
 // ============================================================
 // DAILY MEAL TRACKER
 // ============================================================
-const FIXED_MEALS = [
-  { id: 'cafe',    time: '7h',  name: 'Café da Manhã',        desc: 'Ovos + Pão Integral',
-    foods: '2 ovos inteiros mexidos (~100g) + 2 claras (~70g) | 1 fatia pão integral (~25g) | 1 fatia mussarela (20g) | 1 banana prata (~70g) | Café preto',
-    kcal: 360, p: 29, c: 26, g: 16, color: '' },
-  { id: 'lanche1', time: '10h', name: 'Lanche da Manhã',      desc: 'Whey + Fruta',
-    foods: '1 scoop whey isolado em água (30g) | 1 maçã média (~150g)',
-    kcal: 200, p: 24, c: 23, g: 2, color: '' },
-  null, // placeholder for dynamic lunch
-  { id: 'lanche2', time: '16h', name: 'Lanche / Pré-Treino',  desc: 'Iogurte + Whey + Banana',
-    foods: '130g iogurte grego natural | 1/2 scoop whey (15g) | 1 banana prata (~70g)',
-    kcal: 240, p: 25, c: 23, g: 7, color: '' },
-  { id: 'jantar',  time: '20h', name: 'Jantar',                desc: 'Omelete / Tapioca / Carne',
-    foods: '<b>Op.1:</b> 3 ovos inteiros (~150g) + 50g peito de peru + 1 fatia mussarela (20g) + 2 fatias pão integral (~50g)<br><b>Op.2:</b> Goma de tapioca (50g) + 130g frango desfiado cozido + 30g queijo cottage<br><b>Op.3:</b> 130g alcatra grelhada + 100g arroz branco cozido + salada de folhas + 5ml azeite (1 col. chá)',
-    kcal: 440, p: 38, c: 31, g: 15, color: 'var(--purple)' },
-  { id: 'presono', time: '22h', name: 'Pré-Sono',              desc: 'Proteína Lenta (1 opção)',
-    foods: '<b>Opções (escolha 1):</b><br>&bull; 200g queijo cottage<br>&bull; OU 1 scoop (30g) caseína em água<br>&bull; OU 200g iogurte grego natural<br>&bull; OU 60g queijo minas frescal + 30g peito de peru<br>&bull; OU 1 scoop (30g) whey em água<br>&bull; OU omelete (1 ovo inteiro ~50g + 2 claras ~70g)',
-    kcal: 170, p: 24, c: 5, g: 7, color: '' },
-];
+// v2.0: refeições fixas vivem em FIXED_MEAL_RECIPES (data.js) como ingredientes
+// estruturados escalados pelo target. Aqui só ficam os metadados de ordem/layout
+// e as refeições dinâmicas (almoço/jantar) que saem do planner de marmitas.
+
+// Retorna o fator de escala aplicado aos baseGrams das refeições fixas.
+// scale = meta_kcal / DEFAULT_GOALS.kcal (2000). Se não houver perfil/goals,
+// devolve 1 (sem escala, equivalente à base de 2000 kcal).
+function getPortionScale() {
+  try { return computePortionScale(getGoals().kcal); }
+  catch (e) { return 1; }
+}
+
+// Constrói a refeição fixa escalada para a meta atual do usuário.
+// Retorna o mesmo shape que o resto do app consome: {id, time, name, desc, foods, kcal, p, c, g, color}.
+function buildFixedMeal(recipeId) {
+  const recipe = FIXED_MEAL_RECIPES.find(r => r.id === recipeId);
+  if (!recipe) return null;
+  const scale = getPortionScale();
+  const scaled = scaleMealIngredients(recipe, scale);
+  const macros = computeMealMacros(scaled.ingredients);
+  return {
+    id: recipe.id,
+    time: recipe.time,
+    name: recipe.name,
+    desc: recipe.desc,
+    color: recipe.color,
+    foods: renderMealFoodsText(scaled),
+    ...macros,
+  };
+}
 
 function getMeals() {
   // Monta o texto da salada. Para refeições com saladEmbedded (ex: sanduíche, wrap),
@@ -135,14 +220,24 @@ function getMeals() {
         color: 'var(--purple)' };
   }
 
-  // Map: null = lunch placeholder, dinner is at index 4 originally
-  return FIXED_MEALS.map((m, i) => {
-    if (m === null) return lunch;
-    if (m.id === 'jantar') return dinner;
-    return m;
-  });
+  // Ordem final do dia: café → lanche1 → almoço → lanche2 → jantar → pré-sono
+  // Refeições fixas (café/lanche1/lanche2/pré-sono) vêm escaladas pelo target atual.
+  return [
+    buildFixedMeal('cafe'),
+    buildFixedMeal('lanche1'),
+    lunch,
+    buildFixedMeal('lanche2'),
+    dinner,
+    buildFixedMeal('presono'),
+  ];
 }
-const GOALS = { kcal: 2000, p: 190, c: 150, g: 70 };
+// Metas diárias derivadas do user_profile (Mifflin-St Jeor + atividade + meta).
+// Se o perfil estiver incompleto ou faltando, caímos para DEFAULT_GOALS (definido
+// em data.js). A função é chamada dinamicamente porque o perfil pode mudar
+// em runtime (via onboarding, futura edição de perfil, ou sync do Firestore).
+function getGoals() {
+  return computeGoals(getUserProfile()) || DEFAULT_GOALS;
+}
 
 // Helper: local date string YYYY-MM-DD (avoids UTC timezone issues)
 function localDateStr(date) {
@@ -170,16 +265,44 @@ function renderMeals() {
   const container = document.getElementById('meals-container');
   let html = '';
 
+  const goals = getGoals();
+  const perMealP = goals.perMealP || 0;
+  // v2.1.0: mapeia id → glyph. Refeições compartilham keys estáveis.
+  const MEAL_GLYPHS = {
+    cafe: 'coffee', lanche1: 'sun', almoco: 'salad',
+    lanche2: 'cookie', jantar: 'soup', presono: 'moon',
+  };
   getMeals().forEach(m => {
     const eaten = saved[m.id] || false;
-    const borderColor = m.color || 'var(--blue-mid)';
-    const timeColor = m.color || 'var(--blue-mid)';
-    html += `<div class="meal ${eaten ? 'eaten' : ''}" onclick="toggleMeal('${m.id}')"
-      style="border-left-color:${eaten ? 'var(--green)' : borderColor}">
-      <div class="time" style="color:${eaten ? 'var(--green)' : timeColor}">${m.time} - ${m.name}</div>
-      <div class="title">${m.desc}</div>
+    // v2.0.4: classificação de proteína por refeição (Schoenfeld & Aragon 2018)
+    let pClass = 'p-mid';
+    if (perMealP > 0 && m.p > 0) {
+      const ratio = m.p / perMealP;
+      if (ratio >= 1.0)      pClass = 'p-ok';
+      else if (ratio >= 0.6) pClass = 'p-mid';
+      else                   pClass = 'p-low';
+    }
+    const glyphName = MEAL_GLYPHS[m.id] || 'salad';
+    // v2.1.20: almoço verde (default), jantar roxo, demais (snacks) amarelo
+    let mealClass = 'meal';
+    if (m.id === 'jantar') mealClass += ' dinner';
+    else if (m.id !== 'almoco') mealClass += ' snack';
+    html += `<div class="${mealClass} ${eaten ? 'eaten' : ''}" onclick="toggleMeal('${m.id}')">
+      <div class="meal-head">
+        <div class="meal-glyph">${glyph(glyphName, 20)}</div>
+        <div class="meal-title-wrap">
+          <div class="time">${m.time} · ${m.name}</div>
+          <div class="title">${m.desc}</div>
+        </div>
+        <div class="meal-check">${glyph('check', 14, '#fff', 3)}</div>
+      </div>
       <div class="foods">${m.foods}</div>
-      <div class="macros-sm">~${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
+      <div class="macros-sm">
+        <span class="macro-pill kcal">${m.kcal} kcal</span>
+        <span class="macro-pill ${pClass}">${m.p}g P</span>
+        <span class="macro-pill">${m.c}g C</span>
+        <span class="macro-pill">${m.g}g G</span>
+      </div>
     </div>`;
   });
 
@@ -196,37 +319,242 @@ function toggleMeal(id) {
 
 function updateDailyProgress() {
   const saved = getSavedMeals();
-  let kcal = 0, p = 0, c = 0, g = 0, count = 0;
+  const meals = getMeals();
 
-  getMeals().forEach(m => {
+  // consumido = soma das refeições marcadas como comidas
+  let consumedKcal = 0, consumedP = 0, consumedC = 0, consumedG = 0, count = 0;
+  meals.forEach(m => {
     if (saved[m.id]) {
-      kcal += m.kcal; p += m.p; c += m.c; g += m.g; count++;
+      consumedKcal += m.kcal; consumedP += m.p; consumedC += m.c; consumedG += m.g; count++;
     }
   });
 
-  document.getElementById('diet-date').textContent = getTodayDateStr();
-  document.getElementById('meals-count').textContent = `${count} de ${getMeals().length} refeições realizadas`;
+  const dateEl = document.getElementById('diet-date');
+  if (dateEl) dateEl.textContent = getTodayDateStr();
+  const mcEl = document.getElementById('meals-count');
+  if (mcEl) mcEl.textContent = `${count} de ${meals.length} refeições realizadas`;
 
-  const update = (id, val, max) => {
-    const pct = Math.min(100, Math.round(val / max * 100));
-    document.getElementById('bar-' + id).style.width = pct + '%';
-    document.getElementById('prog-' + id).textContent = `${val}/${max}${id === 'kcal' ? '' : 'g'}`;
-  };
-  update('kcal', kcal, GOALS.kcal);
-  update('prot', p, GOALS.p);
-  update('carb', c, GOALS.c);
-  update('fat', g, GOALS.g);
+  const goals = getGoals();
+
+  // v2.1.0: donut SVG pra kcal + linhas textuais pra macros
+  renderKcalDonut(consumedKcal, goals.kcal);
+  renderMacroLines({
+    p: consumedP, c: consumedC, g: consumedG,
+  }, goals);
+
+  renderDietHeader(goals);
 }
 
-function resetDailyMeals() {
-  if (!confirm('Desmarcar todas as refeições de hoje?')) return;
+// v2.1.0: donut SVG pra kcal. Círculo externo verde, fundo cinza claro,
+// número + unidade no centro. Tamanho 120x120 pra ser compacto no mobile.
+function renderKcalDonut(consumed, goal) {
+  const el = document.getElementById('donut-kcal');
+  if (!el) return;
+  const size = 120;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = 48;
+  const stroke = 12;
+  const circ = 2 * Math.PI * radius;
+  const pct = Math.min(1, goal > 0 ? consumed / goal : 0);
+  const dashOffset = circ * (1 - pct);
+  const pctLabel = Math.round(pct * 100);
+  const consumedFmt = consumed.toLocaleString('pt-BR');
+  const goalFmt = goal.toLocaleString('pt-BR');
+
+  el.innerHTML = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="kcal-donut">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none"
+              stroke="var(--gray-light)" stroke-width="${stroke}"/>
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none"
+              stroke="var(--green-primary)" stroke-width="${stroke}"
+              stroke-linecap="round"
+              stroke-dasharray="${circ.toFixed(2)}"
+              stroke-dashoffset="${dashOffset.toFixed(2)}"
+              transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle"
+            font-size="22" font-weight="700" fill="var(--ink-strong)">${pctLabel}%</text>
+      <text x="${cx}" y="${cy + 14}" text-anchor="middle"
+            font-size="10" font-weight="500" fill="var(--ink-medium)">${consumedFmt} / ${goalFmt}</text>
+      <text x="${cx}" y="${cy + 26}" text-anchor="middle"
+            font-size="9" font-weight="500" fill="var(--ink-soft)">kcal</text>
+    </svg>
+  `;
+}
+
+// v2.1.0: 3 linhas textuais pra macros P/C/G com dot colorido e barra inline.
+function renderMacroLines(consumed, goals) {
+  const el = document.getElementById('macro-lines');
+  if (!el) return;
+  const rows = [
+    { key: 'p', label: 'Proteína', color: 'var(--green-primary)', val: consumed.p, max: goals.p, unit: 'g' },
+    { key: 'c', label: 'Carbo',    color: 'var(--accent-warm)',   val: consumed.c, max: goals.c, unit: 'g' },
+    { key: 'g', label: 'Gordura',  color: 'var(--purple-soft)',   val: consumed.g, max: goals.g, unit: 'g' },
+  ];
+  el.innerHTML = rows.map(r => {
+    const pct = Math.min(100, r.max > 0 ? Math.round(r.val / r.max * 100) : 0);
+    return `
+      <div class="macro-line">
+        <div class="macro-line-head">
+          <span class="macro-dot" style="background:${r.color}"></span>
+          <span class="macro-label">${r.label}</span>
+          <span class="macro-values">${r.val}/${r.max}${r.unit} <b>${pct}%</b></span>
+        </div>
+        <div class="macro-line-bar">
+          <div class="macro-line-fill" style="width:${pct}%;background:${r.color}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// v2.1.3: renderDietBalance removido completamente. A linha de "Plano do dia
+// vs meta" confundia o usuário, e os elementos auxiliares (meta de P por
+// refeição, diet break hint) também foram considerados ruído. A informação
+// de perMealP e o diet break hint ficam disponíveis via modal de detalhes do
+// cálculo se necessário — não poluem o daily tracker.
+
+// Atualiza o subtítulo da aba Dieta com a meta dinâmica derivada do perfil.
+function renderDietHeader(goals) {
+  const el = document.getElementById('diet-goal-text');
+  if (!el) return;
+  const g = goals || getGoals();
+  const dir = getGoalDirection(getUserProfile());
+  const objetivo = dir === 'loss'     ? 'Perda de Gordura'
+                 : dir === 'gain'     ? 'Ganho de Massa'
+                 : dir === 'maintain' ? 'Manutenção'
+                 : 'Perda de Gordura e Ganho de Massa';
+  const kcalTxt = g.kcal.toLocaleString('pt-BR');
+  // Fibra + água: duas novas metas derivadas de literatura (v2.0.3).
+  // Renderizadas em linha separada com fonte menor pra não poluir o header.
+  const fiberTxt = g.fiber != null ? `${g.fiber}g` : '≥25g';
+  const waterLiters = g.water_ml != null ? (g.water_ml / 1000).toFixed(1).replace('.', ',') : '2,5';
+  // v2.0.5: link "ⓘ" abre o modal com breakdown completo do cálculo
+  const infoLink = getUserProfile()
+    ? ` <a href="#" onclick="openCalcDetails();return false" class="calc-details-link" aria-label="Ver detalhes do cálculo">ⓘ Detalhes</a>`
+    : '';
+  el.innerHTML =
+    `Meta: ~${kcalTxt} kcal/dia | Objetivo: ${objetivo}${infoLink}` +
+    `<br><span style="font-size:11px;opacity:0.85">Fibra: ${fiberTxt}/dia • Água: ${waterLiters} L/dia</span>`;
+}
+
+// v2.0.5: modal de transparência do cálculo. Mostra cada passo da derivação
+// de kcal/macros/fibra/água + referências científicas pra cada critério.
+function openCalcDetails() {
+  const profile = getUserProfile();
+  if (!profile) return;
+  const goals = getGoals();
+  const d = goals._details || {};
+  const fmt = n => n != null ? n.toLocaleString('pt-BR') : '';
+
+  const compSection = d.lbm != null
+    ? `<li>Peso total: <b>${profile.peso_atual} kg</b></li>
+       <li>Gordura corporal: <b>${d.bf_pct}%</b></li>
+       <li>Massa magra (LBM): <b>${d.lbm.toString().replace('.',',')} kg</b> <span class="calc-formula">= ${profile.peso_atual} × (1 − ${d.bf_pct}/100)</span></li>`
+    : `<li>Peso total: <b>${profile.peso_atual} kg</b></li>
+       <li><i>BF% não preenchido — usando Mifflin com peso total</i></li>`;
+
+  const bmrFormulaText = d.bmrFormula === 'Katch-McArdle'
+    ? `<span class="calc-formula">= 370 + 21,6 × ${d.lbm.toString().replace('.',',')}</span>`
+    : `<span class="calc-formula">= Mifflin-St Jeor (sem BF%)</span>`;
+
+  let metaSection;
+  if (d.direction === 'loss') {
+    const deficitTxt = d.deficitPct != null
+      ? `${(d.deficitPct * 100).toFixed(0)}% do TDEE = −${Math.round(d.tdee * d.deficitPct)} kcal`
+      : `−500 kcal (fixo, fallback legado)`;
+    metaSection = `
+      <li>Direção: <b>Perda</b> (meta < peso)</li>
+      <li>Déficit: ${deficitTxt}</li>
+      <li>Alvo: <b>${fmt(goals.kcal)} kcal/dia</b></li>`;
+  } else if (d.direction === 'gain') {
+    const surplusTxt = d.surplusPct != null
+      ? `${(d.surplusPct * 100).toFixed(0)}% do TDEE = +${Math.round(d.tdee * d.surplusPct)} kcal`
+      : `+300 kcal (fixo, fallback legado)`;
+    metaSection = `
+      <li>Direção: <b>Ganho</b> (meta > peso)</li>
+      <li>Superávit: ${surplusTxt}</li>
+      <li>Alvo: <b>${fmt(goals.kcal)} kcal/dia</b></li>`;
+  } else {
+    metaSection = `
+      <li>Direção: <b>Manutenção</b> (meta ≈ peso)</li>
+      <li>Alvo: <b>${fmt(goals.kcal)} kcal/dia</b> (= TDEE)</li>`;
+  }
+
+  const base = d.macroBase != null ? d.macroBase.toString().replace('.', ',') : '—';
+
+  document.getElementById('calc-details-content').innerHTML = `
+    <div class="calc-section">
+      <h3>1. Composição corporal</h3>
+      <ul>${compSection}</ul>
+    </div>
+
+    <div class="calc-section">
+      <h3>2. Gasto energético</h3>
+      <ul>
+        <li>Fórmula: <b>${d.bmrFormula}</b> ${bmrFormulaText}</li>
+        <li>BMR: <b>${fmt(d.bmr)} kcal/dia</b></li>
+        <li>Atividade: <b>${d.activityKey}</b> (× ${d.activityMult.toString().replace('.',',')})</li>
+        <li>TDEE: <b>${fmt(d.tdee)} kcal/dia</b> <span class="calc-formula">= ${fmt(d.bmr)} × ${d.activityMult.toString().replace('.',',')}</span></li>
+      </ul>
+    </div>
+
+    <div class="calc-section">
+      <h3>3. Meta calórica</h3>
+      <ul>${metaSection}</ul>
+    </div>
+
+    <div class="calc-section">
+      <h3>4. Macronutrientes</h3>
+      <p class="calc-note">Hierarquia: proteína primeiro (protege massa magra), gordura mínima (função hormonal), carbo preenche o restante.</p>
+      <ul>
+        <li>Proteína: <b>${goals.p}g</b> <span class="calc-formula">= ${d.protein_per_kg.toString().replace('.',',')} × ${base} kg ${d.macroBaseLabel}</span></li>
+        <li>Gordura: <b>${goals.g}g</b> <span class="calc-formula">= ${d.fat_per_kg.toString().replace('.',',')} × ${base} kg ${d.macroBaseLabel}</span></li>
+        <li>Carbo: <b>${goals.c}g</b> <span class="calc-formula">= (${fmt(goals.kcal)} − ${goals.p * 4} − ${goals.g * 9}) / 4</span></li>
+        <li>Proteína por refeição: <b>~${goals.perMealP}g</b> <span class="calc-formula">= 0,4 × ${base} kg ${d.macroBaseLabel}</span></li>
+      </ul>
+    </div>
+
+    <div class="calc-section">
+      <h3>5. Recomendações adicionais</h3>
+      <ul>
+        <li>Fibra: <b>${goals.fiber}g/dia</b> <span class="calc-formula">= max(25, 14 × ${fmt(goals.kcal)} / 1000)</span></li>
+        <li>Água: <b>${(goals.water_ml / 1000).toFixed(1).replace('.', ',')} L/dia</b> <span class="calc-formula">= ${d.waterPerKg} ml/kg × ${profile.peso_atual} kg</span></li>
+      </ul>
+    </div>
+
+    <div class="calc-section calc-refs">
+      <h3>Referências científicas</h3>
+      <ul>
+        <li><b>BMR:</b> Mifflin-St Jeor 1990 (padrão adulto); Katch-McArdle 1996 (quando BF% conhecido); Pavlidou et al. 2023 (meta-análise confirma ambos)</li>
+        <li><b>Atividade:</b> escala v2.0.1 deslocada uma categoria pra baixo (conservadora); Pontzer et al. 2021 (compensação metabólica)</li>
+        <li><b>Déficit/Superávit:</b> Helms et al. 2014; Iraki et al. 2019; Longland et al. 2016; Murphy & Koehler 2022</li>
+        <li><b>Proteína:</b> Morton et al. 2018 (meta-análise); Helms et al. 2014 (2,3-3,1 g/kg LBM em cutting); ISSN 2017</li>
+        <li><b>Gordura:</b> Dorgan et al. 1996 (mínimo 0,9 g/kg LBM)</li>
+        <li><b>Carbo:</b> Slater & Phillips 2011 (restante calórico)</li>
+        <li><b>Fibra:</b> Reynolds et al. 2019 (Lancet); WHO 2023 Guideline on Carbohydrate Intake; IOM/USDA DRI 14 g/1000 kcal</li>
+        <li><b>Água:</b> Manz & Wentz 2005; Popkin et al. 2010; ACSM Position Stand 2007/2016</li>
+        <li><b>Timing de proteína:</b> Schoenfeld & Aragon 2018; Areta et al. 2013 (MPS otimizado por 0,4 g/kg × 4-5 refeições)</li>
+        <li><b>Diet break:</b> Helms et al. 2014; Peterson et al. 2017 (intermittent energy restriction)</li>
+      </ul>
+    </div>
+  `;
+  document.getElementById('calc-details-modal').classList.add('open');
+}
+
+function closeCalcDetails() {
+  document.getElementById('calc-details-modal').classList.remove('open');
+}
+
+async function resetDailyMeals() {
+  if (!await customConfirm('Desmarcar todas as refeições de hoje?')) return;
   localStorage.removeItem(getTodayKey());
   renderMeals();
 }
 
 
 function getCurrentWeekLabel() {
-  const wk = localStorage.getItem('marmita_current_week') || getWeekId();
+  const wk = localStorage.getItem(STORAGE_KEYS.marmitaCurrentWeek) || getWeekId();
   return wk;
 }
 
@@ -235,44 +563,75 @@ function updateWeekLabel() {
   if (el) el.textContent = 'Semana atual: ' + getCurrentWeekLabel();
 }
 
+// v2.1.5: mapeamento de emoji placeholder por marmita/dinner. Quando houver
+// imagens reais (PNG), basta adicionar o campo `image: 'filename.png'` no
+// MARMITA_DEFS/DINNER_DEFS e o helper renderMealImageHtml() prefere o PNG.
+const MARMITA_EMOJIS = {
+  A: '🍗', // Frango
+  B: '🥩', // Carne moída
+  C: '🐟', // Tilápia
+  D: '🍖', // Lombo suíno
+  E: '🍗', // Sobrecoxa
+  F: '🥩', // Coxão mole
+};
+const DINNER_EMOJIS = {
+  O: '🍳', // Omelete
+  T: '🫓', // Tapioca de Frango
+  C: '🥩', // Carne com Arroz
+  A: '🥫', // Torrada de Atum
+  S: '🥪', // Sanduíche Natural
+  W: '🌯', // Wrap
+};
+
+// Retorna o HTML do conteúdo do círculo: <img> se houver meal.image, senão
+// emoji como fallback. Habilita evolução gradual pra fotos reais.
+function renderMealImageHtml(meal, emojiMap) {
+  if (meal && meal.image) {
+    return `<img src="images/${meal.image}" alt="${meal.name}" loading="lazy">`;
+  }
+  const emoji = (meal && meal.emoji) || (emojiMap && emojiMap[meal.id]) || '🍽';
+  return `<span class="pc-emoji">${emoji}</span>`;
+}
+
 function renderMarmitaPlanner() {
   const container = document.getElementById('planner-cards');
   if (!container) return;
   const plan = getMarmitaPlan();
   let html = '';
 
-  // Show only marmitas that the user has added (qty > 0)
   const addedMarmitas = MARMITA_DEFS.filter(m => (plan[m.id] || 0) > 0);
 
   if (addedMarmitas.length === 0) {
-    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:12px;text-align:center;color:var(--gray-mid);font-size:13px;margin-bottom:8px">
-      Nenhuma marmita adicionada. Toque em <b style="color:var(--green)">+ Adicionar Novo Sabor de Marmita</b> abaixo para começar.
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
+      Nenhuma marmita adicionada. Toque em <b style="color:var(--green-primary)">+ Adicionar Novo Sabor</b> abaixo para começar.
     </div>`;
   } else {
+    html += '<div class="planner-cards-grid">';
     addedMarmitas.forEach(m => {
       const qty = plan[m.id];
-      html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="planner-info" onclick="showMarmitaRecipe('${m.id}')" style="cursor:pointer">
-            <div class="pl-name">${m.name}</div>
-            <div class="pl-desc">${m.desc}</div>
-            <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
-          </div>
-          <div class="planner-stepper">
-            <button class="step-btn minus" onclick="stepMarmita('${m.id}',-1)">-</button>
-            <div class="qty-display" id="mq_${m.id}">${qty}</div>
-            <button class="step-btn plus" onclick="stepMarmita('${m.id}',1)">+</button>
-          </div>
+      const nameClean = m.name.replace(/^Marmita [A-F] - /, '');
+      const imgClass = m.image ? 'pc-image has-image' : 'pc-image';
+      html += `<div class="pl-card" onclick="showMarmitaRecipe('${m.id}')">
+        <div class="${imgClass}">${renderMealImageHtml(m, MARMITA_EMOJIS)}</div>
+        <div class="pc-name">${nameClean}</div>
+        <div class="pc-desc">${m.desc}</div>
+        <div class="pc-macros">
+          <div class="pc-macro"><span class="pc-macro-val">${m.kcal}</span><span class="pc-macro-label">kcal</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.p}g</span><span class="pc-macro-label">prot</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.c}g</span><span class="pc-macro-label">carb</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.g}g</span><span class="pc-macro-label">gord</span></div>
         </div>
-        <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
-          <b style="color:var(--green)">Composição (cozido):</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
+        <div class="pc-stepper" onclick="event.stopPropagation()">
+          <button onclick="stepMarmita('${m.id}',-1)" aria-label="Remover uma">${glyph('minus', 14)}</button>
+          <span class="pc-qty" id="mq_${m.id}">${qty}</span>
+          <button onclick="stepMarmita('${m.id}',1)" aria-label="Adicionar mais uma">${glyph('plus', 14)}</button>
         </div>
-        <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showMarmitaRecipe('${m.id}')">Ver Receita</button>
       </div>`;
     });
+    html += '</div>';
   }
 
-  html += `<button class="history-btn" style="margin-top:6px;border-color:var(--green);color:var(--green);background:var(--green-bg);font-weight:700" onclick="openMarmitaPicker()">+ Adicionar Novo Sabor de Marmita</button>`;
+  html += `<button class="history-btn" style="margin-top:14px" onclick="openMarmitaPicker()">+ Adicionar Novo Sabor de Marmita</button>`;
 
   container.innerHTML = html;
   updatePlannerSummary();
@@ -307,7 +666,7 @@ function openMarmitaPicker() {
 function addMarmitaToPlan(id) {
   const plan = getMarmitaPlan();
   plan[id] = (plan[id] || 0) + 1;
-  localStorage.setItem('marmita_plan', JSON.stringify(plan));
+  localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(plan));
   closeHistory();
   renderMarmitaPlanner();
   onPlanChange();
@@ -348,7 +707,7 @@ function stepMarmita(id, delta) {
   const plan = getMarmitaPlan();
   const newQty = Math.max(0, (plan[id] || 0) + delta);
   plan[id] = newQty;
-  localStorage.setItem('marmita_plan', JSON.stringify(plan));
+  localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(plan));
   if (newQty === 0) {
     // Re-render to remove the card from the list
     renderMarmitaPlanner();
@@ -369,34 +728,35 @@ function renderDinnerPlanner() {
   const addedDinners = DINNER_DEFS.filter(m => (plan[m.id] || 0) > 0);
 
   if (addedDinners.length === 0) {
-    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:12px;text-align:center;color:var(--gray-mid);font-size:13px;margin-bottom:8px">
-      Nenhum jantar adicionado. Toque em <b style="color:var(--purple)">+ Adicionar Novo Sabor de Jantar</b> abaixo para começar.
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
+      Nenhum jantar adicionado. Toque em <b style="color:var(--purple-soft)">+ Adicionar Novo Sabor</b> abaixo para começar.
     </div>`;
   } else {
+    html += '<div class="planner-cards-grid">';
     addedDinners.forEach(m => {
       const qty = plan[m.id];
-      html += `<div class="planner-card" style="flex-direction:column;align-items:stretch">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="planner-info" onclick="showDinnerRecipe('${m.id}')" style="cursor:pointer">
-            <div class="pl-name">${m.name}</div>
-            <div class="pl-desc">${m.desc}</div>
-            <div class="pl-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
-          </div>
-          <div class="planner-stepper">
-            <button class="step-btn minus" onclick="stepDinner('${m.id}',-1)">-</button>
-            <div class="qty-display" id="dq_${m.id}">${qty}</div>
-            <button class="step-btn plus" onclick="stepDinner('${m.id}',1)">+</button>
-          </div>
+      const imgClass = m.image ? 'pc-image has-image' : 'pc-image';
+      html += `<div class="pl-card dinner" onclick="showDinnerRecipe('${m.id}')">
+        <div class="${imgClass}">${renderMealImageHtml(m, DINNER_EMOJIS)}</div>
+        <div class="pc-name">${m.name}</div>
+        <div class="pc-desc">${m.desc}</div>
+        <div class="pc-macros">
+          <div class="pc-macro"><span class="pc-macro-val">${m.kcal}</span><span class="pc-macro-label">kcal</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.p}g</span><span class="pc-macro-label">prot</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.c}g</span><span class="pc-macro-label">carb</span></div>
+          <div class="pc-macro"><span class="pc-macro-val">${m.g}g</span><span class="pc-macro-label">gord</span></div>
         </div>
-        <div style="font-size:11px;color:var(--gray-mid);margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-light);line-height:1.6">
-          <b style="color:var(--purple)">Composição:</b><br>${m.cooked.split(' | ').join('<br>&bull; ').replace(/^/, '&bull; ')}
+        <div class="pc-stepper" onclick="event.stopPropagation()">
+          <button onclick="stepDinner('${m.id}',-1)" aria-label="Remover um">${glyph('minus', 14)}</button>
+          <span class="pc-qty" id="dq_${m.id}">${qty}</span>
+          <button onclick="stepDinner('${m.id}',1)" aria-label="Adicionar mais um">${glyph('plus', 14)}</button>
         </div>
-        <button class="history-btn" style="margin-top:8px;padding:8px;font-size:12px" onclick="showDinnerRecipe('${m.id}')">Ver Receita</button>
       </div>`;
     });
+    html += '</div>';
   }
 
-  html += `<button class="history-btn" style="margin-top:6px;border-color:var(--purple);color:var(--purple);background:var(--purple-light);font-weight:700" onclick="openDinnerPicker()">+ Adicionar Novo Sabor de Jantar</button>`;
+  html += `<button class="history-btn is-dinner" style="margin-top:14px" onclick="openDinnerPicker()">+ Adicionar Novo Sabor de Jantar</button>`;
 
   container.innerHTML = html;
   updateDinnerSummary();
@@ -430,7 +790,7 @@ function openDinnerPicker() {
 function addDinnerToPlan(id) {
   const plan = getDinnerPlan();
   plan[id] = (plan[id] || 0) + 1;
-  localStorage.setItem('dinner_plan', JSON.stringify(plan));
+  localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(plan));
   closeHistory();
   renderDinnerPlanner();
   onPlanChange();
@@ -471,7 +831,7 @@ function stepDinner(id, delta) {
   const plan = getDinnerPlan();
   const newQty = Math.max(0, (plan[id] || 0) + delta);
   plan[id] = newQty;
-  localStorage.setItem('dinner_plan', JSON.stringify(plan));
+  localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(plan));
   if (newQty === 0) {
     renderDinnerPlanner();
   } else {
@@ -538,7 +898,7 @@ function updateDinnerSummary() {
   DINNER_DEFS.forEach(m => { total += plan[m.id] || 0; });
   const el = document.getElementById('dinner-status');
   if (el) {
-    el.innerHTML = `<div class="planner-ok">${total} jantar${total === 1 ? '' : 'es'} planejado${total === 1 ? '' : 's'}</div>`;
+    el.innerHTML = `<div class="planner-ok is-dinner">${total} jantar${total === 1 ? '' : 'es'} planejado${total === 1 ? '' : 's'}</div>`;
   }
   // Dinner totals feed into the unified weekly summary
   if (document.getElementById('planner-summary')) updatePlannerSummary();
@@ -546,7 +906,7 @@ function updateDinnerSummary() {
 
 // ---- STOCK MANAGEMENT ----
 function getConsumed() {
-  const data = JSON.parse(localStorage.getItem('marmita_consumed') || '{}');
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaConsumed) || '{}');
   // Migrate any UTC-format keys to local format (one-time fix)
   let migrated = false;
   Object.keys(data).forEach(k => {
@@ -563,7 +923,7 @@ function getConsumed() {
       }
     }
   });
-  if (migrated) localStorage.setItem('marmita_consumed', JSON.stringify(data));
+  if (migrated) localStorage.setItem(STORAGE_KEYS.marmitaConsumed, JSON.stringify(data));
   return data;
 }
 
@@ -615,7 +975,7 @@ function selectTodayMarmita(type) {
   } else {
     consumed[today] = selections;
   }
-  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.marmitaConsumed, JSON.stringify(consumed));
   renderMarmitaSelector();
   renderDinnerSelector();
   renderMeals();
@@ -630,7 +990,7 @@ function removeTodayMarmita(type) {
   if (idx !== -1) selections.splice(idx, 1);
   if (selections.length === 0) delete consumed[today];
   else consumed[today] = selections;
-  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.marmitaConsumed, JSON.stringify(consumed));
   renderMarmitaSelector();
   renderDinnerSelector();
   renderMeals();
@@ -661,7 +1021,7 @@ function renderMarmitaSelector() {
       if (!m) return;
       html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--green-bg);border-radius:8px;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:var(--green)">${count}x ${getMarmitaTypeName(m.id)} (${m.kcal} kcal | ${m.p}g P)</span>
-        <button onclick="removeTodayMarmita('${type}')" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
+        <button onclick="removeTodayMarmita('${type}')" aria-label="Remover marmita selecionada" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
       </div>`;
     });
     html += '</div>';
@@ -682,9 +1042,12 @@ function renderMarmitaSelector() {
     if ((planned[m.id] || 0) === 0) return; // só mostrar marmitas programadas
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
+    const iconHtml = m.image
+      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${getMarmitaTypeName(m.id)}"></div>`
+      : `<div class="msel-icon">${m.id}</div>`;
     html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
       onclick="selectTodayMarmita('${m.id}')">
-      <div class="msel-icon">${m.id}</div>
+      ${iconHtml}
       <div class="msel-info">
         <div class="msel-name">${getMarmitaTypeName(m.id)}</div>
         <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
@@ -697,7 +1060,7 @@ function renderMarmitaSelector() {
 
 // ---- DINNER TODAY SELECTOR ----
 function getDinnerConsumed() {
-  return JSON.parse(localStorage.getItem('dinner_consumed') || '{}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.dinnerConsumed) || '{}');
 }
 
 function getDinnerStock() {
@@ -738,7 +1101,7 @@ function selectTodayDinner(type) {
 
   if (selections.length === 0) delete consumed[today];
   else consumed[today] = selections;
-  localStorage.setItem('dinner_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.dinnerConsumed, JSON.stringify(consumed));
   renderDinnerSelector();
   renderMeals();
 }
@@ -751,7 +1114,7 @@ function removeTodayDinner(type) {
   if (idx !== -1) selections.splice(idx, 1);
   if (selections.length === 0) delete consumed[today];
   else consumed[today] = selections;
-  localStorage.setItem('dinner_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.dinnerConsumed, JSON.stringify(consumed));
   renderDinnerSelector();
   renderMeals();
 }
@@ -775,7 +1138,7 @@ function renderDinnerSelector() {
       if (!m) return;
       html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--purple-light);border-radius:8px;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:var(--purple)">${count}x ${m.name} (${m.kcal} kcal | ${m.p}g P)</span>
-        <button onclick="removeTodayDinner('${type}')" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
+        <button onclick="removeTodayDinner('${type}')" aria-label="Remover jantar selecionado" style="border:none;background:var(--red-light);color:var(--red);border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer">-</button>
       </div>`;
     });
     html += '</div>';
@@ -795,9 +1158,12 @@ function renderDinnerSelector() {
     if ((planned[m.id] || 0) === 0) return; // só mostrar jantares programados
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
+    const iconHtml = m.image
+      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${m.name}"></div>`
+      : `<div class="msel-icon" style="background:var(--purple-light);color:var(--purple)">${m.id}</div>`;
     html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
       onclick="selectTodayDinner('${m.id}')">
-      <div class="msel-icon" style="background:var(--purple-light);color:var(--purple)">${m.id}</div>
+      ${iconHtml}
       <div class="msel-info">
         <div class="msel-name">${m.name}</div>
         <div class="msel-macros">${m.kcal} kcal | ${m.p}g P | ${m.c}g C | ${m.g}g G</div>
@@ -853,7 +1219,7 @@ function renderStockCard() {
       const rem = Math.max(0, dStock[d.id] || 0);
       html += `<div class="stock-item">
         <span>${d.name}</span>
-        <span class="stock-badge ${rem > 0 ? 'has' : 'empty'}">${rem > 0 ? rem + ' un.' : 'Esgotado'}</span>
+        <span class="stock-badge ${rem > 0 ? 'has is-dinner' : 'empty'}">${rem > 0 ? rem + ' un.' : 'Esgotado'}</span>
       </div>`;
     });
   }
@@ -922,15 +1288,15 @@ function onPlanChange() {
   const dinnerPlan = getDinnerPlan();
 
   // Defensive re-save to ensure sync layer picks it up
-  localStorage.setItem('marmita_plan', JSON.stringify(plan));
-  localStorage.setItem('dinner_plan', JSON.stringify(dinnerPlan));
+  localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(plan));
+  localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(dinnerPlan));
 
   // Snapshot da semana atual no histórico
   const weekId = getCurrentWeekLabel();
-  localStorage.setItem('marmita_current_week', weekId);
-  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  localStorage.setItem(STORAGE_KEYS.marmitaCurrentWeek, weekId);
+  const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
   history[weekId] = { ...plan, dinners: dinnerPlan, _saved: new Date().toISOString() };
-  localStorage.setItem('marmita_history', JSON.stringify(history));
+  localStorage.setItem(STORAGE_KEYS.marmitaHistory, JSON.stringify(history));
 
   // Re-render de tudo que depende do plano
   renderShoppingList();
@@ -941,14 +1307,14 @@ function onPlanChange() {
   updateWeekLabel();
 }
 
-function startNewWeek() {
+async function startNewWeek() {
   const currentWeek = getCurrentWeekLabel();
   const thisWeek = getWeekId();
   const today = new Date();
   const isSunday = today.getDay() === 0;
 
   // Check if there's already a saved plan for this week
-  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
   const hasCurrentWeekPlan = !!history[thisWeek];
 
   // If not Sunday and there's already a plan for this week, block
@@ -957,7 +1323,11 @@ function startNewWeek() {
     return;
   }
 
-  if (!confirm(`Limpar planejamento semanal?\n\nO planejamento anterior será arquivado no histórico.\nA lista de compras e o consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.\n\nDeseja continuar?`)) return;
+  const ok = await customConfirm(
+    'O planejamento anterior será arquivado no histórico.\nA lista de compras e o consumo de marmitas serão zerados.\n\nQualquer estoque em casa cadastrado também será zerado.',
+    { title: 'Limpar planejamento semanal?', okLabel: 'Limpar', danger: true }
+  );
+  if (!ok) return;
 
   // Archive current plan if it exists and is different from new week
   if (currentWeek !== thisWeek) {
@@ -965,19 +1335,19 @@ function startNewWeek() {
     const totalPlan = Object.values(plan).reduce((a,b) => a+b, 0);
     if (totalPlan > 0) {
       history[currentWeek] = { ...plan, _saved: new Date().toISOString() };
-      localStorage.setItem('marmita_history', JSON.stringify(history));
+      localStorage.setItem(STORAGE_KEYS.marmitaHistory, JSON.stringify(history));
     }
   }
 
   // Reset everything
-  localStorage.setItem('marmita_plan', JSON.stringify(DEFAULT_PLAN));
-  localStorage.setItem('dinner_plan', JSON.stringify(DEFAULT_DINNER_PLAN));
-  localStorage.removeItem('shop_checks');
-  localStorage.removeItem('marmita_consumed');
-  localStorage.removeItem('dinner_consumed');
-  localStorage.removeItem('home_stock');
-  localStorage.removeItem('gen_draft');
-  localStorage.setItem('marmita_current_week', thisWeek);
+  localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(DEFAULT_PLAN));
+  localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(DEFAULT_DINNER_PLAN));
+  localStorage.removeItem(STORAGE_KEYS.shopChecks);
+  localStorage.removeItem(STORAGE_KEYS.marmitaConsumed);
+  localStorage.removeItem(STORAGE_KEYS.dinnerConsumed);
+  localStorage.removeItem(STORAGE_KEYS.homeStock);
+  localStorage.removeItem(STORAGE_KEYS.genDraft);
+  localStorage.setItem(STORAGE_KEYS.marmitaCurrentWeek, thisWeek);
 
   renderMarmitaPlanner();
   renderDinnerPlanner();
@@ -996,12 +1366,12 @@ function startNewWeek() {
 function checkSundayPrompt() {
   const today = new Date();
   if (today.getDay() !== 0) return; // not Sunday
-  const lastPrompt = localStorage.getItem('sunday_prompt_date');
+  const lastPrompt = localStorage.getItem(STORAGE_KEYS.sundayPromptDate);
   const todayStr = localDateStr(today);
   if (lastPrompt === todayStr) return; // already prompted today
-  localStorage.setItem('sunday_prompt_date', todayStr);
-  setTimeout(() => {
-    if (confirm('Hoje é domingo! Deseja iniciar um novo planejamento de marmitas para a semana?')) {
+  localStorage.setItem(STORAGE_KEYS.sundayPromptDate, todayStr);
+  setTimeout(async () => {
+    if (await customConfirm('Hoje é domingo! Deseja iniciar um novo planejamento de marmitas para a semana?', { okLabel: 'Iniciar' })) {
       startNewWeek();
       switchTab('marmitas');
     }
@@ -1009,7 +1379,7 @@ function checkSundayPrompt() {
 }
 
 function openMarmitaHistory() {
-  const history = JSON.parse(localStorage.getItem('marmita_history') || '{}');
+  const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaHistory) || '{}');
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
   document.getElementById('history-title').textContent = 'Histórico de Marmitas';
@@ -1179,7 +1549,7 @@ function buildShoppingList() {
     { section: 'Proteínas (marmitas + refeições)', items: [
       ...(frangoG > 0 ? [{ name: 'Peito de frango (cru)', qty: fmt(frangoG) }] : []),
       ...(sobrecoxaG > 0 ? [{ name: 'Sobrecoxa sem pele (crua)', qty: fmt(sobrecoxaG) }] : []),
-      ...(carneG > 0 ? [{ name: 'Carne moída magra - patinho', qty: fmt(carneG) }] : []),
+      ...(carneG > 0 ? [{ name: 'Carne moída magra (patinho, coxão mole ou coxão duro)', qty: fmt(carneG) }] : []),
       ...(coxaoG > 0 ? [{ name: 'Coxão mole (cru)', qty: fmt(coxaoG) }] : []),
       ...(tilapiaG > 0 ? [{ name: 'Filé de tilápia (cru)', qty: fmt(tilapiaG) }] : []),
       ...(lomboG > 0 ? [{ name: 'Lombo suíno (cru)', qty: fmt(lomboG) }] : []),
@@ -1244,7 +1614,7 @@ function buildShoppingList() {
 function renderShoppingList() {
   const container = document.getElementById('shopping-list');
   if (!container) return;
-  const saved = JSON.parse(localStorage.getItem('shop_checks') || '{}');
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopChecks) || '{}');
   const shopItems = buildShoppingList();
   let html = '', total = 0, checked = 0;
   shopItems.forEach(sec => {
@@ -1280,9 +1650,9 @@ function renderShoppingList() {
 }
 
 function toggleShop(key, el) {
-  const saved = JSON.parse(localStorage.getItem('shop_checks') || '{}');
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopChecks) || '{}');
   saved[key] = el.checked;
-  localStorage.setItem('shop_checks', JSON.stringify(saved));
+  localStorage.setItem(STORAGE_KEYS.shopChecks, JSON.stringify(saved));
   el.closest('.check-item').classList.toggle('checked', el.checked);
   const total = document.querySelectorAll('#shopping-list input[type="checkbox"]').length;
   const checked = document.querySelectorAll('#shopping-list input[type="checkbox"]:checked').length;
@@ -1459,8 +1829,8 @@ function updateProgress(type, checked, total) {
   txt.textContent = `${checked} de ${total} itens (${pct}%)`;
 }
 
-function resetChecklist(type) {
-  if (!confirm('Limpar todos os itens marcados?')) return;
+async function resetChecklist(type) {
+  if (!await customConfirm('Limpar todos os itens marcados?', { okLabel: 'Limpar', danger: true })) return;
   localStorage.removeItem(type + '_checks');
   if (type === 'shop') renderShoppingList();
 }
@@ -1521,7 +1891,7 @@ function stepVal(inputId, delta) {
 let exerciseChecks = {};
 
 function getLastWorkoutData(type, currentWk) {
-  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
   // First try current week
   const current = all[type + '_w' + currentWk];
   if (current && Object.keys(current).length > 0) return current;
@@ -1564,14 +1934,14 @@ function renderExercises() {
       const repId = `w_${ei}_${s}_reps`;
       html += `<div class="set-label">S${s+1}</div>
         <div class="input-stepper">
-          <button class="step-btn minus" onclick="stepVal('${kgId}',-${kgStep})">-</button>
+          <button class="step-btn minus" onclick="stepVal('${kgId}',-${kgStep})" aria-label="Diminuir peso">-</button>
           <input type="number" inputmode="decimal" placeholder="kg" id="${kgId}" value="${sv.kg}">
-          <button class="step-btn plus" onclick="stepVal('${kgId}',${kgStep})">+</button>
+          <button class="step-btn plus" onclick="stepVal('${kgId}',${kgStep})" aria-label="Aumentar peso">+</button>
         </div>
         <div class="input-stepper">
-          <button class="step-btn minus" onclick="stepVal('${repId}',-${repStep})">-</button>
+          <button class="step-btn minus" onclick="stepVal('${repId}',-${repStep})" aria-label="Diminuir repetições">-</button>
           <input type="number" inputmode="numeric" placeholder="${isPlank ? 'seg' : 'reps'}" id="${repId}" value="${sv.reps}">
-          <button class="step-btn plus" onclick="stepVal('${repId}',${repStep})">+</button>
+          <button class="step-btn plus" onclick="stepVal('${repId}',${repStep})" aria-label="Aumentar repetições">+</button>
         </div>`;
     }
     html += '</div></div>';
@@ -1590,7 +1960,7 @@ function toggleExCheck(ei) {
 }
 
 function getSavedWorkout(type, week) {
-  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
   return all[type + '_w' + week] || {};
 }
 
@@ -1600,7 +1970,7 @@ function getTodayCardioKey() {
 }
 
 function loadTodayCardio() {
-  const all = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.cardioLog) || '{}');
   cardioEntries = all[getTodayCardioKey()] || [];
   renderCardioEntries();
   // Update title with today's date
@@ -1626,7 +1996,7 @@ function renderCardioEntries() {
         <input type="number" inputmode="numeric" value="${e.min}" placeholder="min"
           onchange="updateCardio(${i},'min',this.value)" style="max-width:55px">
         <span style="font-size:11px;color:var(--gray-mid)">min</span>
-        <button class="cardio-rm" onclick="removeCardio(${i})">&#10005;</button>
+        <button class="cardio-rm" onclick="removeCardio(${i})" aria-label="Remover cardio">&#10005;</button>
       </div>
       ${showDist ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-left:4px">
         <input type="number" inputmode="decimal" value="${e.km || ''}" placeholder="km"
@@ -1663,17 +2033,17 @@ function removeCardio(i) {
 }
 
 function saveTodayCardio() {
-  const all = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.cardioLog) || '{}');
   if (cardioEntries.length > 0) {
     all[getTodayCardioKey()] = cardioEntries;
   } else {
     delete all[getTodayCardioKey()];
   }
-  localStorage.setItem('cardio_log', JSON.stringify(all));
+  localStorage.setItem(STORAGE_KEYS.cardioLog, JSON.stringify(all));
 }
 
 // ---- SAVE ----
-function saveWorkout() {
+async function saveWorkout() {
   if (currentWorkout !== 'F') {
     const exercises = WORKOUTS[currentWorkout];
     const checks = exerciseChecks[currentWorkout] || {};
@@ -1683,10 +2053,10 @@ function saveWorkout() {
     const checkedEx = Object.values(checks).filter(Boolean).length;
 
     if (checkedEx === 0) {
-      if (!confirm('Nenhum exercício foi marcado como realizado.\n\nDeseja salvar apenas o cardio?')) return;
+      if (!await customConfirm('Nenhum exercício foi marcado como realizado.\n\nDeseja salvar apenas o cardio?', { okLabel: 'Salvar' })) return;
     } else if (checkedEx < totalEx) {
       const missing = totalEx - checkedEx;
-      if (!confirm(`${missing} exercício(s) não foi(ram) marcado(s) como realizado(s).\n\nDeseja salvar o treino assim mesmo?`)) return;
+      if (!await customConfirm(`${missing} exercício(s) não foi(ram) marcado(s) como realizado(s).\n\nDeseja salvar o treino assim mesmo?`, { okLabel: 'Salvar' })) return;
     }
 
     // Save only checked exercises
@@ -1701,11 +2071,11 @@ function saveWorkout() {
         }
       }
     });
-    const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+    const allW = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
     allW[currentWorkout + '_w' + currentWeek] = data;
     if (!allW._meta) allW._meta = {};
     allW._meta[currentWorkout + '_w' + currentWeek] = { type: currentWorkout, week: currentWeek, date: localDateStr() };
-    localStorage.setItem('workouts', JSON.stringify(allW));
+    localStorage.setItem(STORAGE_KEYS.workouts, JSON.stringify(allW));
   }
 
   // Save today's cardio
@@ -1722,7 +2092,7 @@ function saveWorkout() {
 }
 
 function saveToCalendar() {
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   const today = localDateStr();
   if (!cal[today]) cal[today] = {};
 
@@ -1745,14 +2115,14 @@ function saveToCalendar() {
       return s;
     }).join(', ');
   }
-  localStorage.setItem('cal_log', JSON.stringify(cal));
+  localStorage.setItem(STORAGE_KEYS.calLog, JSON.stringify(cal));
 }
 
 // ============================================================
 // HISTORY WITH CHARTS
 // ============================================================
 function openHistory() {
-  const all = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
   const exercises = WORKOUTS[currentWorkout];
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
@@ -1911,7 +2281,7 @@ function changeMonth(delta) {
 
 function renderCalendar() {
   document.getElementById('cal-month-label').textContent = MONTH_NAMES[calMonth] + ' ' + calYear;
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   const grid = document.getElementById('cal-grid');
   const today = new Date();
   const todayStr = localDateStr(today);
@@ -1980,7 +2350,7 @@ function showDayDetail(dateStr) {
     if (c.getAttribute('data-date') === dateStr) c.classList.add('selected');
   });
 
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   const entry = cal[dateStr] || {};
   const consumed = getConsumed();
   const dayMarmitas = consumed[dateStr];
@@ -1995,7 +2365,7 @@ function showDayDetail(dateStr) {
   let html = `
     <div class="dd-header">
       <span class="dd-date">${dateDisplay}${isToday ? ' (hoje)' : ''}</span>
-      <button class="dd-close" onclick="closeDayDetail()">&times;</button>
+      <button class="dd-close" onclick="closeDayDetail()" aria-label="Fechar detalhes do dia">&times;</button>
     </div>`;
 
   // -- Marmitas section --
@@ -2028,7 +2398,7 @@ function showDayDetail(dateStr) {
     const workoutType = entry.forca;
     const wLabel = workoutType === 'F' ? 'Funcional' : 'Treino ' + workoutType;
     const exercises = WORKOUTS[workoutType];
-    const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+    const allW = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
     let workoutData = null;
     if (allW._meta) {
       Object.keys(allW._meta).forEach(k => {
@@ -2105,18 +2475,21 @@ function closeDayDetail() {
   document.querySelectorAll('.cal-cell.selected').forEach(c => c.classList.remove('selected'));
 }
 
-function deleteDayData(dateStr) {
+async function deleteDayData(dateStr) {
   const parts = dateStr.split('-');
   const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
-  if (!confirm(`Tem certeza que deseja apagar todos os dados de ${dateDisplay}?\n\nMarmitas, treino e cardio deste dia serão apagados.\n\nEsta ação não pode ser desfeita.`)) return;
+  if (!await customConfirm(
+    `Marmitas, treino e cardio do dia ${dateDisplay} serão apagados.\n\nEsta ação não pode ser desfeita.`,
+    { title: 'Apagar dados deste dia?', okLabel: 'Apagar', danger: true }
+  )) return;
 
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   delete cal[dateStr];
-  localStorage.setItem('cal_log', JSON.stringify(cal));
+  localStorage.setItem(STORAGE_KEYS.calLog, JSON.stringify(cal));
 
   const consumed = getConsumed();
   delete consumed[dateStr];
-  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.marmitaConsumed, JSON.stringify(consumed));
 
   closeDayDetail();
   renderCalendar();
@@ -2128,7 +2501,7 @@ function deleteDayData(dateStr) {
 // ============================================================
 // EXPORT / IMPORT
 // ============================================================
-const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed','shop_checks','workouts','cardio_log','cal_log','user_profile'];
+// BACKUP_KEYS is defined in data.js and shared with SYNC_KEYS.
 
 function exportData() {
   const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
@@ -2165,10 +2538,13 @@ function downloadFile(url, filename) {
   URL.revokeObjectURL(url);
 }
 
-function importData(event) {
+async function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (!confirm('Importar este backup vai SUBSTITUIR todos os dados atuais do app.\n\nTem certeza que deseja continuar?')) {
+  if (!await customConfirm(
+    'Importar este backup vai SUBSTITUIR todos os dados atuais do app.',
+    { title: 'Importar backup?', okLabel: 'Importar', danger: true }
+  )) {
     event.target.value = '';
     return;
   }
@@ -2261,7 +2637,7 @@ function buildFruitBuySuggestions(shortfallCarbsG) {
 }
 
 function getHomeStock() {
-  return JSON.parse(localStorage.getItem('home_stock') || '{}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.homeStock) || '{}');
 }
 
 // ============================================================
@@ -2270,7 +2646,7 @@ function getHomeStock() {
 // Persiste os inputs e resultados gerados entre aberturas do modal, para que
 // o usuário possa fechar e reabrir sem perder o que digitou nem a sugestão.
 function loadGenDraft() {
-  try { return JSON.parse(localStorage.getItem('gen_draft') || 'null'); }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.genDraft) || 'null'); }
   catch (e) { return null; }
 }
 
@@ -2282,12 +2658,12 @@ function saveGenDraft() {
     const draft = { stock };
     if (window._genMarmitaResult) draft.marmitaResult = window._genMarmitaResult;
     if (window._genDinnerResult)  draft.dinnerResult  = window._genDinnerResult;
-    localStorage.setItem('gen_draft', JSON.stringify(draft));
+    localStorage.setItem(STORAGE_KEYS.genDraft, JSON.stringify(draft));
   } catch (e) {}
 }
 
 function clearGenDraft() {
-  localStorage.removeItem('gen_draft');
+  localStorage.removeItem(STORAGE_KEYS.genDraft);
   window._genStock = null;
   window._genMarmitaResult = null;
   window._genDinnerResult = null;
@@ -2793,19 +3169,22 @@ function setGenerateButtonState(generated) {
   }
 }
 
-function applyGeneratedMenu() {
+async function applyGeneratedMenu() {
   if (!window._genMarmitaResult && !window._genDinnerResult) return;
-  if (!confirm('Atenção: o Gerador de Cardápio é apenas uma sugestão.\n\nConfira a seleção gerada conforme sua necessidade antes de aplicar. Você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nDeseja continuar e aplicar o cardápio gerado?\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas e as quantidades informadas serão salvas como "estoque em casa".')) return;
+  if (!await customConfirm(
+    'O Gerador de Cardápio é apenas uma sugestão. Confira a seleção antes de aplicar — você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas, e as quantidades informadas serão salvas como "estoque em casa".',
+    { title: 'Aplicar cardápio gerado?', okLabel: 'Aplicar' }
+  )) return;
 
   const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   Object.assign(newMarmitaPlan, window._genMarmitaResult || {});
-  localStorage.setItem('marmita_plan', JSON.stringify(newMarmitaPlan));
+  localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(newMarmitaPlan));
 
   const newDinnerPlan = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
   Object.assign(newDinnerPlan, window._genDinnerResult || {});
-  localStorage.setItem('dinner_plan', JSON.stringify(newDinnerPlan));
+  localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(newDinnerPlan));
 
-  localStorage.setItem('home_stock', JSON.stringify(window._genStock || {}));
+  localStorage.setItem(STORAGE_KEYS.homeStock, JSON.stringify(window._genStock || {}));
   clearGenDraft();
 
   renderMarmitaPlanner();
@@ -2816,9 +3195,12 @@ function applyGeneratedMenu() {
   document.getElementById('history-modal').classList.remove('open');
 }
 
-function clearHomeStock() {
-  if (!confirm('Limpar o estoque em casa?\n\nA lista de compras voltará a considerar que você não tem nenhum ingrediente guardado.')) return;
-  localStorage.removeItem('home_stock');
+async function clearHomeStock() {
+  if (!await customConfirm(
+    'A lista de compras voltará a considerar que você não tem nenhum ingrediente guardado.',
+    { title: 'Limpar o estoque em casa?', okLabel: 'Limpar', danger: true }
+  )) return;
+  localStorage.removeItem(STORAGE_KEYS.homeStock);
   clearGenDraft();
   renderShoppingList();
   // Reabre o gerador do zero (com estoque limpo) em vez de fechar o modal,
@@ -2830,7 +3212,7 @@ function openDayEditor(dateStr) {
   const parts = dateStr.split('-');
   const dateDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   const entry = cal[dateStr] || {};
   const consumed = getConsumed();
   const dayMarmitas = consumed[dateStr];
@@ -2906,7 +3288,7 @@ function renderEditorMarmitas() {
         <select onchange="editorChangeMarmita(${i},this.value)" style="flex:1;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px">
           ${options}
         </select>
-        <button class="cardio-rm" onclick="window._editorMarmitas.splice(${i},1);renderEditorMarmitas()">&#10005;</button>
+        <button class="cardio-rm" onclick="window._editorMarmitas.splice(${i},1);renderEditorMarmitas()" aria-label="Remover marmita">&#10005;</button>
       </div>`;
     });
     container.innerHTML = html;
@@ -2952,14 +3334,14 @@ function saveDayEditor(dateStr) {
   const treinoVal = document.querySelector('input[name="edit_treino"]:checked');
   const treino = treinoVal ? treinoVal.value : '';
 
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   if (!cal[dateStr]) cal[dateStr] = {};
   if (treino) {
     cal[dateStr].forca = treino;
   } else {
     delete cal[dateStr].forca;
   }
-  localStorage.setItem('cal_log', JSON.stringify(cal));
+  localStorage.setItem(STORAGE_KEYS.calLog, JSON.stringify(cal));
 
   // Save marmitas
   const consumed = getConsumed();
@@ -2969,7 +3351,7 @@ function saveDayEditor(dateStr) {
   } else {
     delete consumed[dateStr];
   }
-  localStorage.setItem('marmita_consumed', JSON.stringify(consumed));
+  localStorage.setItem(STORAGE_KEYS.marmitaConsumed, JSON.stringify(consumed));
 
   // Close modal, refresh
   closeHistory();
@@ -2983,9 +3365,15 @@ function saveDayEditor(dateStr) {
 // ============================================================
 // RESET ALL DATA
 // ============================================================
-function resetAllData() {
-  if (!confirm('ATENÇÃO!\n\nIsso vai apagar TODAS as informações do app:\n\n• Planejamento de marmitas\n• Planejamento de jantares\n• Histórico de semanas\n• Lista de compras\n• Checklist de preparo\n• Treinos e cardio registrados\n• Calendário (agenda)\n• Refeições marcadas\n• Consumo de marmitas\n\nTem CERTEZA que deseja continuar?\n\nEsta ação NÃO pode ser desfeita.')) return;
-  if (!confirm('Última confirmação!\n\nTodos os dados serão apagados permanentemente.\n\nDeseja continuar mesmo assim?')) return;
+async function resetAllData() {
+  if (!await customConfirm(
+    'Isso vai apagar TODAS as informações do app:\n\n• Planejamento de marmitas\n• Planejamento de jantares\n• Histórico de semanas\n• Lista de compras\n• Checklist de preparo\n• Treinos e cardio registrados\n• Calendário (agenda)\n• Refeições marcadas\n• Consumo de marmitas\n\nEsta ação NÃO pode ser desfeita.',
+    { title: 'ATENÇÃO — Resetar tudo?', okLabel: 'Resetar', danger: true }
+  )) return;
+  if (!await customConfirm(
+    'Todos os dados serão apagados permanentemente.\n\nDeseja continuar mesmo assim?',
+    { title: 'Última confirmação', okLabel: 'Sim, apagar', danger: true }
+  )) return;
 
   // Clear all sync keys
   SYNC_KEYS.forEach(k => localStorage.removeItem(k));
@@ -2997,7 +3385,7 @@ function resetAllData() {
   Object.keys(localStorage).filter(k => k.startsWith('cardio_')).forEach(k => localStorage.removeItem(k));
 
   // Clear other misc keys
-  localStorage.removeItem('sunday_prompt_date');
+  localStorage.removeItem(STORAGE_KEYS.sundayPromptDate);
 
   // If logged in, also clear Firestore
   if (currentUser) {
@@ -3017,16 +3405,19 @@ function resetAllData() {
 // ============================================================
 // CLEAR TODAY WORKOUT
 // ============================================================
-function clearTodayWorkout() {
-  if (!confirm('Tem certeza que deseja limpar todos os dados de treino e cardio de hoje?\n\nOs pesos, repetições e cardio registrados hoje serão apagados.\n\nEsta ação não pode ser desfeita.')) return;
+async function clearTodayWorkout() {
+  if (!await customConfirm(
+    'Os pesos, repetições e cardio registrados hoje serão apagados.\n\nEsta ação não pode ser desfeita.',
+    { title: 'Limpar treino de hoje?', okLabel: 'Limpar', danger: true }
+  )) return;
 
   // Clear saved workout data for current week (both A and B)
-  const allW = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const allW = JSON.parse(localStorage.getItem(STORAGE_KEYS.workouts) || '{}');
   ['A','B'].forEach(t => {
     delete allW[t + '_w' + currentWeek];
     if (allW._meta) delete allW._meta[t + '_w' + currentWeek];
   });
-  localStorage.setItem('workouts', JSON.stringify(allW));
+  localStorage.setItem(STORAGE_KEYS.workouts, JSON.stringify(allW));
 
   // Clear checks and re-render with empty fields
   exerciseChecks = {};
@@ -3052,14 +3443,14 @@ function clearTodayWorkout() {
         const repId = `w_${ei}_${s}_reps`;
         html += `<div class="set-label">S${s+1}</div>
           <div class="input-stepper">
-            <button class="step-btn minus" onclick="stepVal('${kgId}',-1)">-</button>
+            <button class="step-btn minus" onclick="stepVal('${kgId}',-1)" aria-label="Diminuir peso">-</button>
             <input type="number" inputmode="decimal" placeholder="kg" id="${kgId}" value="">
-            <button class="step-btn plus" onclick="stepVal('${kgId}',1)">+</button>
+            <button class="step-btn plus" onclick="stepVal('${kgId}',1)" aria-label="Aumentar peso">+</button>
           </div>
           <div class="input-stepper">
-            <button class="step-btn minus" onclick="stepVal('${repId}',-1)">-</button>
+            <button class="step-btn minus" onclick="stepVal('${repId}',-1)" aria-label="Diminuir repetições">-</button>
             <input type="number" inputmode="numeric" placeholder="${isPlank ? 'seg' : 'reps'}" id="${repId}" value="">
-            <button class="step-btn plus" onclick="stepVal('${repId}',1)">+</button>
+            <button class="step-btn plus" onclick="stepVal('${repId}',1)" aria-label="Aumentar repetições">+</button>
           </div>`;
       }
       html += '</div></div>';
@@ -3069,16 +3460,16 @@ function clearTodayWorkout() {
 
   // Clear today's cardio
   cardioEntries = [];
-  const allC = JSON.parse(localStorage.getItem('cardio_log') || '{}');
+  const allC = JSON.parse(localStorage.getItem(STORAGE_KEYS.cardioLog) || '{}');
   delete allC[getTodayCardioKey()];
-  localStorage.setItem('cardio_log', JSON.stringify(allC));
+  localStorage.setItem(STORAGE_KEYS.cardioLog, JSON.stringify(allC));
   renderCardioEntries();
 
   // Remove today from calendar
-  const cal = JSON.parse(localStorage.getItem('cal_log') || '{}');
+  const cal = JSON.parse(localStorage.getItem(STORAGE_KEYS.calLog) || '{}');
   const today = localDateStr();
   delete cal[today];
-  localStorage.setItem('cal_log', JSON.stringify(cal));
+  localStorage.setItem(STORAGE_KEYS.calLog, JSON.stringify(cal));
 }
 
 // ============================================================
@@ -3101,9 +3492,7 @@ db.enablePersistence().catch(() => {});
 let currentUser = null;
 let firestoreUnsubscribes = [];
 
-// Data keys we sync
-const SYNC_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed',
-  'shop_checks','workouts','cardio_log','cal_log','user_profile'];
+// SYNC_KEYS is defined in data.js (derived from STORAGE_KEYS).
 
 // Save to localStorage AND Firestore (if logged in)
 function saveData(key, value) {
@@ -3228,17 +3617,17 @@ function googleLogin() {
 }
 
 function skipLogin() {
-  localStorage.setItem('skip_login', '1');
+  localStorage.setItem(STORAGE_KEYS.skipLogin, '1');
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-container').style.display = 'block';
   initApp();
 }
 
-function logout() {
-  if (!confirm('Sair da conta? Seus dados continuam salvos.')) return;
+async function logout() {
+  if (!await customConfirm('Seus dados continuam salvos.', { title: 'Sair da conta?', okLabel: 'Sair' })) return;
   stopFirestoreSync();
   currentUser = null;
-  localStorage.removeItem('skip_login');
+  localStorage.removeItem(STORAGE_KEYS.skipLogin);
   auth.signOut().then(() => {
     document.getElementById('app-container').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'flex';
@@ -3262,7 +3651,7 @@ auth.onAuthStateChanged(user => {
     startFirestoreSync();
   } else {
     // Check if was previously logged in
-    if (localStorage.getItem('skip_login')) {
+    if (localStorage.getItem(STORAGE_KEYS.skipLogin)) {
       authScreen.style.display = 'none';
       appContainer.style.display = 'block';
       initApp();
@@ -3275,9 +3664,9 @@ auth.onAuthStateChanged(user => {
 // ============================================================
 // Reset profile via URL: ?reset=profile  (clears localStorage + Firestore + reloads)
 function resetUserProfile() {
-  localStorage.removeItem('user_profile');
+  localStorage.removeItem(STORAGE_KEYS.userProfile);
   if (currentUser) {
-    db.collection('users').doc(currentUser.uid).collection('data').doc('user_profile')
+    db.collection('users').doc(currentUser.uid).collection('data').doc(STORAGE_KEYS.userProfile)
       .delete().catch(() => {});
   }
 }
@@ -3296,13 +3685,13 @@ function resetUserProfile() {
 })();
 
 function getUserProfile() {
-  try { return JSON.parse(localStorage.getItem('user_profile') || 'null'); }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.userProfile) || 'null'); }
   catch (e) { return null; }
 }
 
 function saveUserProfile(profile) {
-  // Use saveData so it propagates to Firestore (when SYNC_KEYS includes 'user_profile')
-  saveData('user_profile', profile);
+  // Use saveData so it propagates to Firestore (when SYNC_KEYS includes STORAGE_KEYS.userProfile)
+  saveData(STORAGE_KEYS.userProfile, profile);
 }
 
 function showOnboardingIfNeeded() {
@@ -3331,36 +3720,267 @@ function renderUserBar() {
   document.body.classList.add('logged-in');
   userBar.style.display = 'flex';
 
-  let label;
+  // v2.1.0: layout compacto com avatar + 2 linhas + botões de ícone
+  const fmt = n => (n != null ? n.toString().replace('.', ',') : '');
+  let avatar = '?';
+  let line1 = '';
+  let line2 = '';
   if (profile) {
-    const fmt = n => (n != null ? n.toString().replace('.', ',') : '');
-    const fullName = `${profile.nome || ''} ${profile.sobrenome || ''}`.trim();
+    const nome = (profile.nome || '').trim();
+    const sobrenome = (profile.sobrenome || '').trim();
+    avatar = (nome[0] || sobrenome[0] || '?').toUpperCase();
     const idade = calculateAge(profile.data_nascimento);
-    const parts = [];
-    if (fullName) parts.push(fullName);
-    if (idade !== null) parts.push(`${idade} anos`);
-    if (profile.peso_atual) parts.push(`Peso atual: ${fmt(profile.peso_atual)} kg`);
-    if (profile.meta_peso) parts.push(`Meta de peso: ${fmt(profile.meta_peso)} kg`);
-    label = parts.join(' | ');
-  } else {
-    label = currentUser ? (currentUser.displayName || currentUser.email) : '';
+    line1 = [nome, sobrenome].filter(Boolean).join(' ') || (currentUser ? currentUser.displayName : '');
+    const bits = [];
+    if (idade != null) bits.push(`${idade}a`);
+    if (profile.peso_atual && profile.meta_peso) {
+      bits.push(`${fmt(profile.peso_atual)} → ${fmt(profile.meta_peso)} kg`);
+    } else if (profile.peso_atual) {
+      bits.push(`${fmt(profile.peso_atual)} kg`);
+    }
+    line2 = bits.join(' · ');
+  } else if (currentUser) {
+    const display = currentUser.displayName || currentUser.email || '';
+    avatar = (display[0] || '?').toUpperCase();
+    line1 = display;
   }
 
+  // v2.1.2: clicar no avatar/info abre o profile-view modal (bottom-sheet).
+  // O botão "Sair" fica isolado e usa stopPropagation pra não disparar o view.
+  const clickableOpen = profile ? 'onclick="openProfileView()"' : '';
   userBar.innerHTML = `
-    <span><span class="sync-dot online"></span><span class="user-name">${label}</span></span>
-    <button class="logout-btn" onclick="logout()">Sair</button>`;
+    <div class="user-bar-main" ${clickableOpen}>
+      <div class="user-avatar">${avatar}</div>
+      <div class="user-info">
+        <span class="line1">${line1}</span>
+        ${line2 ? `<span class="line2">${line2}</span>` : ''}
+      </div>
+    </div>
+    <div class="user-actions">
+      <button class="logout-btn" onclick="event.stopPropagation();logout()" aria-label="Sair">${glyph('log-out', 16)}</button>
+    </div>`;
 }
 
-// Calculate age in years from a YYYY-MM-DD birth date string
-function calculateAge(birthStr) {
-  if (!birthStr) return null;
-  const birth = new Date(birthStr + 'T12:00:00');
-  if (isNaN(birth.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+// v2.1.2: Bottom-sheet modal que mostra todas as infos do perfil de forma
+// legível, com as mesmas formatações usadas no cálculo interno.
+function openProfileView() {
+  const profile = getUserProfile();
+  if (!profile) return;
+  const el = document.getElementById('profile-view-content');
+  if (!el) return;
+
+  const fmt = n => (n != null ? String(n).replace('.', ',') : '—');
+  const idade = calculateAge(profile.data_nascimento);
+  const sexoMap = { M: 'Masculino', F: 'Feminino', O: 'Outro / Prefiro não dizer' };
+  const atividadeMap = {
+    sentado:  'Sedentário (×1,2)',
+    leve:     'Levemente ativo — 1-3x/sem (×1,375)',
+    rotina:   'Moderadamente ativo — 3-5x/sem (×1,55)',
+    intenso:  'Muito ativo — 6-7x/sem (×1,725)',
+    atleta:   'Extra ativo — trabalho físico + treino diário (×1,9)',
+  };
+  const intensityMap = {
+    suave:     'Suave — 15% do TDEE',
+    moderado:  'Moderado — 20% do TDEE',
+    agressivo: 'Agressivo — 30% do TDEE',
+    extremo:   'Extremo — 40% do TDEE',
+    lento:     'Lento — 10% do TDEE',
+  };
+
+  // Pra resolver chaves legadas de atividade (v1 → v2.0.7)
+  const atividadeKey = (typeof resolveActivityKey === 'function'
+    ? resolveActivityKey(profile.nivel_atividade)
+    : profile.nivel_atividade) || profile.nivel_atividade;
+  const atividadeLabel = atividadeMap[atividadeKey] || profile.nivel_atividade || '—';
+
+  // Direção atual + intensidade aplicável (só uma aparece, lógica igual ao edit profile)
+  const dir = getGoalDirection(profile);
+  let intensityLine = '';
+  if (dir === 'loss' && profile.deficit_intensity) {
+    intensityLine = `
+      <div class="pv-row">
+        <span class="pv-label">Intensidade do déficit</span>
+        <span class="pv-value">${intensityMap[profile.deficit_intensity] || profile.deficit_intensity}</span>
+      </div>`;
+  } else if (dir === 'gain' && profile.surplus_intensity) {
+    intensityLine = `
+      <div class="pv-row">
+        <span class="pv-label">Intensidade do superávit</span>
+        <span class="pv-value">${intensityMap[profile.surplus_intensity] || profile.surplus_intensity}</span>
+      </div>`;
+  } else if (dir === 'maintain') {
+    intensityLine = `
+      <div class="pv-row">
+        <span class="pv-label">Direção</span>
+        <span class="pv-value">Manutenção (meta ≈ peso atual)</span>
+      </div>`;
+  }
+
+  const bfLine = profile.body_fat_pct != null
+    ? `<div class="pv-row">
+         <span class="pv-label">Gordura corporal</span>
+         <span class="pv-value">${fmt(profile.body_fat_pct)}%</span>
+       </div>`
+    : '';
+
+  // Data de criação do perfil em formato legível
+  let criadoTxt = '';
+  if (profile.criado_em) {
+    try {
+      const d = new Date(profile.criado_em);
+      criadoTxt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) { criadoTxt = profile.criado_em.slice(0, 10); }
+  }
+
+  el.innerHTML = `
+    <div class="pv-section">
+      <h3>Identificação</h3>
+      <div class="pv-row"><span class="pv-label">Nome</span><span class="pv-value">${(profile.nome || '') + ' ' + (profile.sobrenome || '')}</span></div>
+      <div class="pv-row"><span class="pv-label">Sexo</span><span class="pv-value">${sexoMap[profile.sexo] || '—'}</span></div>
+      <div class="pv-row"><span class="pv-label">Idade</span><span class="pv-value">${idade != null ? idade + ' anos' : '—'}</span></div>
+      <div class="pv-row"><span class="pv-label">Nascimento</span><span class="pv-value">${profile.data_nascimento ? profile.data_nascimento.split('-').reverse().join('/') : '—'}</span></div>
+    </div>
+
+    <div class="pv-section">
+      <h3>Composição corporal</h3>
+      <div class="pv-row"><span class="pv-label">Peso atual</span><span class="pv-value">${fmt(profile.peso_atual)} kg</span></div>
+      <div class="pv-row"><span class="pv-label">Altura</span><span class="pv-value">${fmt(profile.altura_cm)} cm</span></div>
+      ${bfLine}
+      <div class="pv-row"><span class="pv-label">Meta de peso</span><span class="pv-value">${fmt(profile.meta_peso)} kg</span></div>
+    </div>
+
+    <div class="pv-section">
+      <h3>Dieta</h3>
+      <div class="pv-row"><span class="pv-label">Atividade física</span><span class="pv-value">${atividadeLabel}</span></div>
+      ${intensityLine}
+    </div>
+
+    ${criadoTxt ? `<div class="pv-footer">Perfil criado em ${criadoTxt}</div>` : ''}
+  `;
+
+  document.getElementById('profile-view-modal').classList.add('open');
+}
+
+function closeProfileView() {
+  document.getElementById('profile-view-modal').classList.remove('open');
+}
+
+// calculateAge is defined in data.js (shared with computeGoals).
+
+// ---- Onboarding inline validation helpers ----
+const OB_FIELDS = ['ob-nome','ob-sobrenome','ob-sexo','ob-nascimento','ob-peso','ob-altura','ob-bf','ob-meta','ob-atividade','ob-deficit','ob-surplus'];
+
+// v2.0.6: visibilidade dinâmica de deficit/surplus baseada em meta vs peso.
+// Se meta < peso − 0,5: mostra déficit, esconde superávit
+// Se meta > peso + 0,5: mostra superávit, esconde déficit
+// Zona de manutenção (|delta| ≤ 0,5): esconde ambos, mostra nota explicativa
+// Ambos os valores ainda são persistidos no perfil independente da visibilidade,
+// pra o usuário não perder a preferência ao oscilar entre direções.
+function updateIntensityVisibility() {
+  const pesoEl = document.getElementById('ob-peso');
+  const metaEl = document.getElementById('ob-meta');
+  const deficitField = document.getElementById('ob-deficit-field');
+  const surplusField = document.getElementById('ob-surplus-field');
+  const maintNote = document.getElementById('ob-maintenance-note');
+  if (!pesoEl || !metaEl || !deficitField || !surplusField) return;
+
+  const peso = parseFloat(pesoEl.value);
+  const meta = parseFloat(metaEl.value);
+
+  // Peso ou meta ainda não preenchidos → esconde tudo (estado neutro)
+  if (!peso || !meta || isNaN(peso) || isNaN(meta)) {
+    deficitField.style.display = 'none';
+    surplusField.style.display = 'none';
+    if (maintNote) maintNote.style.display = 'none';
+    return;
+  }
+
+  const delta = meta - peso;
+  if (delta < -0.5) {
+    deficitField.style.display = '';
+    surplusField.style.display = 'none';
+    if (maintNote) maintNote.style.display = 'none';
+  } else if (delta > 0.5) {
+    deficitField.style.display = 'none';
+    surplusField.style.display = '';
+    if (maintNote) maintNote.style.display = 'none';
+  } else {
+    deficitField.style.display = 'none';
+    surplusField.style.display = 'none';
+    if (maintNote) maintNote.style.display = '';
+  }
+}
+
+// Hook listeners once — roda em initApp. Listeners persistem; reagem sempre
+// que peso/meta mudam (inclusive durante create mode quando o usuário digita).
+function setupIntensityToggle() {
+  const pesoEl = document.getElementById('ob-peso');
+  const metaEl = document.getElementById('ob-meta');
+  if (!pesoEl || !metaEl) return;
+  pesoEl.addEventListener('input',  updateIntensityVisibility);
+  metaEl.addEventListener('input',  updateIntensityVisibility);
+  pesoEl.addEventListener('change', updateIntensityVisibility);
+  metaEl.addEventListener('change', updateIntensityVisibility);
+  updateIntensityVisibility();
+}
+
+function clearOnboardingErrors() {
+  OB_FIELDS.forEach(id => {
+    const input = document.getElementById(id);
+    const err = document.getElementById(id + '-err');
+    if (input) input.classList.remove('error');
+    if (err) { err.classList.remove('show'); err.textContent = ''; }
+  });
+}
+
+function showOnboardingError(id, msg) {
+  const input = document.getElementById(id);
+  const err = document.getElementById(id + '-err');
+  if (input) input.classList.add('error');
+  if (err) { err.textContent = msg; err.classList.add('show'); }
+}
+
+// Abre o modal em modo edição, pré-populando com o perfil atual.
+function openEditProfile() {
+  const profile = getUserProfile();
+  if (!profile) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  set('ob-nome',       profile.nome);
+  set('ob-sobrenome',  profile.sobrenome);
+  set('ob-sexo',       profile.sexo);
+  set('ob-nascimento', profile.data_nascimento);
+  set('ob-peso',       profile.peso_atual);
+  set('ob-altura',     profile.altura_cm);
+  set('ob-meta',       profile.meta_peso);
+  // Resolve chave legada pra nova escala (se aplicável) ao pré-popular edit.
+  const nivelKey = (typeof resolveActivityKey === 'function'
+    ? resolveActivityKey(profile.nivel_atividade)
+    : profile.nivel_atividade) || '';
+  set('ob-atividade',  nivelKey);
+  set('ob-bf',         profile.body_fat_pct != null ? profile.body_fat_pct : '');
+  set('ob-deficit',    profile.deficit_intensity || 'moderado');
+  set('ob-surplus',    profile.surplus_intensity || 'moderado');
+  clearOnboardingErrors();
+
+  const modal = document.getElementById('onboarding-modal');
+  modal.dataset.mode = 'edit';
+  document.getElementById('ob-title').textContent = 'Editar Perfil';
+  document.getElementById('ob-subtitle').style.display = 'none';
+  document.getElementById('ob-submit').textContent = 'Salvar';
+  // v2.0.6: sincroniza visibilidade dos campos de intensidade com peso/meta pré-populados
+  updateIntensityVisibility();
+  modal.classList.add('open');
+}
+
+function closeEditProfile() {
+  const modal = document.getElementById('onboarding-modal');
+  modal.classList.remove('open');
+  modal.dataset.mode = 'create';
+  // Restaura textos padrão para eventual onboarding de outro usuário/conta
+  document.getElementById('ob-title').textContent = 'Bem-vindo!';
+  document.getElementById('ob-subtitle').style.display = '';
+  document.getElementById('ob-submit').textContent = 'Salvar e Continuar';
+  clearOnboardingErrors();
 }
 
 function submitOnboarding() {
@@ -3372,34 +3992,233 @@ function submitOnboarding() {
   const peso       = parseFloat(get('ob-peso').value);
   const altura     = parseFloat(get('ob-altura').value);
   const meta       = parseFloat(get('ob-meta').value);
+  const bfRaw      = get('ob-bf').value.trim();
+  const bodyFat    = bfRaw === '' ? null : parseFloat(bfRaw);
   const atividade  = get('ob-atividade').value;
+  const deficit    = get('ob-deficit').value;
+  const surplus    = get('ob-surplus').value;
 
-  if (!nome || !sobrenome) { alert('Informe seu nome e sobrenome.'); get('ob-nome').focus(); return; }
-  if (!sexo) { alert('Selecione seu sexo.'); get('ob-sexo').focus(); return; }
-  if (!nascimento) { alert('Informe sua data de nascimento.'); get('ob-nascimento').focus(); return; }
-  const idade = calculateAge(nascimento);
-  if (idade === null || idade < 5 || idade > 120) { alert('Data de nascimento inválida.'); get('ob-nascimento').focus(); return; }
-  if (!peso || peso <= 0 || peso > 400) { alert('Informe um peso válido (kg).'); get('ob-peso').focus(); return; }
-  if (!altura || altura < 80 || altura > 250) { alert('Informe uma altura válida em cm.'); get('ob-altura').focus(); return; }
-  if (!meta || meta <= 0 || meta > 400) { alert('Informe uma meta de peso válida (kg).'); get('ob-meta').focus(); return; }
-  if (!atividade) { alert('Selecione seu nível de atividade física.'); get('ob-atividade').focus(); return; }
+  clearOnboardingErrors();
+  let hasError = false;
+  let firstError = null;
+  const fail = (id, msg) => {
+    showOnboardingError(id, msg);
+    if (!firstError) firstError = id;
+    hasError = true;
+  };
+
+  if (!nome)      fail('ob-nome',      'Informe seu nome');
+  if (!sobrenome) fail('ob-sobrenome', 'Informe seu sobrenome');
+  if (!sexo)      fail('ob-sexo',      'Selecione uma opção');
+  if (!nascimento) {
+    fail('ob-nascimento', 'Informe a data');
+  } else {
+    const idade = calculateAge(nascimento);
+    if (idade === null || idade < 5 || idade > 120) fail('ob-nascimento', 'Data inválida');
+  }
+  if (!peso || peso <= 0 || peso > 400) fail('ob-peso', 'Peso inválido (kg)');
+  if (!altura || altura < 80 || altura > 250) fail('ob-altura', 'Altura entre 80 e 250 cm');
+  if (!meta || meta <= 0 || meta > 400) fail('ob-meta', 'Meta inválida (kg)');
+  if (bodyFat !== null && (isNaN(bodyFat) || bodyFat < 3 || bodyFat > 60)) fail('ob-bf', 'Entre 3% e 60%');
+  if (!atividade || !(atividade in ACTIVITY_MULTIPLIERS)) fail('ob-atividade', 'Selecione uma opção');
+
+  // v2.0.6: deficit e surplus só são obrigatórios quando a direção da meta
+  // ativa o campo correspondente (loss → deficit; gain → surplus).
+  // Em manutenção (|delta| ≤ 0,5), nenhum dos dois é validado.
+  if (peso && meta && !isNaN(peso) && !isNaN(meta)) {
+    const delta = meta - peso;
+    if (delta < -0.5) {
+      if (!deficit || !(deficit in DEFICIT_INTENSITY_PCT)) fail('ob-deficit', 'Selecione uma opção');
+    } else if (delta > 0.5) {
+      if (!surplus || !(surplus in SURPLUS_INTENSITY_PCT)) fail('ob-surplus', 'Selecione uma opção');
+    }
+  }
+
+  if (hasError) {
+    const el = document.getElementById(firstError);
+    if (el && typeof el.focus === 'function') el.focus();
+    return;
+  }
+
+  const modal = document.getElementById('onboarding-modal');
+  const isEdit = modal.dataset.mode === 'edit';
+  const existing = isEdit ? (getUserProfile() || {}) : {};
+  const pesoAntigo = Number(existing.peso_atual);
 
   saveUserProfile({
+    ...existing,
     nome, sobrenome, sexo,
     data_nascimento: nascimento,
     peso_atual: peso,
     altura_cm: altura,
+    body_fat_pct: bodyFat,   // null se não preenchido → cai no Mifflin
     meta_peso: meta,
     nivel_atividade: atividade,
-    criado_em: new Date().toISOString(),
+    deficit_intensity: deficit,
+    surplus_intensity: surplus,
+    criado_em: existing.criado_em || new Date().toISOString(),
   });
 
-  document.getElementById('onboarding-modal').classList.remove('open');
-  // Refresh the user bar to reflect the new profile data
-  if (typeof renderUserBar === 'function') renderUserBar();
+  // Se estamos editando e o peso mudou, registra como entrada do weight_log.
+  if (isEdit && pesoAntigo && pesoAntigo !== peso) {
+    const next = addWeightEntry(getWeightLog(), localDateStr(), peso);
+    saveData(STORAGE_KEYS.weightLog, next);
+  }
+
+  modal.classList.remove('open');
+  modal.dataset.mode = 'create';
+  document.getElementById('ob-title').textContent = 'Bem-vindo!';
+  document.getElementById('ob-subtitle').style.display = '';
+  document.getElementById('ob-submit').textContent = 'Salvar e Continuar';
+
+  renderUserBar();
+  renderDietHeader();
+  renderWeightLog();
+  updateDailyProgress();
+}
+
+// ============================================================
+// WEIGHT LOG (evolução do peso)
+// ============================================================
+function getWeightLog() {
+  try { return normalizeWeightLog(JSON.parse(localStorage.getItem(STORAGE_KEYS.weightLog) || '[]')); }
+  catch (e) { return []; }
+}
+
+function saveWeightEntry() {
+  const input = document.getElementById('weight-log-input');
+  if (!input) return;
+  const raw = parseFloat(input.value);
+  if (!raw || raw <= 0 || raw > 400) {
+    input.classList.add('error');
+    input.focus();
+    return;
+  }
+  input.classList.remove('error');
+  const next = addWeightEntry(getWeightLog(), localDateStr(), raw);
+  saveData(STORAGE_KEYS.weightLog, next);
+
+  // Mantém peso_atual do perfil em sincronia com o último registro.
+  const profile = getUserProfile();
+  if (profile) {
+    profile.peso_atual = raw;
+    saveUserProfile(profile);
+  }
+  input.value = '';
+
+  renderUserBar();
+  renderDietHeader();
+  renderWeightLog();
+  updateDailyProgress();
+}
+
+// Renderiza o card de peso: gráfico SVG + input + hint semanal.
+// Se não há perfil, esconde o card (nada pra mostrar sem meta).
+function renderWeightLog() {
+  const card = document.getElementById('weight-log-card');
+  if (!card) return;
+  const profile = getUserProfile();
+  if (!profile) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const log = getWeightLog();
+  const meta = Number(profile.meta_peso) || null;
+  const fmt = n => (n == null ? '' : n.toFixed(1).replace('.', ','));
+
+  const latest = log.length ? log[log.length - 1] : null;
+  const atual = latest ? latest.peso : Number(profile.peso_atual);
+  const delta = (atual != null && meta != null) ? (atual - meta) : null;
+  const deltaTxt = delta == null ? '' :
+    delta === 0 ? 'na meta' :
+    delta > 0 ? `${fmt(delta)} kg acima` : `${fmt(-delta)} kg abaixo`;
+  const deltaClass = delta == null ? '' : (delta > 0 ? 'pos' : delta < 0 ? 'neg' : '');
+
+  // Aviso semanal: se a última entrada tem ≥7 dias OU se nunca registrou, mostra hint.
+  let hintHtml = '';
+  const todayStr = localDateStr();
+  const daysSince = latest ? daysBetweenDates(latest.date, todayStr) : null;
+  if (!latest) {
+    hintHtml = `<div class="weight-log-hint">Registre seu peso pra começar a acompanhar sua evolução.</div>`;
+  } else if (daysSince != null && daysSince >= 7) {
+    hintHtml = `<div class="weight-log-hint">Já se passou ${daysSince} ${daysSince === 1 ? 'dia' : 'dias'} desde o último registro. Que tal atualizar?</div>`;
+  }
+
+  const chartHtml = log.length >= 1 ? renderWeightChart(log, meta) :
+    `<div class="weight-chart-empty">Seu gráfico aparece aqui após o primeiro registro.</div>`;
+
+  // Mini lista das últimas 3 entradas (mais antiga → mais nova para leitura natural).
+  const recent = log.slice(-3).map(e => {
+    const [y, m, d] = e.date.split('-');
+    return `<span>${d}/${m}: ${fmt(e.peso)} kg</span>`;
+  }).join('');
+  const recentHtml = recent ? `<div class="weight-log-recent">${recent}</div>` : '';
+
+  card.innerHTML = `
+    <h3>Evolução do Peso</h3>
+    ${hintHtml}
+    <div class="weight-summary">
+      <span>Atual: <b>${fmt(atual)} kg</b></span>
+      ${meta != null ? `<span>Meta: <b>${fmt(meta)} kg</b> ${deltaTxt ? `<span class="weight-delta ${deltaClass}">(${deltaTxt})</span>` : ''}</span>` : ''}
+    </div>
+    ${chartHtml}
+    <div class="weight-log-form">
+      <input type="number" id="weight-log-input" inputmode="decimal" step="0.1" placeholder="Peso de hoje (kg)">
+      <button onclick="saveWeightEntry()">Registrar</button>
+    </div>
+    ${recentHtml}
+  `;
+}
+
+// SVG inline — polyline do peso ao longo do tempo + linha de meta pontilhada.
+// N amostras no eixo X (últimas até WEIGHT_LOG_MAX), eixo Y auto-escalado com padding.
+function renderWeightChart(log, meta) {
+  const width = 320, height = 130, padX = 30, padY = 16;
+  const values = log.map(e => e.peso);
+  const all = meta != null ? values.concat([meta]) : values;
+  let minV = Math.min(...all);
+  let maxV = Math.max(...all);
+  if (minV === maxV) { minV -= 1; maxV += 1; }
+  const range = maxV - minV;
+  minV -= range * 0.15;
+  maxV += range * 0.15;
+
+  const n = log.length;
+  const xFor = i => padX + (n <= 1 ? (width - 2 * padX) / 2 : i * (width - 2 * padX) / (n - 1));
+  const yFor = v => padY + (maxV - v) / (maxV - minV) * (height - 2 * padY);
+
+  // Polyline dos pontos
+  const pts = log.map((e, i) => `${xFor(i).toFixed(1)},${yFor(e.peso).toFixed(1)}`).join(' ');
+  const dots = log.map((e, i) =>
+    `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(e.peso).toFixed(1)}" r="3" fill="#2a6aa3"/>`
+  ).join('');
+
+  // Linha de meta (tracejada) + labels dos eixos (min/max)
+  const metaLine = meta != null
+    ? `<line x1="${padX}" y1="${yFor(meta).toFixed(1)}" x2="${width - padX}" y2="${yFor(meta).toFixed(1)}" stroke="#48bb78" stroke-width="1.5" stroke-dasharray="4,3"/>
+       <text x="${width - padX + 2}" y="${(yFor(meta) + 3).toFixed(1)}" font-size="9" fill="#48bb78" font-weight="700">${meta.toFixed(1).replace('.', ',')}</text>`
+    : '';
+
+  // Labels Y (min/max arredondados a 0.5)
+  const yLabel = (v, y) => `<text x="${padX - 4}" y="${y.toFixed(1)}" font-size="9" fill="#718096" text-anchor="end">${v.toFixed(1).replace('.', ',')}</text>`;
+  const yTop = yLabel(maxV, padY + 3);
+  const yBot = yLabel(minV, height - padY + 3);
+
+  // Label X primeira e última data (DD/MM)
+  const fmtDate = d => { const [y, m, dd] = d.split('-'); return `${dd}/${m}`; };
+  const xLabels = n === 0 ? '' :
+    `<text x="${xFor(0).toFixed(1)}" y="${height - 2}" font-size="9" fill="#718096" text-anchor="start">${fmtDate(log[0].date)}</text>
+     ${n > 1 ? `<text x="${xFor(n - 1).toFixed(1)}" y="${height - 2}" font-size="9" fill="#718096" text-anchor="end">${fmtDate(log[n - 1].date)}</text>` : ''}`;
+
+  return `<svg class="weight-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+    ${metaLine}
+    <polyline points="${pts}" fill="none" stroke="#2a6aa3" stroke-width="2"/>
+    ${dots}
+    ${yTop}${yBot}${xLabels}
+  </svg>`;
 }
 
 function initApp() {
+  renderTabBar();
   renderMarmitaPlanner();
   renderDinnerPlanner();
   renderFruitSuggestions();
@@ -3412,6 +4231,8 @@ function initApp() {
   renderExercises();
   loadTodayCardio();
   renderCalendar();
+  renderWeightLog();
+  setupIntensityToggle();
   showOnboardingIfNeeded();
 
   renderUserBar();

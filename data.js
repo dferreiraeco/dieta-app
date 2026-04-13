@@ -6,6 +6,390 @@
 // ou helpers que operam apenas sobre as estruturas declaradas aqui.
 
 // ============================================================
+// STORAGE KEYS (single source of truth for localStorage names)
+// ============================================================
+// Qualquer chave de localStorage usada no app deve estar declarada aqui.
+// SYNC_KEYS / BACKUP_KEYS são derivados pra ninguém esquecer de manter
+// sincronizados: adicionar uma chave nova aqui propaga para sync e backup.
+const STORAGE_KEYS = {
+  // Planejamento semanal
+  marmitaPlan:         'marmita_plan',
+  dinnerPlan:          'dinner_plan',
+  marmitaCurrentWeek:  'marmita_current_week',
+  marmitaConsumed:     'marmita_consumed',
+  dinnerConsumed:      'dinner_consumed',
+  marmitaHistory:      'marmita_history',
+  // Compras / Estoque
+  homeStock:           'home_stock',
+  shopChecks:          'shop_checks',
+  genDraft:            'gen_draft',
+  // Treino / Agenda
+  workouts:            'workouts',
+  cardioLog:           'cardio_log',
+  calLog:              'cal_log',
+  // Perfil / sessão
+  userProfile:         'user_profile',
+  sundayPromptDate:    'sunday_prompt_date',
+  skipLogin:           'skip_login',
+  weightLog:           'weight_log',
+};
+
+// Prefixos de chaves dinâmicas (usadas com startsWith em cleanup/backup).
+const STORAGE_PREFIXES = {
+  meals:  'meals_',   // meals_YYYY-MM-DD — refeições marcadas por dia
+  cardio: 'cardio_',  // legado: antigas entradas diárias de cardio por data
+};
+
+// Chaves que sincronizam com Firestore e aparecem em backup/export.
+// Hoje SYNC_KEYS === BACKUP_KEYS, mas mantemos as duas pra deixar explícito
+// que cada uso tem um propósito diferente (sync em tempo real vs. export).
+const SYNC_KEYS = [
+  STORAGE_KEYS.marmitaPlan,
+  STORAGE_KEYS.dinnerPlan,
+  STORAGE_KEYS.homeStock,
+  STORAGE_KEYS.marmitaHistory,
+  STORAGE_KEYS.marmitaCurrentWeek,
+  STORAGE_KEYS.marmitaConsumed,
+  STORAGE_KEYS.dinnerConsumed,
+  STORAGE_KEYS.shopChecks,
+  STORAGE_KEYS.workouts,
+  STORAGE_KEYS.cardioLog,
+  STORAGE_KEYS.calLog,
+  STORAGE_KEYS.userProfile,
+  STORAGE_KEYS.weightLog,
+];
+const BACKUP_KEYS = SYNC_KEYS;
+
+// ============================================================
+// GOALS / MACRO CALCULATOR (Mifflin-St Jeor + atividade + meta)
+// ============================================================
+// Usado quando há um user_profile válido. Se faltar dado, o chamador
+// deve cair para DEFAULT_GOALS (representa o objetivo histórico do app).
+// Referência implícita: adulto 70 kg em 2.000 kcal com atividade leve.
+//   fiber    = max(25, 14 × 2.000/1.000) = max(25, 28) = 28 g (IOM/USDA + WHO 2023)
+//   water    = 35 × 70 = 2.450 ml (Manz & Wentz 2005 baseline)
+//   perMealP = 0,4 × 70 = 28 g (Schoenfeld & Aragon 2018; Areta et al. 2013)
+const DEFAULT_GOALS = { kcal: 2000, p: 190, c: 150, g: 70, fiber: 28, water_ml: 2450, perMealP: 28 };
+
+// Multiplicadores de atividade — Harris-Benedict clássicos (v2.0.7).
+// Valores alinhados com a literatura mais citada em sports nutrition:
+// Helms et al. 2014 (bodybuilding prep), ISSN Position Stand on Energy
+// (Kerksick et al. 2017/2023), ACSM 2016, Academy of Nutrition and
+// Dietetics Evidence Analysis Library 2023, Ten Haaf & Weijs 2014.
+const ACTIVITY_MULTIPLIERS = {
+  sentado:  1.2,     // Sedentário: pouca ou nenhuma atividade física
+  leve:     1.375,   // Levemente ativo: exercício leve 1-3x/semana
+  rotina:   1.55,    // Moderadamente ativo: exercício moderado 3-5x/semana
+  intenso:  1.725,   // Muito ativo: exercício intenso 6-7x/semana
+  atleta:   1.9,     // Extra ativo: trabalho físico pesado + treino diário
+};
+
+// Mapa de migração de chaves legadas (v1). Com a escala H-B de v2.0.7, o
+// mapeamento agora é preservativo (não é mais shift-down) — cada chave
+// antiga aponta pra nova chave com mesmo multiplicador, sem mudança de valor.
+const LEGACY_ACTIVITY_KEYS = {
+  sedentario:      'sentado',   // v1 1.2 → v2 sentado 1.2 (preservado)
+  sedentario_leve: 'leve',      // v1 1.375 → v2 leve 1.375 (preservado)
+  moderado:        'rotina',    // v1 1.55 → v2 rotina 1.55 (preservado)
+  alto:            'intenso',   // v1 1.725 → v2 intenso 1.725 (preservado)
+};
+
+// Resolve uma chave de atividade (seja nova ou legada) para o key canônico
+// do `ACTIVITY_MULTIPLIERS`. Retorna null se não reconhecer.
+function resolveActivityKey(key) {
+  if (!key) return null;
+  if (key in ACTIVITY_MULTIPLIERS) return key;
+  if (key in LEGACY_ACTIVITY_KEYS) return LEGACY_ACTIVITY_KEYS[key];
+  return null;
+}
+
+// Percentual de déficit aplicado sobre o TDEE quando o usuário está em perda.
+// Se `profile.deficit_intensity` não estiver definido (perfis antigos), o
+// cálculo cai no déficit fixo de 500 kcal — comportamento legado preservado.
+// As chaves batem com os values do <select id="ob-deficit">.
+const DEFICIT_INTENSITY_PCT = {
+  suave:     0.15,   // ~0,35 kg/semana em 3.000 kcal TDEE
+  moderado:  0.20,   // ~0,5  kg/semana
+  agressivo: 0.30,   // ~0,85 kg/semana
+  extremo:   0.40,   // ~1,0+ kg/semana — limite superior (Longland et al. 2016;
+                     // Murphy & Koehler 2022). Só defensável com BF% alto + proteína
+                     // alta + treino de força. Acima disso há risco de perda de massa
+                     // magra mesmo com proteção proteica.
+};
+
+// Percentual de superávit aplicado sobre o TDEE em modo ganho (v2.0.4).
+// Escala automaticamente com o TDEE individual — evita o viés grosseiro do
+// +300 fixo que over/undersize em TDEEs extremos. Valores baseados em:
+//   - Ribeiro et al. 2019 (lean gains com surplus moderado de 10-15%)
+//   - Iraki et al. 2019 (Strength & Conditioning Journal, 10-20% range)
+//   - Garthe et al. 2013 (500g vs 1kg/sem, 500g preservou melhor composição)
+// Se `profile.surplus_intensity` não estiver definido, cai no comportamento
+// legado (+300 kcal fixo) pra retrocompatibilidade.
+const SURPLUS_INTENSITY_PCT = {
+  lento:     0.10,   // ~0,25 kg/semana, lean bulk (Ribeiro 2019)
+  moderado:  0.15,   // ~0,35 kg/semana, default (Iraki 2019)
+  agressivo: 0.20,   // ~0,5  kg/semana, bulk mais rápido
+};
+
+// Ratios de macro por kg. Quando o perfil tem body_fat_pct, usamos LBM como base
+// (Helms et al. 2014 pra proteína em cutting; Dorgan 1996 pra gordura mínima).
+// Sem BF%, caímos em peso total com multiplicadores mais baixos — menos preciso
+// mas retrocompatível com perfis v1 que não tinham o campo BF%.
+const MACRO_RATIOS = {
+  // Com BF% conhecido → base = LBM
+  lbm: {
+    protein_per_kg: 2.4,  // Morton et al. 2018, Helms et al. 2014 (range 2,3-3,1 g/kg LBM)
+    fat_per_kg:     0.9,  // Dorgan et al. 1996 (mínimo pra função hormonal)
+  },
+  // Sem BF% → base = peso total (fallback v1)
+  total: {
+    protein_per_kg: 2.0,
+    fat_per_kg:     0.9,
+  },
+};
+
+// Água em ml por kg de peso total, por nível de atividade. Baseline 35 ml/kg é a
+// fórmula funcional de Manz & Wentz 2005 (ainda citada em literatura de 2020+
+// como referência individual). Escalonamento por atividade reflete perdas de
+// sudorese: ACSM 2007/2016 Position Stand recomenda +400-800 ml/h de exercício,
+// que convertido pra média diária bate com esses incrementos em peso corporal.
+// Também inclui (implicitamente) o ajuste pra alta ingestão proteica (>1,8 g/kg
+// LBM) porque perfis ativos naturalmente têm mais proteína e mais água.
+const ACTIVITY_WATER_ML_PER_KG = {
+  sentado:  35,   // Manz & Wentz 2005 baseline
+  leve:     37,   // +5%
+  rotina:   40,   // +14% (3-5x/semana)
+  intenso:  45,   // +28% (6-7x/semana)
+  atleta:   50,   // +43% (2x/dia, trabalho físico)
+};
+
+// Idade em anos cheios, a partir de uma data YYYY-MM-DD. Retorna null
+// se a string for inválida. O parâmetro `today` é opcional — só usado
+// em testes para travar a data e evitar flakiness por passagem do tempo.
+function calculateAge(birthStr, today) {
+  if (!birthStr) return null;
+  const birth = new Date(birthStr + 'T12:00:00');
+  if (isNaN(birth.getTime())) return null;
+  const ref = today || new Date();
+  let age = ref.getFullYear() - birth.getFullYear();
+  const m = ref.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+// Calcula meta diária (kcal, P, C, G) a partir do user_profile.
+// Retorna null se o perfil estiver incompleto — nesse caso o chamador
+// deve cair para DEFAULT_GOALS.
+//
+// Fórmulas:
+//   Katch-McArdle (usada quando profile.body_fat_pct está presente):
+//     BMR = 370 + 21,6 × LBM,  onde LBM = peso × (1 − bf/100)
+//     Mais precisa quando BF% é conhecido, especialmente em extremos de composição.
+//   Mifflin-St Jeor (fallback sem BF%):
+//     Homem:  BMR = 10·peso + 6.25·altura − 5·idade + 5
+//     Mulher: BMR = 10·peso + 6.25·altura − 5·idade − 161
+//     Outro:  média (usa −78 como constante de sexo)
+//
+// TDEE = BMR × multiplicador de atividade (escala v2.0.1, mais conservadora).
+// Ajuste pela meta (zona morta ±0,5 kg):
+//   perda:       TDEE − 500 kcal OU TDEE × (1 − deficit_pct) se deficit_intensity presente
+//   ganho:       TDEE + 300 kcal
+//   manutenção:  TDEE
+//
+// Macros (v2.0.2): hierarquia proteína → gordura → carbo (preenche restante).
+//   Com BF%: proteína 2,4 g/kg LBM (Helms/Morton), gordura 0,9 g/kg LBM (Dorgan)
+//   Sem BF%: proteína 2,0 g/kg peso total, gordura 0,9 g/kg peso total (fallback v1)
+// Piso de segurança: 1200 kcal/dia.
+function computeGoals(profile, today) {
+  if (!profile) return null;
+  const peso = Number(profile.peso_atual);
+  const altura = Number(profile.altura_cm);
+  const meta = Number(profile.meta_peso);
+  if (!peso || !altura || !meta) return null;
+
+  const idade = calculateAge(profile.data_nascimento, today);
+  if (idade == null || idade < 5) return null;
+
+  // BMR: Katch-McArdle se tem BF% válido, senão Mifflin-St Jeor.
+  // Macros: se BF% válido, usa LBM como base; senão peso total.
+  let bmr;
+  let macroBase;      // peso usado pra calcular proteína/gordura
+  let macroRatios;    // multiplicadores aplicados sobre macroBase
+  const bf = Number(profile.body_fat_pct);
+  if (bf && bf >= 3 && bf <= 60) {
+    const lbm = peso * (1 - bf / 100);
+    bmr = 370 + 21.6 * lbm;
+    macroBase = lbm;
+    macroRatios = MACRO_RATIOS.lbm;
+  } else {
+    const sexoConst = profile.sexo === 'M' ? 5
+                    : profile.sexo === 'F' ? -161
+                    : -78;
+    bmr = 10 * peso + 6.25 * altura - 5 * idade + sexoConst;
+    macroBase = peso;
+    macroRatios = MACRO_RATIOS.total;
+  }
+
+  // Resolve atividade (suporta chaves legadas do v1 com migração preservativa).
+  // Fallback: 'sentado' (1.2) é o mais conservador — coincide com o que a
+  // literatura recomenda em dúvida sobre nível de atividade.
+  const activityKey = resolveActivityKey(profile.nivel_atividade) || 'sentado';
+  const mult = ACTIVITY_MULTIPLIERS[activityKey];
+  const tdee = bmr * mult;
+
+  const delta = meta - peso;
+  let kcal;
+  if (delta < -0.5) {
+    // Perda: se o perfil tem deficit_intensity, aplica percentual sobre TDEE.
+    // Senão, cai no comportamento legado (−500 kcal fixo) pra não quebrar
+    // perfis criados antes da introdução desse campo.
+    const pct = DEFICIT_INTENSITY_PCT[profile.deficit_intensity];
+    kcal = pct != null ? tdee * (1 - pct) : tdee - 500;
+  } else if (delta > 0.5) {
+    // Ganho: análogo ao deficit. Se surplus_intensity presente, aplica
+    // percentual sobre TDEE (10-20% — Iraki/Ribeiro/Garthe). Senão, +300 fixo.
+    const sPct = SURPLUS_INTENSITY_PCT[profile.surplus_intensity];
+    kcal = sPct != null ? tdee * (1 + sPct) : tdee + 300;
+  } else {
+    kcal = tdee;
+  }
+
+  kcal = Math.max(1200, Math.round(kcal));
+  // v2.1.2: arredonda pra baixo ao múltiplo de 100 mais próximo, pra exibir
+  // uma meta "amigável visualmente" (2.200 em vez de 2.245). O piso de 1.200
+  // é aplicado ANTES do round-down, então nunca cai abaixo dele.
+  kcal = Math.floor(kcal / 100) * 100;
+
+  // Hierarquia dos macros: proteína primeiro, gordura mínima, carbo preenche.
+  const p = Math.round(macroRatios.protein_per_kg * macroBase);
+  const g = Math.round(macroRatios.fat_per_kg     * macroBase);
+  const carbKcal = kcal - (p * 4) - (g * 9);
+  const c = Math.max(0, Math.round(carbKcal / 4));
+
+  // Fibra: calorie-adjusted (IOM/USDA: 14 g/1.000 kcal) com piso de 25 g/dia
+  // (WHO 2023 Guideline on Carbohydrate Intake, Reynolds et al. 2019 Lancet).
+  const fiber = Math.max(25, Math.round(14 * kcal / 1000));
+
+  // Água: body-weight-adjusted, escalonado por atividade. Manz & Wentz 2005
+  // baseline (35 ml/kg) + ajuste ACSM por sudorese.
+  const waterPerKg = ACTIVITY_WATER_ML_PER_KG[activityKey] || 35;
+  const water_ml = Math.round(waterPerKg * peso);
+
+  // Meta de proteína por refeição: 0,4 g/kg de macroBase otimiza MPS (síntese
+  // proteica muscular). Base científica: Schoenfeld & Aragon 2018 + Areta et al.
+  // 2013 (spacing de 4-5 refeições com ~0,4 g/kg cada). Usamos a mesma base
+  // do cálculo total (LBM se BF% presente, peso total senão) pra consistência.
+  const perMealP = Math.round(0.4 * macroBase);
+
+  // v2.0.5: metadados de transparência do cálculo. Usados pela UI "Detalhes
+  // do cálculo" pra mostrar cada passo ao usuário. Não afetam o cálculo em si.
+  const hasBf = bf && bf >= 3 && bf <= 60;
+  const direction = delta < -0.5 ? 'loss' : delta > 0.5 ? 'gain' : 'maintain';
+  const _details = {
+    bmr: Math.round(bmr),
+    tdee: Math.round(tdee),
+    lbm: hasBf ? Math.round(peso * (1 - bf / 100) * 10) / 10 : null,
+    bf_pct: hasBf ? bf : null,
+    bmrFormula: hasBf ? 'Katch-McArdle' : 'Mifflin-St Jeor',
+    activityKey,
+    activityMult: mult,
+    macroBase: Math.round(macroBase * 10) / 10,
+    macroBaseLabel: hasBf ? 'LBM' : 'peso total',
+    protein_per_kg: macroRatios.protein_per_kg,
+    fat_per_kg:     macroRatios.fat_per_kg,
+    direction,
+    deficitPct: direction === 'loss'
+      ? (DEFICIT_INTENSITY_PCT[profile.deficit_intensity] != null ? DEFICIT_INTENSITY_PCT[profile.deficit_intensity] : null)
+      : null,
+    surplusPct: direction === 'gain'
+      ? (SURPLUS_INTENSITY_PCT[profile.surplus_intensity] != null ? SURPLUS_INTENSITY_PCT[profile.surplus_intensity] : null)
+      : null,
+    waterPerKg,
+  };
+
+  return { kcal, p, c, g, fiber, water_ml, perMealP, _details };
+}
+
+// Retorna o "objetivo" (perda/ganho/manutenção) a partir da meta,
+// usado pelo header da aba Dieta para escrever o texto dinâmico.
+function getGoalDirection(profile) {
+  if (!profile || !profile.meta_peso || !profile.peso_atual) return null;
+  const delta = Number(profile.meta_peso) - Number(profile.peso_atual);
+  if (delta < -0.5) return 'loss';
+  if (delta > 0.5)  return 'gain';
+  return 'maintain';
+}
+
+// ============================================================
+// WEIGHT LOG (evolução do peso ao longo do tempo)
+// ============================================================
+// Formato de uma entrada: { date: 'YYYY-MM-DD', peso: number }.
+// Invariante: a lista está sempre ordenada por data crescente, sem
+// duplicatas de data (a última escrita vence) e capada em WEIGHT_LOG_MAX
+// entradas (janela deslizante ~1 ano se o usuário registrar semanalmente).
+const WEIGHT_LOG_MAX = 52;
+
+// Normaliza um array arbitrário: descarta entradas inválidas, deduplica
+// por data (último valor para a mesma data vence) e ordena crescente.
+function normalizeWeightLog(log) {
+  if (!Array.isArray(log)) return [];
+  const byDate = {};
+  log.forEach(e => {
+    if (!e || !e.date || typeof e.date !== 'string') return;
+    const peso = Number(e.peso);
+    if (!peso || isNaN(peso) || peso <= 0 || peso > 500) return;
+    byDate[e.date] = peso;
+  });
+  const sorted = Object.keys(byDate).sort().map(d => ({ date: d, peso: byDate[d] }));
+  // Mantém só as WEIGHT_LOG_MAX entradas mais recentes.
+  return sorted.slice(-WEIGHT_LOG_MAX);
+}
+
+// Retorna uma nova lista com a entrada (date, peso) adicionada e o
+// invariante restabelecido (dedupe + sort + cap).
+function addWeightEntry(log, date, peso) {
+  const next = Array.isArray(log) ? log.slice() : [];
+  next.push({ date, peso: Number(peso) });
+  return normalizeWeightLog(next);
+}
+
+// Diferença de dias entre duas datas YYYY-MM-DD. Retorna null se inválidas.
+// Usado pra decidir se já é hora de registrar o peso da semana.
+function daysBetweenDates(a, b) {
+  if (!a || !b) return null;
+  const da = new Date(a + 'T12:00:00');
+  const db = new Date(b + 'T12:00:00');
+  if (isNaN(da.getTime()) || isNaN(db.getTime())) return null;
+  return Math.round((db - da) / 86400000);
+}
+
+// Detecta há quantas semanas o usuário está em cutting contínuo, baseado
+// no log de peso. Heurística: encontra o peso máximo do log e conta as
+// semanas entre esse pico e a entrada mais recente. Se o usuário não está
+// abaixo do max, retorna 0 (não em cutting ativo).
+//
+// Usado pra disparar o "diet break reminder" baseado em Helms et al. 2014:
+// após 8-12 semanas de cutting contínuo, recomenda-se 1-2 semanas em
+// manutenção para recuperação metabólica (leptina, função tireoidiana,
+// performance). Peterson et al. 2017 (Obesity) também suporta intermittent
+// energy restriction como estratégia de sustentabilidade.
+function weeksInCut(weightLog) {
+  if (!Array.isArray(weightLog) || weightLog.length < 2) return null;
+  const sorted = [...weightLog].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = sorted[sorted.length - 1];
+  // Encontra a entrada com maior peso (provável início do cut atual).
+  let maxEntry = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].peso > maxEntry.peso) maxEntry = sorted[i];
+  }
+  // Se o peso atual não está abaixo do máximo, não está em cut ativo.
+  if (latest.peso >= maxEntry.peso) return 0;
+  const days = daysBetweenDates(maxEntry.date, latest.date);
+  if (days == null) return null;
+  return Math.floor(days / 7);
+}
+
+// ============================================================
 // INGREDIENT CATALOG (single source of truth for metadata)
 // ============================================================
 // Cada ingrediente aparece aqui uma vez só. As receitas (MARMITA_DEFS / DINNER_DEFS)
@@ -16,10 +400,16 @@
 //   - 'carb'          → carboidrato (estoque, não conta contagem)
 //   - 'veg'           → folhas/vegetais (estoque mínimo)
 //   - 'other'         → queijos, molhos, pães etc. (estoque)
+//
+// v2.0 — campos opcionais pra refeições fixas escaláveis:
+//   - per100g: { kcal, p, c, g }  nutrição por 100g (fonte: TACO/USDA, ~5% de tolerância)
+//   - grams_per_un: peso típico de 1 "unidade" (ovo, fatia, scoop, maçã, etc.)
+// Só os ingredientes usados em FIXED_MEAL_RECIPES têm esses campos hoje.
+// As receitas legadas (MARMITA_DEFS/DINNER_DEFS) continuam usando só label/unit/role.
 const INGREDIENTS = {
   // Proteínas — marmitas
   frango:            { label: 'Peito de frango',                     unit: 'g',     role: 'protein' },
-  carne_moida:       { label: 'Carne moída',                         unit: 'g',     role: 'protein' },
+  carne_moida:       { label: 'Carne moída magra (patinho, coxão mole ou coxão duro)', unit: 'g', role: 'protein' },
   tilapia:           { label: 'Filé de tilápia',                     unit: 'g',     role: 'protein' },
   lombo:             { label: 'Lombo suíno',                         unit: 'g',     role: 'protein' },
   sobrecoxa:         { label: 'Sobrecoxa sem pele',                  unit: 'g',     role: 'protein' },
@@ -28,7 +418,12 @@ const INGREDIENTS = {
   atum_lata:         { label: 'Atum em lata',                        unit: 'lata',  role: 'protein' },
   alcatra:           { label: 'Carne bovina (bife ou pedaços; crua)', unit: 'g',    role: 'protein' },
   peito_peru:        { label: 'Peito de peru defumado',              unit: 'g',     role: 'protein' },
-  ovos:              { label: 'Ovos',                                unit: 'un',    role: 'protein-share' },
+  ovos:              { label: 'Ovos',                                unit: 'un',    role: 'protein-share',
+                       per100g: { kcal: 155, p: 13.0, c: 1.1, g: 11.0 }, grams_per_un: 50 },
+  claras:            { label: 'Claras',                              unit: 'un',    role: 'protein',
+                       per100g: { kcal: 48,  p: 11.0, c: 0.7, g: 0.2 },  grams_per_un: 35 },
+  whey_isolado:      { label: 'Whey isolado',                        unit: 'scoop', role: 'protein',
+                       per100g: { kcal: 380, p: 80.0, c: 4.0, g: 1.0 },  grams_per_un: 30 },
   // Carboidratos
   arroz_branco:      { label: 'Arroz branco (cru)',                  unit: 'g',     role: 'carb' },
   arroz_integral:    { label: 'Arroz integral (cru)',                unit: 'g',     role: 'carb' },
@@ -37,16 +432,153 @@ const INGREDIENTS = {
   macarrao_integral: { label: 'Macarrão integral (cru)',             unit: 'g',     role: 'carb' },
   goma_tapioca:      { label: 'Goma de tapioca',                     unit: 'g',     role: 'carb' },
   tortilla:          { label: 'Tortilla integral',                   unit: 'un',    role: 'carb' },
-  pao_integral:      { label: 'Pão integral',                        unit: 'fatias',role: 'carb' },
+  pao_integral:      { label: 'Pão integral',                        unit: 'fatias',role: 'carb',
+                       per100g: { kcal: 253, p: 9.0,  c: 43.0, g: 3.4 }, grams_per_un: 25 },
   // Queijos e cremes
-  mussarela:         { label: 'Queijo mussarela',                    unit: 'g',     role: 'other' },
+  mussarela:         { label: 'Queijo mussarela',                    unit: 'g',     role: 'other',
+                       per100g: { kcal: 280, p: 22.0, c: 2.3, g: 21.0 } },
   queijo_minas:      { label: 'Queijo minas frescal',                unit: 'g',     role: 'other' },
-  cottage:           { label: 'Queijo cottage',                      unit: 'g',     role: 'other' },
+  cottage:           { label: 'Queijo cottage',                      unit: 'g',     role: 'other',
+                       per100g: { kcal: 98,  p: 11.0, c: 3.4, g: 4.3 } },
+  iogurte_grego:     { label: 'Iogurte grego natural',               unit: 'g',     role: 'other',
+                       per100g: { kcal: 100, p: 10.0, c: 4.0, g: 5.0 } },
   requeijao:         { label: 'Requeijão cremoso',                   unit: 'g',     role: 'other' },
+  // Frutas
+  banana_prata:      { label: 'Banana prata',                        unit: 'un',    role: 'other',
+                       per100g: { kcal: 89,  p: 1.1,  c: 23.0, g: 0.3 }, grams_per_un: 70 },
+  maca:              { label: 'Maçã',                                unit: 'un',    role: 'other',
+                       per100g: { kcal: 52,  p: 0.3,  c: 14.0, g: 0.2 }, grams_per_un: 150 },
   // Salada
   alface:            { label: 'Alface + rúcula',                     unit: 'g',     role: 'veg' },
   pepino:            { label: 'Pepino',                              unit: 'g',     role: 'veg' },
 };
+
+// ============================================================
+// FIXED MEAL RECIPES — refeições fixas escaláveis (v2.0)
+// ============================================================
+// Estrutura declarativa em vez de macros hardcoded. Cada ingrediente tem:
+//   - key:        chave no catálogo INGREDIENTS (puxa per100g)
+//   - baseGrams:  peso total em gramas na porção base (target = DEFAULT_GOALS.kcal)
+//   - qty:        quantidade em unidades contáveis (opcional; se presente, é "2 ovos", "1 fatia" etc.)
+//   - label:      { s, p } formas singular e plural pro render de texto
+//
+// O fator de escala `portionScale = target / DEFAULT_GOALS.kcal` é aplicado
+// aos baseGrams em tempo de render. Macros derivam de (grams/100 × per100g).
+// Marmitas e jantares NÃO passam por esse pipeline (seguem hardcoded como legado
+// pra não afetar shopping list / planner).
+const FIXED_MEAL_RECIPES = [
+  {
+    id: 'cafe', time: '7h', name: 'Café da Manhã', desc: 'Ovos + Pão Integral', color: '',
+    ingredients: [
+      { key: 'ovos',         qty: 2, baseGrams: 100, label: { s: 'ovo inteiro mexido', p: 'ovos inteiros mexidos' } },
+      { key: 'claras',       qty: 2, baseGrams: 70,  label: { s: 'clara',              p: 'claras' } },
+      { key: 'pao_integral', qty: 1, baseGrams: 25,  label: { s: 'fatia pão integral', p: 'fatias pão integral' } },
+      { key: 'mussarela',    qty: 1, baseGrams: 20,  label: { s: 'fatia mussarela',    p: 'fatias mussarela' } },
+      { key: 'banana_prata', qty: 1, baseGrams: 70,  label: { s: 'banana prata',       p: 'bananas prata' } },
+    ],
+    extras: 'Café preto sem açúcar',
+  },
+  {
+    id: 'lanche1', time: '10h', name: 'Lanche da Manhã', desc: 'Whey + Fruta', color: '',
+    ingredients: [
+      { key: 'whey_isolado', qty: 1, baseGrams: 30,  label: { s: 'scoop whey isolado em água', p: 'scoops whey isolado em água' } },
+      { key: 'maca',         qty: 1, baseGrams: 150, label: { s: 'maçã média',                 p: 'maçãs médias' } },
+    ],
+  },
+  {
+    id: 'lanche2', time: '16h', name: 'Lanche / Pré-Treino', desc: 'Iogurte + Whey + Banana', color: '',
+    ingredients: [
+      { key: 'iogurte_grego', baseGrams: 130, label: 'iogurte grego natural' },
+      { key: 'whey_isolado',  qty: 1, baseGrams: 15, label: { s: 'scoop whey', p: 'scoops whey' } },
+      { key: 'banana_prata',  qty: 1, baseGrams: 70, label: { s: 'banana prata', p: 'bananas prata' } },
+    ],
+  },
+  {
+    id: 'presono', time: '22h', name: 'Pré-Sono', desc: 'Proteína lenta', color: '',
+    ingredients: [
+      { key: 'cottage', baseGrams: 200, label: 'queijo cottage' },
+    ],
+    altOptions: '<b>Alternativas equivalentes:</b> caseína em água • iogurte grego natural • queijo minas + peito de peru • whey em água • omelete (1 ovo + 2 claras)',
+  },
+];
+
+// Escala um único ingrediente pelo factor `scale`.
+// Regras de arredondamento:
+//   - Contáveis (com qty): novo qty = round(baseGrams × scale / grams_per_un), mínimo 1.
+//                           grams = newQty × grams_per_un.
+//   - Só gramas: grams = round(baseGrams × scale / 5) × 5, mínimo 5g.
+function scaleIngredient(ing, scale) {
+  const targetGrams = ing.baseGrams * scale;
+  if (ing.qty != null) {
+    // Contável: puxa grams_per_un do catálogo (fallback: baseGrams/qty da receita).
+    const meta = INGREDIENTS[ing.key] || {};
+    const gPerUn = meta.grams_per_un || (ing.baseGrams / ing.qty);
+    const newQty = Math.max(1, Math.round(targetGrams / gPerUn));
+    return { ...ing, qty: newQty, grams: newQty * gPerUn };
+  }
+  // Gramas puros: arredonda ao múltiplo de 5g mais próximo.
+  const rounded = Math.max(5, Math.round(targetGrams / 5) * 5);
+  return { ...ing, grams: rounded };
+}
+
+// Escala todos os ingredientes de uma refeição, retornando uma cópia nova.
+function scaleMealIngredients(meal, scale) {
+  return { ...meal, ingredients: meal.ingredients.map(i => scaleIngredient(i, scale)) };
+}
+
+// Soma macros de uma lista de ingredientes escalados.
+// Cada ingrediente precisa ter `grams` (output de scaleIngredient) e `key` apontando
+// pra uma entrada em INGREDIENTS com `per100g`. Ingredientes sem per100g são ignorados
+// (silenciosamente, pra tolerar receitas parciais).
+function computeMealMacros(ingredients) {
+  const totals = { kcal: 0, p: 0, c: 0, g: 0 };
+  ingredients.forEach(ing => {
+    const meta = INGREDIENTS[ing.key];
+    if (!meta || !meta.per100g) return;
+    const factor = ing.grams / 100;
+    totals.kcal += meta.per100g.kcal * factor;
+    totals.p    += meta.per100g.p    * factor;
+    totals.c    += meta.per100g.c    * factor;
+    totals.g    += meta.per100g.g    * factor;
+  });
+  return {
+    kcal: Math.round(totals.kcal),
+    p:    Math.round(totals.p),
+    c:    Math.round(totals.c),
+    g:    Math.round(totals.g),
+  };
+}
+
+// Gera o texto human-readable das refeições fixas a partir dos ingredientes escalados.
+// Ex: "2 ovos inteiros mexidos (~100g) | 2 claras (~70g) | 25g pão integral | ..."
+function renderIngredientLine(ing) {
+  if (ing.qty != null) {
+    // Contável: "{qty} {label singular|plural} (~{grams}g)"
+    const label = typeof ing.label === 'object'
+      ? (ing.qty === 1 ? ing.label.s : ing.label.p)
+      : (ing.label || ing.key);
+    return `${ing.qty} ${label} (~${Math.round(ing.grams)}g)`;
+  }
+  // Gramas puros: "{grams}g {label}"
+  const label = typeof ing.label === 'string' ? ing.label : (ing.label && ing.label.s) || ing.key;
+  return `${Math.round(ing.grams)}g ${label}`;
+}
+
+function renderMealFoodsText(meal) {
+  const lines = meal.ingredients.map(renderIngredientLine);
+  let text = lines.join(' | ');
+  if (meal.extras)    text += ' | ' + meal.extras;
+  if (meal.altOptions) text += '<br>' + meal.altOptions;
+  return text;
+}
+
+// Fator de escala aplicado às refeições fixas: meta_kcal / base.
+// base é o DEFAULT_GOALS.kcal (2000), que foi o target original da dieta quando
+// ela foi desenhada — os baseGrams de FIXED_MEAL_RECIPES refletem esse target.
+function computePortionScale(goalsKcal) {
+  if (!goalsKcal || goalsKcal <= 0) return 1;
+  return goalsKcal / DEFAULT_GOALS.kcal;
+}
 
 // Helper: soma as necessidades de ingredientes a partir de um plano de marmitas + jantares
 // Retorna { key: quantidadeTotal } somando todas as refeições selecionadas.
@@ -74,6 +606,7 @@ function computeIngredientNeeds(marmitaPlan, dinnerPlan) {
 // ============================================================
 const MARMITA_DEFS = [
   { id: 'A', name: 'Marmita A - Frango', desc: 'Peito de frango grelhado + arroz branco',
+    image: 'marmita-frango.png',
     cooked: '160g frango grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 540, p: 52, c: 40, g: 14,
     ingredients: { frango: 215, arroz_branco: 56, alface: 40, pepino: 80 },
@@ -92,6 +625,7 @@ const MARMITA_DEFS = [
     }
   },
   { id: 'B', name: 'Marmita B - Carne Moída', desc: 'Patinho moído + batata doce',
+    image: 'marmita-carne-moida.png',
     cooked: '160g carne moída refogada | 160g batata doce cozida | 60g salada (alface + rúcula) | 60g pepino | 5ml azeite',
     kcal: 580, p: 46, c: 35, g: 24,
     ingredients: { carne_moida: 230, batata_doce: 180, alface: 60, pepino: 60 },
@@ -111,6 +645,7 @@ const MARMITA_DEFS = [
     }
   },
   { id: 'C', name: 'Marmita C - Tilápia', desc: 'Filé de tilápia + arroz integral',
+    image: 'marmita-tilapia.png',
     cooked: '200g tilápia grelhada | 130g arroz integral cozido | 50g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 530, p: 52, c: 34, g: 15,
     ingredients: { tilapia: 250, arroz_integral: 52, alface: 50, pepino: 80 },
@@ -130,6 +665,7 @@ const MARMITA_DEFS = [
     }
   },
   { id: 'D', name: 'Marmita D - Lombo Suíno', desc: 'Lombo suíno grelhado + arroz branco',
+    image: 'marmita-lombo.png',
     cooked: '160g lombo suíno grelhado | 140g arroz branco cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 570, p: 50, c: 44, g: 18,
     ingredients: { lombo: 215, arroz_branco: 56, alface: 40, pepino: 80 },
@@ -149,6 +685,7 @@ const MARMITA_DEFS = [
     }
   },
   { id: 'E', name: 'Marmita E - Sobrecoxa', desc: 'Sobrecoxa sem pele + mandioca cozida',
+    image: 'marmita-sobrecoxa.png',
     cooked: '180g sobrecoxa sem pele grelhada | 130g mandioca cozida | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 600, p: 48, c: 40, g: 26,
     ingredients: { sobrecoxa: 240, mandioca: 145, alface: 40, pepino: 80 },
@@ -168,6 +705,7 @@ const MARMITA_DEFS = [
     }
   },
   { id: 'F', name: 'Marmita F - Macarrão com Coxão Mole', desc: 'Coxão mole grelhado + macarrão integral',
+    image: 'marmita-macarrao-coxao.png',
     cooked: '160g coxão mole grelhado | 130g macarrão integral cozido | 40g salada (alface + rúcula) | 80g pepino | 5ml azeite',
     kcal: 580, p: 50, c: 39, g: 25,
     ingredients: { coxao_mole: 215, macarrao_integral: 52, alface: 40, pepino: 80 },
@@ -197,6 +735,7 @@ const DEFAULT_PLAN = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0};
 const DINNER_DEFS = [
   { id: 'O', name: 'Omelete Reforçada',
     desc: 'Omelete de peru ao queijo e ervas + torrada',
+    image: 'jantar-omelete.png',
     kcal: 470, p: 37, c: 28, g: 23,
     ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_integral: 2, alface: 40, pepino: 60 },
     cooked: '3 ovos inteiros (~150g) | 50g peito de peru | 1 fatia mussarela (20g) | 2 fatias pão integral (~50g) | 5ml azeite',
@@ -218,6 +757,7 @@ const DINNER_DEFS = [
   },
   { id: 'T', name: 'Tapioca de Frango',
     desc: 'Tapioca recheada com frango cremoso',
+    image: 'jantar-tapioca.png',
     kcal: 460, p: 42, c: 39, g: 11,
     ingredients: { goma_tapioca: 50, frango: 175, cottage: 30, alface: 40, pepino: 60 },
     cooked: '50g goma de tapioca | 130g frango desfiado cozido | 30g queijo cottage | Salada de folhas + pepino',
@@ -240,6 +780,7 @@ const DINNER_DEFS = [
   },
   { id: 'C', name: 'Carne com Arroz',
     desc: 'Alcatra grelhada ao alho + arroz perfumado',
+    image: 'jantar-carne.png',
     kcal: 480, p: 36, c: 30, g: 20,
     ingredients: { alcatra: 175, arroz_branco: 40, alface: 40, pepino: 60 },
     cooked: '130g alcatra grelhada | 100g arroz branco cozido | Salada de folhas + pepino | 5ml azeite',
@@ -261,6 +802,7 @@ const DINNER_DEFS = [
   },
   { id: 'A', name: 'Torrada de Atum com Ovos',
     desc: 'Atum com ovos cozidos + torrada',
+    image: 'jantar-atum.png',
     kcal: 470, p: 51, c: 23, g: 17,
     ingredients: { atum_lata: 1, ovos: 2, pao_integral: 2, requeijao: 15, alface: 40, pepino: 60 },
     cooked: '120g atum em água drenado (1 lata) | 2 ovos cozidos (~100g) | 2 fatias pão integral (~50g) | 15g requeijão cremoso | Folhas + pepino',
@@ -283,6 +825,7 @@ const DINNER_DEFS = [
   },
   { id: 'S', name: 'Sanduíche Natural de Frango',
     desc: 'Pão integral + frango desfiado + queijo',
+    image: 'jantar-sanduiche.png',
     kcal: 450, p: 45, c: 33, g: 13,
     saladEmbedded: true,
     ingredients: { frango: 134, pao_integral: 3, queijo_minas: 20, requeijao: 15, alface: 40, pepino: 60 },
@@ -306,6 +849,7 @@ const DINNER_DEFS = [
   },
   { id: 'W', name: 'Wrap de Frango',
     desc: 'Tortilla integral + frango cremoso + queijo',
+    image: 'jantar-wrap.png',
     kcal: 475, p: 44, c: 38, g: 12,
     saladEmbedded: true,
     ingredients: { frango: 134, tortilla: 2, cottage: 30, queijo_minas: 20, alface: 40, pepino: 60 },
@@ -353,11 +897,11 @@ function computeAromatics(marmitaPlan, dinnerPlan) {
 }
 
 function getMarmitaPlan() {
-  return JSON.parse(localStorage.getItem('marmita_plan') || JSON.stringify(DEFAULT_PLAN));
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.marmitaPlan) || JSON.stringify(DEFAULT_PLAN));
 }
 
 function getDinnerPlan() {
-  return JSON.parse(localStorage.getItem('dinner_plan') || JSON.stringify(DEFAULT_DINNER_PLAN));
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.dinnerPlan) || JSON.stringify(DEFAULT_DINNER_PLAN));
 }
 
 // ============================================================
