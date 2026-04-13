@@ -4077,6 +4077,113 @@ function showOnboardingError(id, msg) {
   if (err) { err.textContent = msg; err.classList.add('show'); }
 }
 
+function clearOnboardingError(id) {
+  const input = document.getElementById(id);
+  const err = document.getElementById(id + '-err');
+  if (input) input.classList.remove('error');
+  if (err) { err.classList.remove('show'); err.textContent = ''; }
+}
+
+// v2.1.36: validação inline. Cada validador recebe o valor cru do input e
+// retorna null (válido) ou string (mensagem de erro). Os validadores são
+// puros — não tocam no DOM — e são consumidos tanto pelo submit quanto pelos
+// blur listeners da setupOnboardingValidation.
+function validateOnboardingField(id) {
+  const get = i => document.getElementById(i);
+  const el = get(id);
+  if (!el) return null;
+  const raw = (el.value || '').toString().trim();
+
+  switch (id) {
+    case 'ob-nome':       return raw ? null : 'Informe seu nome';
+    case 'ob-sobrenome':  return raw ? null : 'Informe seu sobrenome';
+    case 'ob-sexo':       return raw ? null : 'Selecione uma opção';
+    case 'ob-nascimento': {
+      if (!raw) return 'Informe a data';
+      const idade = calculateAge(raw);
+      if (idade === null || idade < 5 || idade > 120) return 'Data inválida';
+      return null;
+    }
+    case 'ob-peso': {
+      const v = parseFloat(raw);
+      if (!v || v <= 0 || v > 400) return 'Peso inválido (kg)';
+      return null;
+    }
+    case 'ob-altura': {
+      const v = parseFloat(raw);
+      if (!v || v < 80 || v > 250) return 'Altura entre 80 e 250 cm';
+      return null;
+    }
+    case 'ob-meta': {
+      const v = parseFloat(raw);
+      if (!v || v <= 0 || v > 400) return 'Meta inválida (kg)';
+      return null;
+    }
+    case 'ob-bf': {
+      if (raw === '') return null; // opcional
+      const v = parseFloat(raw);
+      if (isNaN(v) || v < 3 || v > 60) return 'Entre 3% e 60%';
+      return null;
+    }
+    case 'ob-atividade': {
+      if (!raw || !(raw in ACTIVITY_MULTIPLIERS)) return 'Selecione uma opção';
+      return null;
+    }
+    case 'ob-deficit': {
+      // Só obrigatório quando peso e meta indicam direção de perda
+      const peso = parseFloat((get('ob-peso') || {}).value);
+      const meta = parseFloat((get('ob-meta') || {}).value);
+      if (!peso || !meta || isNaN(peso) || isNaN(meta)) return null;
+      if (meta - peso >= -0.5) return null; // não é cut
+      if (!raw || !(raw in DEFICIT_INTENSITY_PCT)) return 'Selecione uma opção';
+      return null;
+    }
+    case 'ob-surplus': {
+      const peso = parseFloat((get('ob-peso') || {}).value);
+      const meta = parseFloat((get('ob-meta') || {}).value);
+      if (!peso || !meta || isNaN(peso) || isNaN(meta)) return null;
+      if (meta - peso <= 0.5) return null; // não é bulk
+      if (!raw || !(raw in SURPLUS_INTENSITY_PCT)) return 'Selecione uma opção';
+      return null;
+    }
+    default: return null;
+  }
+}
+
+// Aplica/limpa erro inline pra um campo. Chamado no blur e ao mudar campos
+// dependentes (peso/meta dispara revalidação de deficit/surplus).
+function runInlineValidation(id) {
+  const msg = validateOnboardingField(id);
+  if (msg) showOnboardingError(id, msg);
+  else clearOnboardingError(id);
+}
+
+// Conecta os listeners. Chamado uma vez em initApp; idempotente via flag no DOM.
+function setupOnboardingValidation() {
+  if (document.body.dataset.obValidationReady === '1') return;
+  document.body.dataset.obValidationReady = '1';
+  OB_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // blur valida; input limpa o erro existente (não revalida — usuário ainda digitando)
+    el.addEventListener('blur',  () => runInlineValidation(id));
+    el.addEventListener('input', () => clearOnboardingError(id));
+    el.addEventListener('change', () => runInlineValidation(id));
+  });
+  // Peso/meta afetam visibilidade de deficit/surplus E suas validações.
+  // updateIntensityVisibility já está hookado em setupIntensityToggle, então
+  // só preciso adicionar revalidação dos campos dependentes aqui.
+  ['ob-peso', 'ob-meta'].forEach(srcId => {
+    const el = document.getElementById(srcId);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      // Se já tinha erro nos campos dependentes, atualizar
+      if (document.getElementById('ob-deficit-err')?.classList.contains('show')) runInlineValidation('ob-deficit');
+      if (document.getElementById('ob-surplus-err')?.classList.contains('show')) runInlineValidation('ob-surplus');
+    });
+  });
+}
+
 // Abre o modal em modo edição, pré-populando com o perfil atual.
 function openEditProfile() {
   const profile = getUserProfile();
@@ -4137,43 +4244,19 @@ function submitOnboarding() {
   const surplus    = get('ob-surplus').value;
   const cardapioDois = get('ob-dois').value !== 'nao'; // default true; só false se "nao"
 
+  // v2.1.36: validação centralizada via validateOnboardingField. Roda o
+  // mesmo validador que os blur listeners usam, garantindo consistência.
   clearOnboardingErrors();
-  let hasError = false;
   let firstError = null;
-  const fail = (id, msg) => {
-    showOnboardingError(id, msg);
-    if (!firstError) firstError = id;
-    hasError = true;
-  };
-
-  if (!nome)      fail('ob-nome',      'Informe seu nome');
-  if (!sobrenome) fail('ob-sobrenome', 'Informe seu sobrenome');
-  if (!sexo)      fail('ob-sexo',      'Selecione uma opção');
-  if (!nascimento) {
-    fail('ob-nascimento', 'Informe a data');
-  } else {
-    const idade = calculateAge(nascimento);
-    if (idade === null || idade < 5 || idade > 120) fail('ob-nascimento', 'Data inválida');
-  }
-  if (!peso || peso <= 0 || peso > 400) fail('ob-peso', 'Peso inválido (kg)');
-  if (!altura || altura < 80 || altura > 250) fail('ob-altura', 'Altura entre 80 e 250 cm');
-  if (!meta || meta <= 0 || meta > 400) fail('ob-meta', 'Meta inválida (kg)');
-  if (bodyFat !== null && (isNaN(bodyFat) || bodyFat < 3 || bodyFat > 60)) fail('ob-bf', 'Entre 3% e 60%');
-  if (!atividade || !(atividade in ACTIVITY_MULTIPLIERS)) fail('ob-atividade', 'Selecione uma opção');
-
-  // v2.0.6: deficit e surplus só são obrigatórios quando a direção da meta
-  // ativa o campo correspondente (loss → deficit; gain → surplus).
-  // Em manutenção (|delta| ≤ 0,5), nenhum dos dois é validado.
-  if (peso && meta && !isNaN(peso) && !isNaN(meta)) {
-    const delta = meta - peso;
-    if (delta < -0.5) {
-      if (!deficit || !(deficit in DEFICIT_INTENSITY_PCT)) fail('ob-deficit', 'Selecione uma opção');
-    } else if (delta > 0.5) {
-      if (!surplus || !(surplus in SURPLUS_INTENSITY_PCT)) fail('ob-surplus', 'Selecione uma opção');
+  OB_FIELDS.forEach(id => {
+    const msg = validateOnboardingField(id);
+    if (msg) {
+      showOnboardingError(id, msg);
+      if (!firstError) firstError = id;
     }
-  }
+  });
 
-  if (hasError) {
+  if (firstError) {
     const el = document.getElementById(firstError);
     if (el && typeof el.focus === 'function') el.focus();
     return;
@@ -4378,6 +4461,7 @@ function initApp() {
   renderCalendar();
   renderWeightLog();
   setupIntensityToggle();
+  setupOnboardingValidation();
   showOnboardingIfNeeded();
 
   renderUserBar();
