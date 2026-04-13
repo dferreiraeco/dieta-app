@@ -4073,18 +4073,21 @@ function toggleAuthMode() {
 
 function _updateAuthEmailUI() {
   const title       = document.getElementById('auth-email-title');
+  const desc        = document.getElementById('auth-email-desc');
   const submit      = document.getElementById('auth-email-submit');
   const confirmField= document.getElementById('auth-confirm-field');
   const toggleBtn   = document.getElementById('auth-toggle-btn');
   const passwordEl  = document.getElementById('auth-password');
   if (_authEmailMode === 'signin') {
     title.textContent  = 'Entrar';
+    if (desc) desc.textContent = 'Use seu email cadastrado para acessar o app';
     submit.textContent = 'Entrar';
     confirmField.style.display = 'none';
     toggleBtn.innerHTML = 'Não tem conta? <b>Criar conta</b>';
     passwordEl.setAttribute('autocomplete', 'current-password');
   } else {
     title.textContent  = 'Criar conta';
+    if (desc) desc.textContent = 'Cadastre um email e senha para sincronizar seus dados';
     submit.textContent = 'Criar conta';
     confirmField.style.display = '';
     toggleBtn.innerHTML = 'Já tem conta? <b>Entrar</b>';

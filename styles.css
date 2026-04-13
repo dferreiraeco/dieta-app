@@ -836,38 +836,50 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   background: var(--red-light); color: var(--red); border-radius: 10px;
   font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
 }
-/* ---- AUTH (v2.1.43: branco + shadow pra profundidade) ---- */
+/* ---- AUTH (v2.1.57: minimal flat design — sem card, inputs underline) ---- */
 .auth-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: fixed; inset: 0; padding: 24px; text-align: center; z-index: 300;
+  position: fixed; inset: 0; padding: 32px 24px; text-align: center; z-index: 300;
   background: var(--surface);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .auth-logo {
-  width: 80px; height: 80px; border-radius: 20px;
+  width: 120px; height: 120px; border-radius: 28px;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+.auth-logo img {
+  width: 120px !important;
+  height: 120px !important;
+  border-radius: 28px;
 }
 .auth-screen h1 {
-  font-size: 30px; margin-bottom: 6px; font-weight: 900;
+  font-size: 32px; margin-bottom: 8px; font-weight: 900;
   color: var(--ink-strong);
+  letter-spacing: -0.5px;
 }
-.auth-screen .auth-subtitle { font-size: 15px; color: var(--ink-medium); margin-bottom: 8px; }
+.auth-screen .auth-subtitle {
+  font-size: 14px; color: var(--ink-medium); margin-bottom: 6px;
+  font-weight: 500;
+}
 .auth-screen .auth-desc {
-  font-size: 13px; color: var(--ink-soft-text); margin-bottom: 32px;
-  max-width: 280px; line-height: 1.5;
+  font-size: 13px; color: var(--ink-soft-text); margin-bottom: 36px;
+  max-width: 300px; line-height: 1.5;
 }
+/* v2.1.57: auth-card é agora um container transparente, sem border/shadow.
+   Tudo flat sobre o fundo branco da auth-screen. */
 .auth-card {
-  background: var(--surface); border-radius: 20px; padding: 28px 24px; width: 100%;
+  background: transparent;
+  padding: 0;
+  width: 100%;
   max-width: 340px;
-  /* Sombra forte embaixo + leve sombra geral pra criar profundidade sobre o
-     fundo branco (sem o gradiente colorido pra contrastar). */
-  box-shadow:
-    0 24px 48px -12px rgba(26, 46, 34, 0.18),
-    0 8px 16px -8px rgba(26, 46, 34, 0.12),
-    0 0 0 1px rgba(26, 46, 34, 0.04);
 }
-.auth-card h2 { font-size: 16px; color: var(--gray); margin-bottom: 16px; }
+.auth-card h2 {
+  font-size: 18px;
+  color: var(--ink-strong);
+  margin-bottom: 18px;
+  font-weight: 700;
+}
 .google-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   width: 100%; padding: 14px; border: 2px solid var(--gray-light); border-radius: 12px;
@@ -894,36 +906,64 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   color: var(--ink-medium);
 }
 
-/* v2.1.52: email form view */
+/* v2.1.57: email form view — título grande centralizado estilo "Sign In" */
 #auth-email-form h2 {
-  font-size: 18px;
+  font-size: 26px;
   color: var(--ink-strong);
-  margin-bottom: 16px;
+  margin-bottom: 6px;
   text-align: center;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+#auth-email-form .auth-form-desc {
+  font-size: 12px;
+  color: var(--ink-soft-text);
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.4;
 }
 .auth-back {
   background: none; border: none; color: var(--ink-medium);
   font-size: 13px; font-weight: 600; cursor: pointer;
-  padding: 4px 0; margin-bottom: 4px;
+  padding: 4px 0; margin-bottom: 10px;
+  display: inline-flex; align-items: center;
 }
 .auth-back:hover { color: var(--green-primary); }
-#auth-email-form .ob-field { margin-bottom: 12px; }
-#auth-email-form .ob-field label {
-  display: block; font-size: 11px; font-weight: 700; color: var(--ink-medium);
-  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px;
-}
+/* v2.1.57: inputs underline-style (só border-bottom, sem labels, placeholder-only) */
+#auth-email-form .ob-field { margin-bottom: 18px; text-align: left; }
+#auth-email-form .ob-field label { display: none; }
 #auth-email-form .ob-field input {
-  width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light);
-  border-radius: 10px; font-size: 15px; background: var(--surface); color: var(--ink-strong);
-  -webkit-appearance: none; appearance: none;
+  width: 100%;
+  padding: 12px 2px;
+  border: none;
+  border-bottom: 1.5px solid var(--gray-light);
+  border-radius: 0;
+  font-size: 16px;
+  background: transparent;
+  color: var(--ink-strong);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+#auth-email-form .ob-field input::placeholder {
+  color: var(--ink-soft-text);
+  font-weight: 400;
 }
 #auth-email-form .ob-field input:focus {
-  outline: none; border-color: var(--green-primary);
+  outline: none;
+  border-bottom-color: var(--green-primary);
+  border-bottom-width: 2px;
 }
-#auth-email-form .ob-field input.error { border-color: var(--accent-danger); background: var(--accent-danger-soft); }
+#auth-email-form .ob-field input.error {
+  border-bottom-color: var(--accent-danger);
+  background: transparent;
+}
 #auth-email-form .ob-error {
-  display: none; font-size: 11px; color: var(--accent-danger);
-  margin-top: 4px; font-weight: 600;
+  display: none;
+  font-size: 11px;
+  color: var(--accent-danger);
+  margin-top: 4px;
+  font-weight: 600;
 }
 #auth-email-form .ob-error.show { display: block; }
 .auth-info {
@@ -937,6 +977,32 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   color: var(--green-primary);
 }
 .auth-info.success { background: var(--green-soft); color: var(--green-primary); }
+
+/* v2.1.57: CTA primário do email form — verde sólido pill-shaped */
+#auth-email-form #auth-email-submit {
+  display: block;
+  width: 100%;
+  padding: 14px 20px;
+  margin-top: 18px;
+  background: var(--green-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(43, 122, 75, 0.25);
+  transition: all 0.15s;
+}
+#auth-email-form #auth-email-submit:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 6px rgba(43, 122, 75, 0.2);
+}
+#auth-email-form #auth-email-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 .auth-toggle-btn {
   display: block; width: 100%;
   background: none; border: none; cursor: pointer;
