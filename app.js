@@ -4206,9 +4206,13 @@ async function logout() {
   stopFirestoreSync();
   currentUser = null;
   localStorage.removeItem(STORAGE_KEYS.skipLogin);
-  auth.signOut().then(() => {
-    document.getElementById('app-container').style.display = 'none';
-    document.getElementById('auth-screen').style.display = 'flex';
+  // v2.1.53: hard reload depois do signOut. Antes só escondíamos/mostrávamos
+  // divs, mas vários estados ficavam em memória (event listeners, flags de
+  // setup, formulário de auth em estado parcial, listener Firestore já
+  // desconectado mas com referências stale, etc.), fazendo a auth screen se
+  // comportar de forma errática até o usuário dar F5 manual.
+  auth.signOut().finally(() => {
+    location.reload();
   });
 }
 
