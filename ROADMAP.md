@@ -6,6 +6,62 @@ Origem: análise crítica feita em abril/2026 cobrindo 33+ pontos de dívida té
 
 ---
 
+## ⏳ Ainda pendente
+
+Lista curta e explícita do que falta. Todo o resto do roadmap (33 itens) está ✅ completo ou ❌ marcado won't-do.
+
+### Fase 5 — Segurança (2 itens externos)
+
+- [ ] **Item 21 — Firestore Security Rules** — requer acesso ao Firebase console. Verificar se as rules atuais garantem que `users/{uid}/data/*` só é acessível pelo próprio usuário autenticado. Testar leitura/escrita não autenticada (deve falhar). Ação manual — o agente não tem acesso ao console.
+
+- [ ] **Item 22 — Decisão sobre criptografia** — decidir se dados de saúde (peso, altura, sexo, histórico) precisam criptografia no Firestore. Para uso pessoal/familiar, provavelmente OK sem. Basta documentar a decisão.
+
+Nada mais está pendente. Se algo novo aparecer (feedback de teste no celular, bugs reportados, novas features pedidas), adicionar aqui como um item novo com versão prevista.
+
+---
+
+## 🚀 v2.1.52 → v2.1.68 — Login page redesign + cadastro próprio (2026-04-13)
+
+**Origem:** iteração sobre a auth screen + novo sistema de cadastro próprio (email/senha) ao invés de só Google login. Reestilização aproximando de mockup minimal flat fornecido pelo usuário.
+
+### Entregas agrupadas por tema
+
+**Cadastro próprio (email/senha)**
+- v2.1.52: nova opção "Entrar com email" usando Firebase Auth Email/Password provider. Form signin/signup com toggle, esqueci-senha, error mapping PT-BR pra 10 códigos do Firebase. Requer enable manual do provider no Firebase console (documentado).
+- v2.1.53: logout agora faz `location.reload()` depois do `signOut` pra resetar todo state em memória — fix do bug "auth screen quebrada pós-logout precisava F5 manual".
+- v2.1.55: `.email-btn` herda visual do `.google-btn` (user pediu menos destaque).
+
+**Redesign da auth screen**
+- v2.1.43: fundo gradiente → branco + shadow forte no auth-card (rebrand DietPLAN + title preto).
+- v2.1.54: consolida features "Com conta" em uma linha só.
+- v2.1.57: **minimal flat design** inspirado em mockup — card transparente (sem shadow), inputs underline-only, tipografia grande centralizada, CTA primário verde sólido pill-shaped.
+- v2.1.63: redução vertical — remove desc, features, h2 "Comece agora" pra caber sem scroll em viewport mobile.
+- v2.1.64: restaura `auth-desc` com margens compactas (user pediu).
+- v2.1.67: aviso "Sem sincronização entre dispositivos e sem backup na nuvem" abaixo do botão "Continuar sem conta".
+
+**Logo da auth screen (icon-login → icon-logo-v2)**
+- v2.1.56: usa `icon-login.png` no lugar de `apple-icon.png` (resize 1024 → 256).
+- v2.1.58-v2.1.60: logo 80 → 120 → 240 → 360px (iterações).
+- v2.1.59: icon-login re-uploadado em 1024, resized pra 720 (retina @3x).
+- v2.1.61-v2.1.62: margem menor logo↔título + crop whitespace interno (PIL bbox detection: arte ocupava só 861×793 dentro do 1024×1024).
+- v2.1.65: **novo arquivo `icon-logo-v2.png`** como novo logo oficial. Crop quadrado 929×929 com 2% padding. Display 320×320.
+- v2.1.66: user atualizou v2, reprocessado com PNG palette 256 (302 KB em 984×984 — 2.7× mais leve que PNG RGB puro).
+
+**Cache fix**
+- v2.1.68: **duplo fix** da fonte desconfigurada em PWA standalone:
+  1. `styles.css?v=2114` congelado desde v2.1.4 → `?v=2168` (força invalidação)
+  2. Service worker agora inclui `.css` na política `no-store` igual HTML/JS (bypassa HTTP cache do navegador que ficava na frente do SW fetch handler).
+
+### Arquivos novos
+- `icon-login.png` (legacy, mantido na raiz pra referência)
+- `icon-login-original.png` (backup do original 1024×1024)
+- `icon-logo-v2.png` (novo logo oficial, 984×984 palette 256)
+- `icon-logo-v2-original.png` (backup do original 1094 KB)
+
+### Tests: 129/129 ✓ (sem testes novos — mudanças são UI/CSS/auth flow)
+
+---
+
 ## 🎯 v2.1.15 → v2.1.51 — Sprint de polimento e roadmap close-out (2026-04-13)
 
 **Objetivo:** fechar as Fases 3, 4 e 5 do roadmap + responder a feedback iterativo do usuário durante teste real no celular.
@@ -541,7 +597,13 @@ v2.0.1:  Katch + rotina 1,375 + 30%         → 1.992 kcal  ← atual
 | 2 | Ativar o onboarding (cálculo dinâmico de macros) | ✅ completa |
 | 3 | UX e interface | ✅ completa (v2.1.47) |
 | 4 | Funcionalidades faltantes | ✅ completa (v2.1.49) |
-| 5 | Acessibilidade e segurança | ⏳ 19-20 ✓, 21-22 pendentes (externos) |
+| 5 | Acessibilidade e segurança | 🔄 19-20 ✓, 21-22 pendentes (externos) |
+| **Extra** | Auth flow + login redesign (pós-roadmap original) | ✅ v2.1.52-v2.1.68 |
+
+**Fora do roadmap original**, mas entregue:
+- Sistema de cadastro próprio via email/senha (v2.1.52)
+- Redesign minimal flat da auth screen (v2.1.57+)
+- 3 formas de uso: Google, email/senha, sem conta (per-device)
 
 ---
 
