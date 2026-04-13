@@ -1603,8 +1603,10 @@ function buildShoppingList() {
   const coxaoG     = toBuy('coxao_mole');
   const alcatraG   = toBuy('alcatra');
   const peruG      = toBuy('peito_peru');
-  const atumLatas  = toBuy('atum_lata');
-  const ovosTotal  = toBuy('ovos');
+  // v2.1.42: contáveis precisam de Math.ceil pra não exibir fração na UI
+  // (após v2.1.34, BREAKFAST_BASELINE × portionScale pode dar valores não-inteiros).
+  const atumLatas  = Math.ceil(toBuy('atum_lata'));
+  const ovosTotal  = Math.ceil(toBuy('ovos'));
   const ovosDuzias = Math.ceil(ovosTotal / 12);
 
   // Arroz: branco e integral são perfeitamente substituíveis no estoque.
@@ -1627,8 +1629,8 @@ function buildShoppingList() {
   const mandiocaG    = toBuy('mandioca');
   const macarraoG    = toBuy('macarrao_integral');
   const gomaTapiocaG = toBuy('goma_tapioca');
-  const tortillasUn  = toBuy('tortilla');
-  const paoFatias    = toBuy('pao_integral');
+  const tortillasUn  = Math.ceil(toBuy('tortilla'));
+  const paoFatias    = Math.ceil(toBuy('pao_integral'));
 
   // Laticínios e cremes
   const mussarelaG = toBuy('mussarela');
