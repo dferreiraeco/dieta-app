@@ -246,8 +246,40 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   flex-shrink: 0; cursor: pointer;
 }
 .check-item.checked .check-label { text-decoration: line-through; opacity: 0.5; }
+/* v2.1.49: item substituído mantém o label riscado mas sem dim (a linha
+   continua destacada enquanto mostra o texto da substituição embaixo) */
+.check-item.substituted .check-label { text-decoration: line-through; opacity: 0.75; }
+.check-item.substituted { background: var(--accent-warm-soft); border-radius: 8px; padding: 10px 8px; }
 .check-label { font-size: 14px; line-height: 1.4; flex: 1; }
 .check-label .qty { font-weight: 600; color: var(--blue); }
+.shop-sub-text {
+  font-size: 11px;
+  color: var(--accent-warm);
+  margin-top: 2px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.check-item.substituted .shop-sub-text { opacity: 1; }
+.shop-sub-btn {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border: none;
+  background: var(--gray-bg);
+  color: var(--ink-medium);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.shop-sub-btn:active { background: var(--gray-light); }
+.check-item.substituted .shop-sub-btn {
+  background: var(--accent-warm);
+  color: #fff;
+}
 .check-section { font-size: 13px; font-weight: 700; color: var(--green); padding: 12px 0 4px;
   text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--green-light); }
 .progress-bar { height: 6px; background: var(--gray-light); border-radius: 3px; margin: 8px 0; overflow: hidden; }

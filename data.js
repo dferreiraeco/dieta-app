@@ -22,6 +22,8 @@ const STORAGE_KEYS = {
   // Compras / Estoque
   homeStock:           'home_stock',
   shopChecks:          'shop_checks',
+  shopSubs:            'shop_subs',         // v2.1.49: substituições ativas (chave → texto livre)
+  shopSubsLog:         'shop_subs_log',     // v2.1.49: histórico append-only de substituições
   genDraft:            'gen_draft',
   // v2.1.31: snapshot do que a última geração contribuiu pro plano. Usado pra
   // re-gerar idempotentemente: subtraímos o lastApplied antes de somar a nova
@@ -56,6 +58,8 @@ const SYNC_KEYS = [
   STORAGE_KEYS.marmitaConsumed,
   STORAGE_KEYS.dinnerConsumed,
   STORAGE_KEYS.shopChecks,
+  STORAGE_KEYS.shopSubs,
+  STORAGE_KEYS.shopSubsLog,
   STORAGE_KEYS.workouts,
   STORAGE_KEYS.cardioLog,
   STORAGE_KEYS.calLog,

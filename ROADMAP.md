@@ -643,34 +643,24 @@ Cada card tem ~200px (composição + macros + botão receita). Usuário rola mui
 
 ## ⏳ Fase 4 — Funcionalidades Faltantes
 
-### Item 15 — Estoque com validade / log de compras
+### Item 15 — Estoque com validade / log de compras ❌ **WON'T DO**
 
-Hoje `home_stock` é snapshot único. Sem noção de quando foi comprado, sem validade.
-
-- [ ] Estrutura: `home_stock[key] = { qty, added_at, expires_at? }`
-- [ ] UI para registrar data de compra opcional
-- [ ] Alerta quando item próximo da validade
+**Decisão (2026-04-13):** não implementar. Validade de alimentos depende de critérios sanitários que variam por embalagem, método de armazenamento, temperatura de geladeira, lote e manuseio após abertura. O app não tem dados nem autoridade pra fazer alertas confiáveis, e um alerta errado pode induzir o usuário a consumir algo vencido ou descartar algo bom. Fora do escopo.
 
 ### Item 16 — Substituições manuais na lista de compras
 
 - [ ] Permitir marcar item como "comprei outro no lugar" com texto livre
 - [ ] Guardar log de substituições para análise futura
 
-### Item 17 — Estatísticas do histórico semanal
+### Item 17 — Estatísticas do histórico semanal ✅ **COMPLETO** (v2.1.48)
 
-`marmita_history` é salvo mas só visualização básica.
+- [x] Gráfico: média de kcal/dia por semana (barras horizontais, últimas 12)
+- [x] Top 3 marmitas + top 3 jantares mais frequentes
+- [x] Desvio vs macros da meta atual (colorido por severidade)
 
-- [ ] Gráfico: média de kcal/semana ao longo do tempo
-- [ ] Marmitas mais frequentes (top 3)
-- [ ] Desvio vs macros da meta
+### Item 18 — Variedade sugerida ao longo do tempo ❌ **WON'T DO**
 
-### Item 18 — Variedade sugerida ao longo do tempo
-
-6 marmitas + 6 jantares = monotonia no longo prazo.
-
-- [ ] Rastrear frequência de cada marmita nas últimas 4 semanas
-- [ ] Sugestão: "Você comeu Frango 8× nas últimas 2 semanas. Que tal variar?"
-- [ ] Seletor de "modo variedade" no gerador: prefere marmitas com menor frequência recente
+**Decisão (2026-04-13):** não implementar. O usuário prefere controlar manualmente o que cozinha — sugestões automáticas podem ser intrusivas e contradizer preferências circunstanciais (ex: "essa semana só tenho tempo pra uma receita"). O gerador de cardápio já permite planejar a semana considerando estoque em casa, que é o caminho de personalização preferido.
 
 ---
 

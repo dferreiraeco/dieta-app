@@ -1437,6 +1437,7 @@ function _internalResetWeek() {
   localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(DEFAULT_PLAN));
   localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(DEFAULT_DINNER_PLAN));
   localStorage.removeItem(STORAGE_KEYS.shopChecks);
+  localStorage.removeItem(STORAGE_KEYS.shopSubs);  // v2.1.49: subs ativas (mas não o log)
   localStorage.removeItem(STORAGE_KEYS.marmitaConsumed);
   localStorage.removeItem(STORAGE_KEYS.dinnerConsumed);
   localStorage.removeItem(STORAGE_KEYS.homeStock);
@@ -1900,6 +1901,7 @@ function renderShoppingList() {
   const container = document.getElementById('shopping-list');
   if (!container) return;
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopChecks) || '{}');
+  const subs  = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopSubs)   || '{}');
   const shopItems = buildShoppingList();
   let html = '', total = 0, checked = 0;
   shopItems.forEach(sec => {
@@ -1907,12 +1909,22 @@ function renderShoppingList() {
     html += `<div class="check-section">${sec.section}</div>`;
     sec.items.forEach(item => {
       const key = sec.section.slice(0,10) + '_' + item.name;
-      const isChecked = saved[key] || false;
+      const subText = subs[key] || '';
+      const hasSub = !!subText;
+      // v2.1.49: item com substituição é automaticamente "checked"
+      const isChecked = hasSub || (saved[key] || false);
       total++;
       if (isChecked) checked++;
-      html += `<div class="check-item ${isChecked ? 'checked' : ''}" onclick="toggleShopRow('${key.replace(/'/g,"\\'")}', this)" style="cursor:pointer">
-        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleShop('${key.replace(/'/g,"\\'")}', this)">
-        <label class="check-label"><span class="qty">${item.qty}</span> ${item.name}</label>
+      const safeKey = key.replace(/'/g,"\\'");
+      const safeName = item.name.replace(/'/g,"\\'").replace(/"/g, '&quot;');
+      const safeQty = (item.qty || '').toString().replace(/'/g,"\\'").replace(/"/g, '&quot;');
+      html += `<div class="check-item ${isChecked ? 'checked' : ''} ${hasSub ? 'substituted' : ''}" onclick="toggleShopRow('${safeKey}', this)" style="cursor:pointer">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleShop('${safeKey}', this)">
+        <label class="check-label">
+          <div><span class="qty">${item.qty}</span> ${item.name}</div>
+          ${hasSub ? `<div class="shop-sub-text">↳ comprei: <i>${subText}</i></div>` : ''}
+        </label>
+        <button class="shop-sub-btn" onclick="event.stopPropagation();openShopSubEditor('${safeKey}','${safeName}','${safeQty}')" aria-label="Registrar substituição">✎</button>
       </div>`;
       if (item.fruitWarning) {
         html += `<div style="background:#fff5f5;border-left:3px solid var(--red);color:var(--red);padding:8px 12px;margin:4px 0 6px;font-size:12px;border-radius:6px">
@@ -1948,6 +1960,42 @@ function toggleShopRow(key, row) {
   const cb = row.querySelector('input[type="checkbox"]');
   cb.checked = !cb.checked;
   toggleShop(key, cb);
+}
+
+// v2.1.49: substituições manuais na lista de compras (item 16 roadmap)
+//
+// Fluxo: usuário clica ✎ numa linha → prompt opens → digita o que comprou
+// no lugar → salva em STORAGE_KEYS.shopSubs (ativo) + append no shopSubsLog
+// (histórico). Item com substituição fica automaticamente "checked" e
+// exibe "↳ comprei: <texto>" em itálico.
+//
+// Vazio/cancelar = remove a substituição (desmarca o item também).
+async function openShopSubEditor(key, name, qty) {
+  const subs = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopSubs) || '{}');
+  const current = subs[key] || '';
+  const label = `${qty} ${name}`;
+  // window.prompt é simples e funcional; modal custom seria overkill pra uma entrada de texto.
+  const answer = window.prompt(
+    `Comprei outro no lugar de:\n${label}\n\nO que você comprou?`,
+    current
+  );
+  if (answer === null) return; // cancelou
+  const text = answer.trim();
+  if (text) {
+    subs[key] = text;
+    // Append no log (append-only)
+    const log = JSON.parse(localStorage.getItem(STORAGE_KEYS.shopSubsLog) || '[]');
+    log.push({
+      date: new Date().toISOString(),
+      item: label,
+      sub: text,
+    });
+    localStorage.setItem(STORAGE_KEYS.shopSubsLog, JSON.stringify(log));
+  } else {
+    delete subs[key]; // texto vazio remove a substituição
+  }
+  localStorage.setItem(STORAGE_KEYS.shopSubs, JSON.stringify(subs));
+  renderShoppingList();
 }
 
 function exportShoppingPDF() {
@@ -2117,7 +2165,11 @@ function updateProgress(type, checked, total) {
 async function resetChecklist(type) {
   if (!await customConfirm('Limpar todos os itens marcados?', { okLabel: 'Limpar', danger: true })) return;
   localStorage.removeItem(type + '_checks');
-  if (type === 'shop') renderShoppingList();
+  if (type === 'shop') {
+    // v2.1.49: limpa também as substituições ativas, mas preserva o log histórico
+    localStorage.removeItem(STORAGE_KEYS.shopSubs);
+    renderShoppingList();
+  }
 }
 
 // ============================================================
