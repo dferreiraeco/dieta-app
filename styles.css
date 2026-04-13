@@ -860,8 +860,12 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   letter-spacing: -0.5px;
 }
 .auth-screen .auth-subtitle {
-  font-size: 13px; color: var(--ink-medium); margin-bottom: 14px;
+  font-size: 13px; color: var(--ink-medium); margin-bottom: 6px;
   font-weight: 500;
+}
+.auth-screen .auth-desc {
+  font-size: 12px; color: var(--ink-soft-text); margin-bottom: 16px;
+  max-width: 300px; line-height: 1.45;
 }
 /* v2.1.57: auth-card é agora um container transparente, sem border/shadow.
    Tudo flat sobre o fundo branco da auth-screen. */
