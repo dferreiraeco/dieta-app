@@ -421,7 +421,8 @@ const INGREDIENTS = {
   sobrecoxa:         { label: 'Sobrecoxa sem pele',                  unit: 'g',     role: 'protein' },
   coxao_mole:        { label: 'Coxão mole',                          unit: 'g',     role: 'protein' },
   // Proteínas — jantares
-  atum_lata:         { label: 'Atum em lata',                        unit: 'lata',  role: 'protein' },
+  atum_lata:         { label: 'Atum em lata',                        unit: 'lata',  role: 'protein',
+                       grams_per_un: 120 }, // ~120g drenado por lata padrão
   alcatra:           { label: 'Carne bovina (bife ou pedaços; crua)', unit: 'g',    role: 'protein' },
   peito_peru:        { label: 'Peito de peru defumado',              unit: 'g',     role: 'protein' },
   ovos:              { label: 'Ovos',                                unit: 'un',    role: 'protein-share',
@@ -437,7 +438,8 @@ const INGREDIENTS = {
   mandioca:          { label: 'Mandioca (crua)',                     unit: 'g',     role: 'carb' },
   macarrao_integral: { label: 'Macarrão integral (cru)',             unit: 'g',     role: 'carb' },
   goma_tapioca:      { label: 'Goma de tapioca',                     unit: 'g',     role: 'carb' },
-  tortilla:          { label: 'Tortilla integral',                   unit: 'un',    role: 'carb' },
+  tortilla:          { label: 'Tortilla integral',                   unit: 'un',    role: 'carb',
+                       grams_per_un: 40 }, // ~40g por tortilla integral
   pao_integral:      { label: 'Pão integral',                        unit: 'fatias',role: 'carb',
                        per100g: { kcal: 253, p: 9.0,  c: 43.0, g: 3.4 }, grams_per_un: 25 },
   // Queijos e cremes
@@ -586,26 +588,63 @@ function computePortionScale(goalsKcal) {
   return goalsKcal / DEFAULT_GOALS.kcal;
 }
 
-// v2.1.34: helper compartilhado que retorna uma cópia escalada de um def
+// v2.1.34/35: helper compartilhado que retorna uma cópia escalada de um def
 // de marmita ou jantar. Aplica o portion scale (target / 2000) em:
-//   - kcal/p/c/g (round simples)
-//   - ingredients[k] (gramas, arredondado pra múltiplo de 5g, mín 5g)
-//   - recipe.aromatics[k] (linear, sem rounding — computeAromatics arredonda)
-//   - cooked string (regex \d+g → escala + arredondamento)
-// recipe.items (texto das instruções) NÃO é escalado — fica como receita-base.
+//
+//   ingredients[k]: rounding depende do unit do ingrediente em INGREDIENTS:
+//     - unit === 'g' (ou ausente): FLOOR pra múltiplo de 10g, mín 10g.
+//       Ex: 145g → 140g, 193g → 190g.
+//     - countable (lata, un, fatias, scoop): round pra inteiro mais próximo,
+//       mín 1. Ex: 2.83 fatias → 3, 1.4 latas → 1.
+//
+//   kcal/p/c/g: derivados via loss factor uniforme. O loss factor é a razão
+//     (gramas_equivalentes_rounded / gramas_equivalentes_target) somando
+//     TODOS os ingredientes (countables convertidos via grams_per_un do
+//     catálogo). Esse approximation mantém consistência "macros derivados
+//     do que está realmente no prato" sem precisar de per100g pra cada
+//     ingrediente. lossFactor pode ser >1 (countables que arredondam pra
+//     cima compensam grams que arredondam pra baixo, ex: jantar de atum).
+//
+//   recipe.aromatics[k]: linear, sem rounding (computeAromatics arredonda).
+//   cooked string: regex \d+g → escala + floor-to-10.
+//   recipe.items (texto das instruções): NÃO é escalado — fica receita-base.
 function scaleMealDef(def, scale) {
   if (!def || scale === 1) return def;
   const scaled = { ...def };
-  scaled.kcal = Math.round(def.kcal * scale);
-  scaled.p    = Math.round(def.p    * scale);
-  scaled.c    = Math.round(def.c    * scale);
-  scaled.g    = Math.round(def.g    * scale);
+
+  let lossFactor = 1;
   if (def.ingredients) {
     scaled.ingredients = {};
+    let sumTargetG = 0, sumRoundedG = 0;
     Object.entries(def.ingredients).forEach(([k, v]) => {
-      scaled.ingredients[k] = Math.max(5, Math.round((v * scale) / 5) * 5);
+      const meta = INGREDIENTS[k] || {};
+      const isCountable = meta.unit && meta.unit !== 'g';
+      const target = v * scale;
+      let rounded, targetGrams, roundedGrams;
+      if (isCountable) {
+        rounded = Math.max(1, Math.round(target));
+        // Pra loss factor: converte pra grams equivalentes via grams_per_un.
+        // Sem grams_per_un, fallback usa 1 (tratamento neutro — não distorce).
+        const gpu = meta.grams_per_un || 1;
+        targetGrams  = target  * gpu;
+        roundedGrams = rounded * gpu;
+      } else {
+        rounded = Math.max(10, Math.floor(target / 10) * 10);
+        targetGrams  = target;
+        roundedGrams = rounded;
+      }
+      scaled.ingredients[k] = rounded;
+      sumTargetG  += targetGrams;
+      sumRoundedG += roundedGrams;
     });
+    if (sumTargetG > 0) lossFactor = sumRoundedG / sumTargetG;
   }
+
+  scaled.kcal = Math.round(def.kcal * scale * lossFactor);
+  scaled.p    = Math.round(def.p    * scale * lossFactor);
+  scaled.c    = Math.round(def.c    * scale * lossFactor);
+  scaled.g    = Math.round(def.g    * scale * lossFactor);
+
   if (def.recipe) {
     scaled.recipe = { ...def.recipe };
     if (def.recipe.aromatics) {
@@ -617,7 +656,7 @@ function scaleMealDef(def, scale) {
   }
   if (def.cooked) {
     scaled.cooked = def.cooked.replace(/(\d+)\s*g\b/g, (m, num) => {
-      const sg = Math.max(5, Math.round((parseInt(num, 10) * scale) / 5) * 5);
+      const sg = Math.max(10, Math.floor((parseInt(num, 10) * scale) / 10) * 10);
       return `${sg}g`;
     });
   }

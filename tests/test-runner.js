@@ -179,6 +179,7 @@ function loadApp(htmlPath) {
   renderMealFoodsText,
   renderIngredientLine,
   computePortionScale,
+  scaleMealDef,
 };`;
 
   const sandbox = createSandbox();
