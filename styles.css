@@ -1035,6 +1035,14 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   transition: all 0.2s;
 }
 .skip-btn:active { background: var(--gray-bg); }
+.skip-warning {
+  font-size: 11px;
+  color: var(--ink-soft-text);
+  margin-top: 6px;
+  text-align: center;
+  line-height: 1.4;
+  font-style: italic;
+}
 .auth-features {
   margin-top: 24px; text-align: left; padding: 0 4px;
 }
