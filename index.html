@@ -41,11 +41,9 @@
   <div class="auth-logo" style="background:none"><img src="icon-login.png?v=4" alt="DietPLAN"></div>
   <h1>DietPLAN</h1>
   <p class="auth-subtitle">Dieta + Treino + Marmitas</p>
-  <p class="auth-desc">Controle seu plano alimentar, planeje marmitas, registre treinos e acompanhe sua evolução</p>
   <div class="auth-card">
     <!-- v2.1.52: main view com 3 opções de login -->
     <div id="auth-main">
-      <h2>Comece agora</h2>
       <button class="google-btn" onclick="googleLogin()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
         Entrar com Google
@@ -56,16 +54,6 @@
       </button>
       <div class="auth-divider">ou</div>
       <button class="skip-btn" onclick="skipLogin()">Continuar sem conta</button>
-      <div class="auth-features">
-        <div class="auth-feat">
-          <div class="auth-feat-icon">&#10003;</div>
-          <span><b>Com conta:</b> dados sincronizados entre dispositivos e backup automático na nuvem</span>
-        </div>
-        <div class="auth-feat">
-          <div class="auth-feat-icon">&#8226;</div>
-          <span><b>Sem conta:</b> dados salvos apenas neste dispositivo</span>
-        </div>
-      </div>
     </div>
 
     <!-- v2.1.52: email/password form (signup ou signin, alterna via toggleAuthMode) -->

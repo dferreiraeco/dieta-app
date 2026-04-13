@@ -836,10 +836,10 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   background: var(--red-light); color: var(--red); border-radius: 10px;
   font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; text-align: center;
 }
-/* ---- AUTH (v2.1.57: minimal flat design — sem card, inputs underline) ---- */
+/* ---- AUTH (v2.1.63: compact vertical — sem desc/features, margens enxutas) ---- */
 .auth-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: fixed; inset: 0; padding: 32px 24px; text-align: center; z-index: 300;
+  position: fixed; inset: 0; padding: 16px 24px; text-align: center; z-index: 300;
   background: var(--surface);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
@@ -847,7 +847,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   width: 360px; height: 360px; border-radius: 84px;
   max-width: 80vw; max-height: 80vw;
   display: flex; align-items: center; justify-content: center; font-size: 40px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 .auth-logo img {
   width: 100% !important;
@@ -855,17 +855,13 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   border-radius: 84px;
 }
 .auth-screen h1 {
-  font-size: 32px; margin-bottom: 8px; font-weight: 900;
+  font-size: 28px; margin-bottom: 2px; font-weight: 900;
   color: var(--ink-strong);
   letter-spacing: -0.5px;
 }
 .auth-screen .auth-subtitle {
-  font-size: 14px; color: var(--ink-medium); margin-bottom: 6px;
+  font-size: 13px; color: var(--ink-medium); margin-bottom: 14px;
   font-weight: 500;
-}
-.auth-screen .auth-desc {
-  font-size: 13px; color: var(--ink-soft-text); margin-bottom: 36px;
-  max-width: 300px; line-height: 1.5;
 }
 /* v2.1.57: auth-card é agora um container transparente, sem border/shadow.
    Tudo flat sobre o fundo branco da auth-screen. */
