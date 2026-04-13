@@ -31,7 +31,9 @@ ROOT = SCRIPT_DIR.parent
 IMAGES_DIR = ROOT / 'images'
 BACKUP_DIR = IMAGES_DIR / '.originals'
 
-TARGET_SIZE = 512          # pixels lado (512 é 6,4× DPR pro círculo de 80px)
+TARGET_SIZE = 320          # pixels lado (v2.1.28: 4× DPR pro círculo de 80px,
+                           # rebaixado de 512 pra economizar bytes; JPG q85 ~30KB)
+JPG_QUALITY = 85           # qualidade do JPG final
 ALPHA_THRESHOLD = 220      # alpha >= 220 é "bem opaco"
 RGB_DIFF_THRESHOLD = 70    # diff grayscale vs cor de fundo > 70 = "conteúdo"
                             # (alto o bastante pra descartar ruído do fundo)
@@ -256,20 +258,21 @@ def process_one(png_path):
     # Resize final
     resized = cropped.resize((TARGET_SIZE, TARGET_SIZE), Image.LANCZOS)
 
-    # Se tem alpha útil (transparência dentro do bowl), mantém PNG.
-    # Senão, flatten pra RGB e salva como PNG sem alpha (menor).
-    alpha_min = min(resized.split()[-1].getextrema())
-    has_transparency = alpha_min < 255
-    if has_transparency:
-        # Mantém RGBA. Otimiza.
-        resized.save(png_path, 'PNG', optimize=True)
-    else:
-        # Sem transparência útil → flatten pra RGB + save otimizado
-        rgb = resized.convert('RGB')
-        rgb.save(png_path, 'PNG', optimize=True)
+    # v2.1.28: sempre flatten pra RGB sobre fundo BRANCO e salva como JPG q85.
+    # Antes salvávamos PNG (~550 KB cada). Agora JPG (~30 KB cada) — 18× menor.
+    # Funciona porque os cards têm fundo branco (var(--surface) = #FFFFFF), então
+    # a transparência do bowl flatten-ada pra branco é visualmente idêntica.
+    bg = Image.new('RGB', resized.size, (255, 255, 255))
+    bg.paste(resized, mask=resized.split()[3])
+    jpg_path = png_path.with_suffix('.jpg')
+    bg.save(jpg_path, 'JPEG', quality=JPG_QUALITY, optimize=True, progressive=True)
 
-    new_size_kb = png_path.stat().st_size // 1024
-    print(f'  saved: {TARGET_SIZE}×{TARGET_SIZE} PNG ({new_size_kb} KB)')
+    # Remove o PNG original (output é JPG)
+    if png_path.exists() and png_path != jpg_path:
+        png_path.unlink()
+
+    new_size_kb = jpg_path.stat().st_size // 1024
+    print(f'  saved: {TARGET_SIZE}×{TARGET_SIZE} JPG ({new_size_kb} KB) → {jpg_path.name}')
 
 
 def main():

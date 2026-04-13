@@ -1043,7 +1043,7 @@ function renderMarmitaSelector() {
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
     const iconHtml = m.image
-      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${getMarmitaTypeName(m.id)}"></div>`
+      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${getMarmitaTypeName(m.id)}" loading="lazy"></div>`
       : `<div class="msel-icon">${m.id}</div>`;
     html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
       onclick="selectTodayMarmita('${m.id}')">
@@ -1159,7 +1159,7 @@ function renderDinnerSelector() {
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
     const iconHtml = m.image
-      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${m.name}"></div>`
+      ? `<div class="msel-icon has-image"><img src="images/${m.image}" alt="${m.name}" loading="lazy"></div>`
       : `<div class="msel-icon" style="background:var(--purple-light);color:var(--purple)">${m.id}</div>`;
     html += `<div class="msel-option ${disabled ? 'disabled' : ''}"
       onclick="selectTodayDinner('${m.id}')">
