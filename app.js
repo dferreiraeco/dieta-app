@@ -3722,13 +3722,13 @@ function renderUserBar() {
 
   // v2.1.0: layout compacto com avatar + 2 linhas + botões de ícone
   const fmt = n => (n != null ? n.toString().replace('.', ',') : '');
-  let avatar = '?';
+  let avatarLetter = '?';
   let line1 = '';
   let line2 = '';
   if (profile) {
     const nome = (profile.nome || '').trim();
     const sobrenome = (profile.sobrenome || '').trim();
-    avatar = (nome[0] || sobrenome[0] || '?').toUpperCase();
+    avatarLetter = (nome[0] || sobrenome[0] || '?').toUpperCase();
     const idade = calculateAge(profile.data_nascimento);
     line1 = [nome, sobrenome].filter(Boolean).join(' ') || (currentUser ? currentUser.displayName : '');
     const bits = [];
@@ -3741,16 +3741,23 @@ function renderUserBar() {
     line2 = bits.join(' · ');
   } else if (currentUser) {
     const display = currentUser.displayName || currentUser.email || '';
-    avatar = (display[0] || '?').toUpperCase();
+    avatarLetter = (display[0] || '?').toUpperCase();
     line1 = display;
   }
+
+  // v2.1.26: se logado com Google e tem photoURL, usa a foto. Senão letra.
+  // onerror cai no fallback letra (caso o link da foto quebre).
+  const photoURL = currentUser && currentUser.photoURL;
+  const avatarHtml = photoURL
+    ? `<img src="${photoURL}" alt="${avatarLetter}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${avatarLetter}'">`
+    : avatarLetter;
 
   // v2.1.2: clicar no avatar/info abre o profile-view modal (bottom-sheet).
   // O botão "Sair" fica isolado e usa stopPropagation pra não disparar o view.
   const clickableOpen = profile ? 'onclick="openProfileView()"' : '';
   userBar.innerHTML = `
     <div class="user-bar-main" ${clickableOpen}>
-      <div class="user-avatar">${avatar}</div>
+      <div class="user-avatar">${avatarHtml}</div>
       <div class="user-info">
         <span class="line1">${line1}</span>
         ${line2 ? `<span class="line2">${line2}</span>` : ''}
