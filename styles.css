@@ -1141,15 +1141,19 @@ body {
 .user-bar .edit-btn svg, .user-bar .logout-btn svg { width: 16px; height: 16px; }
 
 /* ---- Profile view modal (v2.1.2) ---- */
-.profile-view-modal { max-width: 520px; }
+/* v2.1.41: profile-view-modal usa .modal-wrap pro close-x ficar fora do
+   card (igual aos outros modais). Override pra manter max-width 520px
+   já que o .modal-wrap default é 600px. */
+.modal-overlay .modal-wrap .modal.profile-view-modal { max-width: 520px; }
 
 /* v2.1.4: animação slide-up (bottom sheet). Backdrop faz fade-in suave,
-   modal sobe de baixo pra cima. Curva cubic-bezier(0.16, 1, 0.3, 1) =
-   "ease-out-expo" — decelera rápido no final, sensação iOS/Material. */
+   wrap inteiro (close-x + modal) sobe de baixo pra cima. Curva
+   cubic-bezier(0.16, 1, 0.3, 1) = "ease-out-expo" — decelera rápido
+   no final, sensação iOS/Material. */
 #profile-view-modal.open {
   animation: overlayFadeIn 0.25s ease-out;
 }
-#profile-view-modal.open .modal {
+#profile-view-modal.open .modal-wrap {
   animation: sheetSlideUp 0.36s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
@@ -1164,7 +1168,7 @@ body {
 /* Respeita usuários com prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   #profile-view-modal.open,
-  #profile-view-modal.open .modal {
+  #profile-view-modal.open .modal-wrap {
     animation: none;
   }
 }

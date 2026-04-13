@@ -402,11 +402,13 @@
 
 <!-- ==================== PROFILE VIEW MODAL (v2.1.2) — bottom sheet ==================== -->
 <div class="modal-overlay" id="profile-view-modal" style="z-index:240">
-  <div class="modal profile-view-modal">
-    <button class="ob-close-btn" onclick="closeProfileView()" aria-label="Fechar" style="display:flex">×</button>
-    <h2 style="margin-bottom:14px">Seu Perfil</h2>
-    <div id="profile-view-content"></div>
-    <button class="save-btn" style="margin-top:18px" onclick="closeProfileView();openEditProfile()">Editar Perfil</button>
+  <div class="modal-wrap">
+    <button class="close-x" onclick="closeProfileView()" aria-label="Fechar">&times;</button>
+    <div class="modal profile-view-modal">
+      <h2 style="margin-bottom:14px">Seu Perfil</h2>
+      <div id="profile-view-content"></div>
+      <button class="save-btn" style="margin-top:18px" onclick="closeProfileView();openEditProfile()">Editar Perfil</button>
+    </div>
   </div>
 </div>
 
