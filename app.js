@@ -3172,16 +3172,25 @@ function setGenerateButtonState(generated) {
 async function applyGeneratedMenu() {
   if (!window._genMarmitaResult && !window._genDinnerResult) return;
   if (!await customConfirm(
-    'O Gerador de Cardápio é apenas uma sugestão. Confira a seleção antes de aplicar — você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nO planejamento de marmitas e jantares será substituído pelas quantidades calculadas, e as quantidades informadas serão salvas como "estoque em casa".',
+    'O Gerador de Cardápio é apenas uma sugestão. Confira a seleção antes de aplicar — você pode ajustar quantidades manualmente na aba Marmitas depois.\n\nAs quantidades sugeridas serão SOMADAS ao seu planejamento atual (marmitas e jantares já adicionados manualmente são preservados). As quantidades informadas serão salvas como "estoque em casa".',
     { title: 'Aplicar cardápio gerado?', okLabel: 'Aplicar' }
   )) return;
 
-  const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-  Object.assign(newMarmitaPlan, window._genMarmitaResult || {});
+  // v2.1.29: somar ao planejamento existente em vez de sobrescrever.
+  // Antes: o gerador apagava marmitas/jantares já adicionados manualmente.
+  // Agora: as quantidades geradas são adicionadas às atuais.
+  const currentMarmitaPlan = getMarmitaPlan();
+  const newMarmitaPlan = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, ...currentMarmitaPlan };
+  Object.entries(window._genMarmitaResult || {}).forEach(([id, qty]) => {
+    newMarmitaPlan[id] = (newMarmitaPlan[id] || 0) + (qty || 0);
+  });
   localStorage.setItem(STORAGE_KEYS.marmitaPlan, JSON.stringify(newMarmitaPlan));
 
-  const newDinnerPlan = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0 };
-  Object.assign(newDinnerPlan, window._genDinnerResult || {});
+  const currentDinnerPlan = getDinnerPlan();
+  const newDinnerPlan = { O: 0, T: 0, C: 0, A: 0, S: 0, W: 0, ...currentDinnerPlan };
+  Object.entries(window._genDinnerResult || {}).forEach(([id, qty]) => {
+    newDinnerPlan[id] = (newDinnerPlan[id] || 0) + (qty || 0);
+  });
   localStorage.setItem(STORAGE_KEYS.dinnerPlan, JSON.stringify(newDinnerPlan));
 
   localStorage.setItem(STORAGE_KEYS.homeStock, JSON.stringify(window._genStock || {}));
