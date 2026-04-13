@@ -238,6 +238,22 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   overflow-y: auto;
 }
 .modal h2 { font-size: 18px; color: var(--blue); margin-bottom: 14px; }
+/* ---- ONBOARDING FORM ---- */
+.ob-field { margin-bottom: 12px; }
+.ob-field label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--blue);
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;
+}
+.ob-field input, .ob-field select {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light);
+  border-radius: 10px; font-size: 15px; background: #fff; color: var(--gray);
+  -webkit-appearance: none; appearance: none;
+}
+.ob-field input:focus, .ob-field select:focus {
+  outline: none; border-color: var(--green);
+}
+.ob-row { display: flex; gap: 10px; }
+.ob-row .ob-field { flex: 1; }
 .modal .close-btn {
   float: right; background: none; border: none; font-size: 24px;
   color: var(--gray-mid); cursor: pointer; padding: 0 4px;
@@ -538,6 +554,72 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 <div id="app-container" style="display:none">
 <div id="user-bar" class="user-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99"></div>
 
+<!-- ==================== ONBOARDING MODAL (first login) ==================== -->
+<div id="onboarding-modal" class="modal-overlay" style="z-index:300;align-items:center">
+  <div class="modal" style="max-width:480px;border-radius:20px;max-height:92vh">
+    <h2 style="margin-bottom:6px">Bem-vindo!</h2>
+    <p style="font-size:13px;color:var(--gray-mid);margin-bottom:18px;line-height:1.5">
+      Para personalizar sua dieta, precisamos de algumas informações iniciais. Você só preenche uma vez — os dados ficam salvos na sua conta.
+    </p>
+
+    <div class="ob-row">
+      <div class="ob-field">
+        <label>Nome</label>
+        <input type="text" id="ob-nome" placeholder="João" autocomplete="given-name">
+      </div>
+      <div class="ob-field">
+        <label>Sobrenome</label>
+        <input type="text" id="ob-sobrenome" placeholder="Silva" autocomplete="family-name">
+      </div>
+    </div>
+
+    <div class="ob-row">
+      <div class="ob-field">
+        <label>Sexo</label>
+        <select id="ob-sexo">
+          <option value="">Selecione...</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+          <option value="O">Outro / Prefiro não dizer</option>
+        </select>
+      </div>
+      <div class="ob-field">
+        <label>Data de nascimento</label>
+        <input type="date" id="ob-nascimento">
+      </div>
+    </div>
+
+    <div class="ob-row">
+      <div class="ob-field">
+        <label>Peso atual (kg)</label>
+        <input type="number" id="ob-peso" inputmode="decimal" step="0.1" placeholder="80.0">
+      </div>
+      <div class="ob-field">
+        <label>Altura (cm)</label>
+        <input type="number" id="ob-altura" inputmode="numeric" placeholder="175">
+      </div>
+    </div>
+
+    <div class="ob-field">
+      <label>Meta de peso (kg)</label>
+      <input type="number" id="ob-meta" inputmode="decimal" step="0.1" placeholder="75.0">
+    </div>
+
+    <div class="ob-field">
+      <label>Nível de atividade física</label>
+      <select id="ob-atividade">
+        <option value="">Selecione...</option>
+        <option value="sedentario">Sedentário (sem exercício regular)</option>
+        <option value="sedentario_leve">Sedentário + atividade leve (1-2x/semana)</option>
+        <option value="moderado">Atividade moderada (3-5x/semana)</option>
+        <option value="alto">Atividade alta (6-7x/semana ou trabalho físico)</option>
+      </select>
+    </div>
+
+    <button class="save-btn" onclick="submitOnboarding()" style="margin-top:14px">Salvar e Continuar</button>
+  </div>
+</div>
+
 <!-- ==================== TAB: MARMITAS (PLANNER) ==================== -->
 <div id="page-marmitas" class="page active">
   <div class="page-header" style="background:var(--green);">
@@ -583,7 +665,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 <div id="page-dieta" class="page">
   <div class="page-header">
     <h1>Dieta de Recomposição Corporal</h1>
-    <p>Diego Ferreira | 118.3 kg | Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
+    <p>Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
   </div>
 
   <!-- Daily macro tracker -->
@@ -809,12 +891,49 @@ const FIXED_MEALS = [
 ];
 
 function getMeals() {
+  // Monta o texto da salada. Para refeições com saladEmbedded (ex: sanduíche, wrap),
+  // mostra nota de que folhas/pepino já estão inclusos. Para as demais, calcula a média
+  // de alface/pepino a partir de ingredients.
+  function buildSaladText(defs, selections, defaults) {
+    if (selections.length === 0) {
+      return `<br><b>+ Salada:</b> ~${defaults.alface}g folhas (alface + rúcula) + ~${defaults.pepino}g pepino fatiado + ${defaults.azeite}ml azeite de oliva`;
+    }
+    const sideSel = [];
+    const embeddedDefs = [];
+    selections.forEach(type => {
+      const def = defs.find(x => x.id === type);
+      if (!def) return;
+      if (def.saladEmbedded) {
+        if (!embeddedDefs.find(d => d.id === def.id)) embeddedDefs.push(def);
+      } else {
+        sideSel.push(def);
+      }
+    });
+
+    let html = '';
+    if (sideSel.length > 0) {
+      let totalAlface = 0, totalPepino = 0;
+      sideSel.forEach(def => {
+        totalAlface += (def.ingredients && def.ingredients.alface) || defaults.alface;
+        totalPepino += (def.ingredients && def.ingredients.pepino) || defaults.pepino;
+      });
+      const n = sideSel.length;
+      html += `<br><b>+ Salada:</b> ~${Math.round(totalAlface/n)}g folhas (alface + rúcula) + ~${Math.round(totalPepino/n)}g pepino fatiado + ${defaults.azeite}ml azeite de oliva`;
+    }
+    if (embeddedDefs.length > 0) {
+      const names = embeddedDefs.map(d => d.name).join(' / ');
+      html += `<br><i style="color:var(--gray-mid);font-size:11px">Folhas e pepino já inclusos no ${names}</i>`;
+    }
+    return html;
+  }
+
   // Build lunch (marmita)
   const selections = getTodaySelections();
+  const lunchSalad = buildSaladText(MARMITA_DEFS, selections, { alface: 50, pepino: 80, azeite: 5 });
   let lunch;
   if (selections.length === 0) {
     lunch = { id: 'almoco', time: '13h', name: 'Almoço (Marmita)',
-        desc: 'Selecione acima', foods: 'Escolha a marmita do dia no card acima',
+        desc: 'Selecione acima', foods: 'Escolha a marmita do dia no card acima' + lunchSalad,
         kcal: 0, p: 0, c: 0, g: 0, color: 'var(--green)' };
   } else {
     let kcal = 0, p = 0, c = 0, g = 0;
@@ -829,17 +948,18 @@ function getMeals() {
     });
     const n = selections.length;
     lunch = { id: 'almoco', time: '13h', name: 'Almoço (' + names.join(' + ') + ')',
-        desc: 'Média por pessoa', foods: names.join(' + '),
+        desc: 'Média por pessoa', foods: names.join(' + ') + lunchSalad,
         kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
         color: 'var(--green)' };
   }
 
   // Build dinner
   const dSel = getTodayDinnerSelections();
+  const dinnerSalad = buildSaladText(DINNER_DEFS, dSel, { alface: 40, pepino: 60, azeite: 5 });
   let dinner;
   if (dSel.length === 0) {
     dinner = { id: 'jantar', time: '20h', name: 'Jantar',
-        desc: 'Selecione acima', foods: 'Escolha o jantar do dia no card acima',
+        desc: 'Selecione acima', foods: 'Escolha o jantar do dia no card acima' + dinnerSalad,
         kcal: 0, p: 0, c: 0, g: 0, color: 'var(--purple)' };
   } else {
     let kcal = 0, p = 0, c = 0, g = 0;
@@ -854,7 +974,7 @@ function getMeals() {
     });
     const n = dSel.length;
     dinner = { id: 'jantar', time: '20h', name: 'Jantar (' + names.join(' + ') + ')',
-        desc: 'Média por pessoa', foods: names.join(' + '),
+        desc: 'Média por pessoa', foods: names.join(' + ') + dinnerSalad,
         kcal: Math.round(kcal/n), p: Math.round(p/n), c: Math.round(c/n), g: Math.round(g/n),
         color: 'var(--purple)' };
   }
@@ -1077,7 +1197,7 @@ const DINNER_DEFS = [
   { id: 'O', name: 'Omelete Reforçada',
     desc: 'Omelete de peru ao queijo e ervas + torrada',
     kcal: 470, p: 37, c: 28, g: 23,
-    ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_fatias: 2 },
+    ingredients: { ovos: 3, peito_peru: 50, mussarela: 20, pao_fatias: 2, alface: 40, pepino: 60 },
     cooked: '3 ovos inteiros (~150g) | 50g peito de peru | 1 fatia mussarela (20g) | 2 fatias pão integral (~50g) | 5ml azeite',
     recipe: {
       title: 'Omelete de Peru ao Queijo e Ervas + Torrada com Alho',
@@ -1098,7 +1218,7 @@ const DINNER_DEFS = [
   { id: 'T', name: 'Tapioca de Frango',
     desc: 'Tapioca recheada com frango cremoso',
     kcal: 460, p: 42, c: 39, g: 11,
-    ingredients: { goma_tapioca: 50, frango_cru: 175, cottage: 30 },
+    ingredients: { goma_tapioca: 50, frango_cru: 175, cottage: 30, alface: 40, pepino: 60 },
     cooked: '50g goma de tapioca | 130g frango desfiado cozido | 30g queijo cottage | Salada de folhas + pepino',
     recipe: {
       title: 'Tapioca Cremosa de Frango com Alho e Ervas',
@@ -1120,7 +1240,7 @@ const DINNER_DEFS = [
   { id: 'C', name: 'Carne com Arroz',
     desc: 'Alcatra grelhada ao alho + arroz perfumado',
     kcal: 480, p: 36, c: 30, g: 20,
-    ingredients: { alcatra_cru: 175, arroz_branco: 40 },
+    ingredients: { alcatra_cru: 175, arroz_branco: 40, alface: 40, pepino: 60 },
     cooked: '130g alcatra grelhada | 100g arroz branco cozido | Salada de folhas + pepino | 5ml azeite',
     recipe: {
       title: 'Alcatra Grelhada ao Alho com Arroz Perfumado',
@@ -1141,7 +1261,7 @@ const DINNER_DEFS = [
   { id: 'A', name: 'Atum com Ovos',
     desc: 'Atum com ovos cozidos + torrada',
     kcal: 470, p: 51, c: 23, g: 17,
-    ingredients: { atum_lata: 120, ovos: 2, pao_fatias: 2, requeijao: 15 },
+    ingredients: { atum_lata: 120, ovos: 2, pao_fatias: 2, requeijao: 15, alface: 40, pepino: 60 },
     cooked: '120g atum em água drenado (1 lata) | 2 ovos cozidos (~100g) | 2 fatias pão integral (~50g) | 15g requeijão cremoso | Folhas + pepino',
     recipe: {
       title: 'Atum com Ovos Cozidos e Torradas (prático e rápido)',
@@ -1163,7 +1283,8 @@ const DINNER_DEFS = [
   { id: 'S', name: 'Sanduíche Natural de Frango',
     desc: 'Pão integral + frango desfiado + queijo',
     kcal: 450, p: 45, c: 33, g: 13,
-    ingredients: { frango_cru: 134, pao_fatias: 3, queijo_minas: 20, requeijao: 15 },
+    saladEmbedded: true,
+    ingredients: { frango_cru: 134, pao_fatias: 3, queijo_minas: 20, requeijao: 15, alface: 40, pepino: 60 },
     cooked: '100g frango desfiado cozido | 3 fatias pão integral (~75g) | 20g queijo minas frescal | 15g requeijão cremoso | Folhas + pepino',
     recipe: {
       title: 'Sanduíche Natural Cremoso de Frango',
@@ -1185,7 +1306,8 @@ const DINNER_DEFS = [
   { id: 'W', name: 'Wrap de Frango',
     desc: 'Tortilla integral + frango cremoso + queijo',
     kcal: 475, p: 44, c: 38, g: 12,
-    ingredients: { frango_cru: 134, tortilla: 80, cottage: 30, queijo_minas: 20 },
+    saladEmbedded: true,
+    ingredients: { frango_cru: 134, tortilla: 80, cottage: 30, queijo_minas: 20, alface: 40, pepino: 60 },
     cooked: '2 tortillas integrais (~80g) | 100g frango desfiado cozido | 30g queijo cottage | 20g queijo minas frescal | Folhas + pepino',
     recipe: {
       title: 'Wrap Cremoso de Frango ao Limão',
@@ -1248,8 +1370,9 @@ function updateWeekLabel() {
 }
 
 function renderMarmitaPlanner() {
-  const plan = getMarmitaPlan();
   const container = document.getElementById('planner-cards');
+  if (!container) return;
+  const plan = getMarmitaPlan();
   let html = '';
 
   // Show only marmitas that the user has added (qty > 0)
@@ -1330,7 +1453,7 @@ function showMarmitaRecipe(id) {
   if (!m || !m.recipe) return;
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
-  document.getElementById('history-title').textContent = 'Receita - ' + m.name;
+  document.getElementById('history-title').textContent = 'Receita - ' + getMarmitaTypeName(id);
 
   let html = `<div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:6px">${m.recipe.title}</div>`;
   if (m.recipe.yield) {
@@ -1455,7 +1578,7 @@ function showDinnerRecipe(id) {
   if (!m || !m.recipe) return;
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
-  document.getElementById('history-title').textContent = 'Receita - ' + m.name;
+  document.getElementById('history-title').textContent = 'Receita - ' + getDinnerTypeName(id);
 
   let html = `<div style="font-size:15px;font-weight:700;color:var(--purple);margin-bottom:6px">${m.recipe.title}</div>`;
   if (m.recipe.yield) {
@@ -1653,9 +1776,10 @@ function removeTodayMarmita(type) {
 }
 
 function renderMarmitaSelector() {
+  const container = document.getElementById('marmita-selector');
+  if (!container) return;
   const stock = getStock();
   const selections = getTodaySelections();
-  const container = document.getElementById('marmita-selector');
 
   // Count per type today
   const todayCounts = {};
@@ -1893,9 +2017,11 @@ function updatePlannerSummary() {
   });
 
   const statusEl = document.getElementById('planner-status');
-  statusEl.innerHTML = `<div class="planner-ok">${mTotal} marmita${mTotal === 1 ? '' : 's'} planejada${mTotal === 1 ? '' : 's'}</div>`;
+  if (statusEl) statusEl.innerHTML = `<div class="planner-ok">${mTotal} marmita${mTotal === 1 ? '' : 's'} planejada${mTotal === 1 ? '' : 's'}</div>`;
 
-  document.getElementById('planner-summary').innerHTML = `
+  const summaryEl = document.getElementById('planner-summary');
+  if (!summaryEl) { renderStockCard(); return; }
+  summaryEl.innerHTML = `
     <h3 style="font-size:14px;color:var(--blue);margin-bottom:8px">Resumo da Semana</h3>
     <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;margin:8px 0 4px">Marmitas</div>
     <div class="sum-row"><span>Total de marmitas</span><span class="sum-val">${mTotal}</span></div>
@@ -1935,7 +2061,6 @@ function saveMarmitaPlan() {
   localStorage.setItem('dinner_plan', JSON.stringify(dinnerPlan));
 
   renderShoppingList();
-  renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
   renderDinnerSelector();
@@ -1985,7 +2110,6 @@ function startNewWeek() {
   localStorage.setItem('marmita_plan', JSON.stringify(DEFAULT_PLAN));
   localStorage.setItem('dinner_plan', JSON.stringify(DEFAULT_DINNER_PLAN));
   localStorage.removeItem('shop_checks');
-  localStorage.removeItem('prep_checks');
   localStorage.removeItem('marmita_consumed');
   localStorage.removeItem('dinner_consumed');
   localStorage.removeItem('home_stock');
@@ -1994,7 +2118,6 @@ function startNewWeek() {
   renderMarmitaPlanner();
   renderDinnerPlanner();
   renderShoppingList();
-  renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
   renderDinnerSelector();
@@ -2244,9 +2367,10 @@ function buildShoppingList() {
 }
 
 function renderShoppingList() {
+  const container = document.getElementById('shopping-list');
+  if (!container) return;
   const saved = JSON.parse(localStorage.getItem('shop_checks') || '{}');
   const shopItems = buildShoppingList();
-  const container = document.getElementById('shopping-list');
   let html = '', total = 0, checked = 0;
   shopItems.forEach(sec => {
     if (!sec.items || sec.items.length === 0) return; // skip empty sections
@@ -2464,86 +2588,6 @@ function resetChecklist(type) {
   if (!confirm('Limpar todos os itens marcados?')) return;
   localStorage.removeItem(type + '_checks');
   if (type === 'shop') renderShoppingList();
-  else renderPrepList();
-}
-
-// ============================================================
-// PREP LIST
-// ============================================================
-function buildPrepItems() {
-  const plan = getMarmitaPlan();
-  const qA = plan.A||0, qB = plan.B||0, qC = plan.C||0, qD = plan.D||0, qE = plan.E||0, qF = plan.F||0;
-  const fmt = (g) => g >= 1000 ? `${(g/1000).toFixed(1)}kg` : `${Math.round(g/10)*10}g`;
-  const items = [];
-
-  // Carboidratos
-  const arrozBrancoCru = (qA + qD) * 56;
-  if (arrozBrancoCru > 0) {
-    const tipos = [qA > 0 ? 'A' : '', qD > 0 ? 'D' : ''].filter(Boolean).join(' + ');
-    items.push(`Cozinhar arroz branco (${fmt(arrozBrancoCru)} cru) para marmitas ${tipos}`);
-  }
-  if (qC > 0) items.push(`Cozinhar arroz integral (${fmt(qC * 52)} cru) para ${qC} marmitas C`);
-  if (qB > 0) items.push(`Cozinhar batata doce (${fmt(qB * 180)} crua) em cubos para ${qB} marmitas B`);
-  if (qE > 0) items.push(`Cozinhar mandioca (${fmt(qE * 145)} crua) em cubos para ${qE} marmitas E`);
-  if (qF > 0) items.push(`Cozinhar macarrão integral (${fmt(qF * 52)} cru) para ${qF} marmitas F`);
-
-  // Proteínas
-  if (qA > 0) items.push(`Grelhar peito de frango (${fmt(qA * 215)} cru) em filés para ${qA} marmitas A`);
-  if (qE > 0) items.push(`Grelhar sobrecoxa sem pele (${fmt(qE * 240)} crua) para ${qE} marmitas E`);
-  if (qB > 0) items.push(`Refogar carne moída (${fmt(qB * 230)} crua) com alho e temperos para ${qB} marmitas B`);
-  if (qF > 0) items.push(`Grelhar coxão mole (${fmt(qF * 215)} cru) em fatias para ${qF} marmitas F`);
-  if (qC > 0) items.push(`Grelhar tilápia (${fmt(qC * 250)} crua) com limão e ervas para ${qC} marmitas C`);
-  if (qD > 0) items.push(`Grelhar lombo suíno (${fmt(qD * 215)} cru) com alho e ervas para ${qD} marmitas D`);
-
-  // Montar
-  const sep = [];
-  if (qA > 0) sep.push(`${qA}x A (frango + arroz)`);
-  if (qB > 0) sep.push(`${qB}x B (carne + batata doce)`);
-  if (qC > 0) sep.push(`${qC}x C (tilápia + arroz integral)`);
-  if (qD > 0) sep.push(`${qD}x D (lombo + arroz)`);
-  if (qE > 0) sep.push(`${qE}x E (sobrecoxa + mandioca)`);
-  if (qF > 0) sep.push(`${qF}x F (coxão + macarrão)`);
-  if (sep.length > 0) items.push(`Montar marmitas: ${sep.join(', ')}`);
-
-  // Folhas e pepino
-  items.push('Lavar e secar folhas (alface + rúcula)');
-  items.push('Fatiar pepinos (guardar em pote com água)');
-
-  return [{ day: 'Preparo das Marmitas', css: 'domingo', items }];
-}
-
-function renderPrepList() {
-  const container = document.getElementById('prep-list');
-  if (!container) return; // prep checklist removido da UI
-  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
-  const PREP_ITEMS = buildPrepItems();
-  let html = '', total = 0, checked = 0;
-  PREP_ITEMS.forEach(day => {
-    html += `<div class="prep-day"><div class="day-header ${day.css}">${day.day}</div><div class="day-content">`;
-    day.items.forEach((item, i) => {
-      const key = day.css + '_' + i;
-      const isChecked = saved[key] || false;
-      total++;
-      if (isChecked) checked++;
-      html += `<div class="check-item ${isChecked ? 'checked' : ''}">
-        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePrep('${key}', this)">
-        <label class="check-label">${item}</label>
-      </div>`;
-    });
-    html += '</div></div>';
-  });
-  container.innerHTML = html;
-  updateProgress('prep', checked, total);
-}
-
-function togglePrep(key, el) {
-  const saved = JSON.parse(localStorage.getItem('prep_checks') || '{}');
-  saved[key] = el.checked;
-  localStorage.setItem('prep_checks', JSON.stringify(saved));
-  el.closest('.check-item').classList.toggle('checked', el.checked);
-  const total = document.querySelectorAll('#prep-list input[type="checkbox"]').length;
-  const checked = document.querySelectorAll('#prep-list input[type="checkbox"]:checked').length;
-  updateProgress('prep', checked, total);
 }
 
 // ============================================================
@@ -3202,7 +3246,7 @@ function deleteDayData(dateStr) {
 // ============================================================
 // EXPORT / IMPORT
 // ============================================================
-const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed','shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+const BACKUP_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed','shop_checks','workouts','cardio_log','cal_log','user_profile'];
 
 function exportData() {
   const data = { _app: 'dieta-diego', _date: new Date().toISOString() };
@@ -3271,7 +3315,6 @@ function importData(event) {
       renderMarmitaPlanner();
       renderMeals();
       renderShoppingList();
-      renderPrepList();
       renderExercises();
       loadTodayCardio();
       renderCalendar();
@@ -3777,7 +3820,6 @@ function applyGeneratedMenu() {
   renderMarmitaPlanner();
   renderDinnerPlanner();
   renderShoppingList();
-  renderPrepList();
   renderStockCard();
   renderMarmitaSelector();
   renderDinnerSelector();
@@ -4069,7 +4111,7 @@ let firestoreUnsubscribes = [];
 
 // Data keys we sync
 const SYNC_KEYS = ['marmita_plan','dinner_plan','home_stock','marmita_history','marmita_current_week','marmita_consumed','dinner_consumed',
-  'shop_checks','prep_checks','workouts','cardio_log','cal_log'];
+  'shop_checks','workouts','cardio_log','cal_log','user_profile'];
 
 // Save to localStorage AND Firestore (if logged in)
 function saveData(key, value) {
@@ -4236,6 +4278,133 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// ============================================================
+// USER PROFILE (onboarding)
+// ============================================================
+// Reset profile via URL: ?reset=profile  (clears localStorage + Firestore + reloads)
+function resetUserProfile() {
+  localStorage.removeItem('user_profile');
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).collection('data').doc('user_profile')
+      .delete().catch(() => {});
+  }
+}
+
+(function handleProfileResetURL() {
+  if (location.search.indexOf('reset=profile') !== -1) {
+    // Wait for Firebase auth to settle so we can also delete from Firestore
+    setTimeout(() => {
+      resetUserProfile();
+      // Strip the query string and reload
+      const cleanUrl = location.pathname + location.hash;
+      history.replaceState(null, '', cleanUrl);
+      setTimeout(() => location.reload(), 400);
+    }, 800);
+  }
+})();
+
+function getUserProfile() {
+  try { return JSON.parse(localStorage.getItem('user_profile') || 'null'); }
+  catch (e) { return null; }
+}
+
+function saveUserProfile(profile) {
+  // Use saveData so it propagates to Firestore (when SYNC_KEYS includes 'user_profile')
+  saveData('user_profile', profile);
+}
+
+function showOnboardingIfNeeded() {
+  const modal = document.getElementById('onboarding-modal');
+  if (!modal) return;
+  if (getUserProfile()) {
+    // Already has profile — make sure modal is hidden (handles late Firestore sync)
+    modal.classList.remove('open');
+    return;
+  }
+  // No profile yet — show modal
+  modal.classList.add('open');
+}
+
+function renderUserBar() {
+  const userBar = document.getElementById('user-bar');
+  if (!userBar) return;
+  // Show bar if logged in OR skip-login mode AND has profile
+  const profile = getUserProfile();
+  const shouldShow = !!currentUser || !!profile;
+  if (!shouldShow) {
+    document.body.classList.remove('logged-in');
+    userBar.style.display = 'none';
+    return;
+  }
+  document.body.classList.add('logged-in');
+  userBar.style.display = 'flex';
+
+  let label;
+  if (profile) {
+    const fullName = `${profile.nome} ${profile.sobrenome}`.trim();
+    const idade = calculateAge(profile.data_nascimento);
+    const peso = profile.peso_atual;
+    const parts = [fullName];
+    if (idade !== null) parts.push(`${idade} anos`);
+    if (peso) parts.push(`${peso.toString().replace('.', ',')} kg`);
+    label = parts.join(' | ');
+  } else {
+    label = currentUser ? (currentUser.displayName || currentUser.email) : '';
+  }
+
+  userBar.innerHTML = `
+    <span><span class="sync-dot online"></span><span class="user-name">${label}</span></span>
+    <button class="logout-btn" onclick="logout()">Sair</button>`;
+}
+
+// Calculate age in years from a YYYY-MM-DD birth date string
+function calculateAge(birthStr) {
+  if (!birthStr) return null;
+  const birth = new Date(birthStr + 'T12:00:00');
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function submitOnboarding() {
+  const get = id => document.getElementById(id);
+  const nome       = get('ob-nome').value.trim();
+  const sobrenome  = get('ob-sobrenome').value.trim();
+  const sexo       = get('ob-sexo').value;
+  const nascimento = get('ob-nascimento').value;
+  const peso       = parseFloat(get('ob-peso').value);
+  const altura     = parseFloat(get('ob-altura').value);
+  const meta       = parseFloat(get('ob-meta').value);
+  const atividade  = get('ob-atividade').value;
+
+  if (!nome || !sobrenome) { alert('Informe seu nome e sobrenome.'); get('ob-nome').focus(); return; }
+  if (!sexo) { alert('Selecione seu sexo.'); get('ob-sexo').focus(); return; }
+  if (!nascimento) { alert('Informe sua data de nascimento.'); get('ob-nascimento').focus(); return; }
+  const idade = calculateAge(nascimento);
+  if (idade === null || idade < 5 || idade > 120) { alert('Data de nascimento inválida.'); get('ob-nascimento').focus(); return; }
+  if (!peso || peso <= 0 || peso > 400) { alert('Informe um peso válido (kg).'); get('ob-peso').focus(); return; }
+  if (!altura || altura < 80 || altura > 250) { alert('Informe uma altura válida em cm.'); get('ob-altura').focus(); return; }
+  if (!meta || meta <= 0 || meta > 400) { alert('Informe uma meta de peso válida (kg).'); get('ob-meta').focus(); return; }
+  if (!atividade) { alert('Selecione seu nível de atividade física.'); get('ob-atividade').focus(); return; }
+
+  saveUserProfile({
+    nome, sobrenome, sexo,
+    data_nascimento: nascimento,
+    peso_atual: peso,
+    altura_cm: altura,
+    meta_peso: meta,
+    nivel_atividade: atividade,
+    criado_em: new Date().toISOString(),
+  });
+
+  document.getElementById('onboarding-modal').classList.remove('open');
+  // Refresh the user bar to reflect the new profile data
+  if (typeof renderUserBar === 'function') renderUserBar();
+}
+
 function initApp() {
   renderMarmitaPlanner();
   renderDinnerPlanner();
@@ -4246,23 +4415,12 @@ function initApp() {
   renderStockCard();
   renderMeals();
   renderShoppingList();
-  renderPrepList();
   renderExercises();
   loadTodayCardio();
   renderCalendar();
+  showOnboardingIfNeeded();
 
-  // Update user bar
-  const userBar = document.getElementById('user-bar');
-  if (currentUser && userBar) {
-    document.body.classList.add('logged-in');
-    userBar.style.display = 'flex';
-    userBar.innerHTML = `
-      <span><span class="sync-dot online"></span><span class="user-name">${currentUser.displayName || currentUser.email}</span></span>
-      <button class="logout-btn" onclick="logout()">Sair</button>`;
-  } else if (userBar) {
-    document.body.classList.remove('logged-in');
-    userBar.style.display = 'none';
-  }
+  renderUserBar();
 
   // Sunday prompt - only after app is loaded (logged in or skipped login)
   setTimeout(checkSundayPrompt, 500);
