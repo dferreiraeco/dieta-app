@@ -526,12 +526,11 @@ function setupModalA11y() {
 }
 
 // v2.1.37: dark mode toggle.
-// Estados: 'light', 'dark', 'auto' (segue prefers-color-scheme). Default 'auto'.
-// O tema é aplicado inicialmente via inline script no <head> (zero flash).
-// Aqui só ficam os helpers pro toggle no profile view e o listener de mudança
-// do prefers-color-scheme quando o usuário está em modo 'auto'.
+// Estados: 'light', 'dark', 'auto' (segue prefers-color-scheme).
+// v2.1.51: default = 'light' (era 'auto'). Usuário precisa escolher 'auto'
+// ou 'dark' explicitamente no profile-view modal.
 function getStoredTheme() {
-  return localStorage.getItem('theme') || 'auto';
+  return localStorage.getItem('theme') || 'light';
 }
 function applyTheme(themeChoice) {
   const resolved = themeChoice === 'auto'
@@ -769,7 +768,7 @@ function renderMarmitaPlanner() {
   const addedMarmitas = getScaledMarmitas().filter(m => (plan[m.id] || 0) > 0);
 
   if (addedMarmitas.length === 0) {
-    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft-text);font-size:13px;margin-bottom:8px">
       Nenhuma marmita adicionada. Toque em <b style="color:var(--green-primary)">+ Adicionar Novo Sabor</b> abaixo para começar.
     </div>`;
   } else {
@@ -894,7 +893,7 @@ function renderDinnerPlanner() {
   const addedDinners = getScaledDinners().filter(m => (plan[m.id] || 0) > 0);
 
   if (addedDinners.length === 0) {
-    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
+    html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft-text);font-size:13px;margin-bottom:8px">
       Nenhum jantar adicionado. Toque em <b style="color:var(--purple-soft)">+ Adicionar Novo Sabor</b> abaixo para começar.
     </div>`;
   } else {
@@ -1049,7 +1048,7 @@ function renderFruitSuggestions() {
           <div style="font-size:11px;color:var(--gray-mid)">${f.qty}</div>
         </div>
       </div>
-      <div style="text-align:right;font-size:11px;color:var(--orange);font-weight:600">
+      <div style="text-align:right;font-size:11px;color:var(--accent-warm-text);font-weight:600">
         ${f.kcal} kcal<br><span style="color:var(--gray-mid)">${f.c}g C</span>
       </div>
     </div>`;
@@ -1376,7 +1375,7 @@ function renderStockCard() {
   }
   card.style.display = 'block';
 
-  let html = `<h3 style="font-size:14px;color:var(--orange);margin-bottom:8px">Estoque de Refeições (${mRemaining + dRemaining} restantes)</h3>`;
+  let html = `<h3 style="font-size:14px;color:var(--accent-warm-text);margin-bottom:8px">Estoque de Refeições (${mRemaining + dRemaining} restantes)</h3>`;
 
   // Marmitas
   const marmitasShown = MARMITA_DEFS.filter(m => (mStock[m.id] || 0) > 0 || (mPlan[m.id] || 0) > 0);
@@ -1681,7 +1680,7 @@ function openMarmitaHistory() {
         <div style="flex:1;min-width:120px">
           <div style="font-size:10px;color:var(--ink-medium);text-transform:uppercase;font-weight:700">Desvio vs meta</div>
           <div style="font-size:20px;font-weight:800;color:${devColor}">${devSign}${stats.deviationPct.toFixed(1)}%</div>
-          <div style="font-size:10px;color:var(--ink-soft)">meta: ${fmtK(stats.currentTarget)} kcal</div>
+          <div style="font-size:10px;color:var(--ink-soft-text)">meta: ${fmtK(stats.currentTarget)} kcal</div>
         </div>` : ''}
       </div>
     </div>`;
@@ -3129,7 +3128,7 @@ function toggleGenSection(sectionId) {
 function _genRowHtml(ing, stock, extraDesc) {
   const existing = stock[ing.key] || '';
   const unit = ing.unit || 'g';
-  const descLine = extraDesc ? `<div style="font-size:11px;color:var(--ink-soft)">${extraDesc}</div>` : '';
+  const descLine = extraDesc ? `<div style="font-size:11px;color:var(--ink-soft-text)">${extraDesc}</div>` : '';
   const extraAttr = ing.gPerPorcao ? `oninput="updateFruitPorcoes('${ing.key}', ${ing.gPerPorcao}); updateGenSectionHeader('fruits')"` : '';
   return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-light)">
     <div style="flex:1">
@@ -3138,7 +3137,7 @@ function _genRowHtml(ing, stock, extraDesc) {
     </div>
     <input type="number" inputmode="numeric" placeholder="0" value="${existing}" id="gen_${ing.key}" ${extraAttr}
       style="width:80px;padding:10px;border:1.5px solid var(--gray-light);border-radius:10px;font-size:14px;text-align:center;background:var(--gray-bg);color:var(--ink-strong)">
-    <span style="font-size:12px;color:var(--ink-soft)">${unit}</span>
+    <span style="font-size:12px;color:var(--ink-soft-text)">${unit}</span>
   </div>`;
 }
 
@@ -3481,7 +3480,7 @@ function renderGeneratedMenu(stock, marmitaResult, dinnerResult) {
   }
   if (riceWarning) {
     html += `<div style="background:#fffbeb;border:1.5px solid var(--orange);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--gray)">
-      <b style="color:var(--orange)">Aviso sobre arroz:</b> ${riceWarning}
+      <b style="color:var(--accent-warm-text)">Aviso sobre arroz:</b> ${riceWarning}
     </div>`;
   }
 

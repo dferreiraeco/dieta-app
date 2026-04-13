@@ -23,6 +23,15 @@
   --yellow-soft:    #A68318;
   --yellow-bg:      #FBF6D7;
 
+  /* v2.1.51 — WCAG AA text variants (item 20).
+     accent-warm e ink-soft têm contraste abaixo de 3:1 quando aplicados como
+     TEXT sobre surface/cream. Os *-text variants são versões mais escuras
+     (~L=0.15) que passam AA 4.5:1 e só são usadas para `color` em texto body;
+     os originais continuam sendo usados para fills/borders/icons (onde o
+     contrast ratio não se aplica). */
+  --accent-warm-text: #9C5C16;
+  --ink-soft-text:    #667169;
+
   /* === Shape tokens === */
   --radius-sm:   12px;
   --radius-md:   18px;
@@ -86,6 +95,12 @@
   --accent-warm-soft:  rgba(232, 160, 78, 0.15);
   --accent-danger:  #E88A7A;  /* era #D35A47 */
   --accent-danger-soft: rgba(211, 90, 71, 0.18);
+  /* v2.1.51: dark mode não precisa escurecer os -text (accent claro sobre dark
+     surface já passa AA 8:1). Usa o mesmo valor do token base pra preservar
+     legibilidade dentro do dark palette. ink-soft-text fica um pouco mais
+     claro pra passar AA 5:1 sobre dark surface/cream. */
+  --accent-warm-text: #F0B873;
+  --ink-soft-text:    #8E998F;
   --shadow-soft:    0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-mid:     0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-lg:      0 12px 32px rgba(0, 0, 0, 0.55);
@@ -164,7 +179,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .macro-box .val { font-size: 20px; font-weight: 700; display: block; }
 .macro-box.kcal { background: var(--blue-bg); color: var(--blue); }
 .macro-box.prot { background: var(--green-bg); color: var(--green); }
-.macro-box.carb { background: var(--orange-light); color: var(--orange); }
+.macro-box.carb { background: var(--orange-light); color: var(--accent-warm-text); }
 .macro-box.fat  { background: var(--purple-light); color: var(--purple); }
 /* ---- MEAL CARD ---- */
 /* (legacy .meal block removed in v2.1.18 — substituído pelo bloco v2.1.0 abaixo.
@@ -274,7 +289,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .check-label .qty { font-weight: 600; color: var(--blue); }
 .shop-sub-text {
   font-size: 11px;
-  color: var(--accent-warm);
+  color: var(--accent-warm-text);
   margin-top: 2px;
   text-decoration: none;
   font-weight: 600;
@@ -389,7 +404,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .gen-mode-title {
   font-size: 11px;
   font-weight: 800;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -464,7 +479,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .gen-section-header .sh-chevron {
   font-size: 10px;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   transition: transform 0.2s;
 }
 .gen-section.collapsed .sh-chevron { transform: rotate(-90deg); }
@@ -598,7 +613,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .ob-section-title {
   font-size: 11px;
   font-weight: 800;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin: 18px 0 8px;
@@ -839,7 +854,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 }
 .auth-screen .auth-subtitle { font-size: 15px; color: var(--ink-medium); margin-bottom: 8px; }
 .auth-screen .auth-desc {
-  font-size: 13px; color: var(--ink-soft); margin-bottom: 32px;
+  font-size: 13px; color: var(--ink-soft-text); margin-bottom: 32px;
   max-width: 280px; line-height: 1.5;
 }
 .auth-card {
@@ -946,7 +961,7 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .weight-log-hint {
-  font-size: 12px; color: var(--accent-warm); background: var(--accent-warm-soft);
+  font-size: 12px; color: var(--accent-warm-text); background: var(--accent-warm-soft);
   padding: 8px 10px; border-radius: 8px; margin-bottom: 10px;
   border-left: 3px solid var(--accent-warm);
 }
@@ -1006,7 +1021,7 @@ body {
 }
 .tab-btn {
   border-top: none;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   font-size: 10px;
   font-weight: 600;
   padding: 8px 4px 10px;
@@ -1061,7 +1076,7 @@ body {
   color: var(--ink-strong);
   font-weight: 700;
 }
-.daily-tracker .tracker-date { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+.daily-tracker .tracker-date { font-size: 12px; color: var(--ink-soft-text); font-weight: 500; }
 .tracker-main {
   display: flex;
   align-items: center;
@@ -1157,7 +1172,7 @@ body {
 .meal .meal-title-wrap { flex: 1; min-width: 0; }
 .meal .time {
   font-size: 11px;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -1210,7 +1225,7 @@ body {
 }
 .meal .macros-sm .macro-pill.kcal { background: var(--green-soft); color: var(--green-primary); }
 .meal .macros-sm .macro-pill.p-ok  { background: var(--green-soft); color: var(--green-primary); }
-.meal .macros-sm .macro-pill.p-low { background: var(--accent-warm-soft); color: var(--accent-warm); }
+.meal .macros-sm .macro-pill.p-low { background: var(--accent-warm-soft); color: var(--accent-warm-text); }
 .meal .macros-sm .macro-pill.p-mid { background: var(--gray-bg); color: var(--ink-medium); }
 
 /* ---- User-bar compacto (v2.1.0) ---- */
@@ -1357,7 +1372,7 @@ body {
 }
 .profile-view-modal .pv-footer {
   font-size: 11px;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   text-align: center;
   margin-top: 12px;
   font-style: italic;
@@ -1570,7 +1585,7 @@ body {
 .pl-card .pc-macro .pc-macro-label {
   font-size: 9px;
   font-weight: 600;
-  color: var(--ink-soft);
+  color: var(--ink-soft-text);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }

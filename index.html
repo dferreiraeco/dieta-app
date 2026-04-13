@@ -20,10 +20,12 @@
 <link rel="stylesheet" href="styles.css?v=2114">
 <script>
   // v2.1.37: aplica o tema (data-theme) ANTES do CSS pintar pra evitar flash.
-  // 'auto' = segue prefers-color-scheme. Default 'auto'.
+  // v2.1.51: default é 'light'. Usuário pode mudar pra 'dark' ou 'auto' no
+  // profile-view modal. 'auto' segue prefers-color-scheme só se explicitamente
+  // escolhido.
   (function () {
     try {
-      var t = localStorage.getItem('theme') || 'auto';
+      var t = localStorage.getItem('theme') || 'light';
       var resolved = t === 'auto'
         ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
         : t;
@@ -216,7 +218,7 @@
   <div id="current-week-label" style="text-align:center;font-size:13px;color:var(--gray-mid);margin:20px 0 8px"></div>
 
   <!-- Fruit suggestions -->
-  <h3 style="font-size:16px;color:var(--orange);margin:20px 0 10px">Sugestões de Frutas (lanches)</h3>
+  <h3 style="font-size:16px;color:var(--accent-warm-text);margin:20px 0 10px">Sugestões de Frutas (lanches)</h3>
   <div class="card">
     <div style="font-size:12px;color:var(--gray-mid);margin-bottom:10px">Frutas para variar os lanches da manhã e tarde. Todas entre 50-90 kcal por porção.</div>
     <div id="fruit-suggestions"></div>
