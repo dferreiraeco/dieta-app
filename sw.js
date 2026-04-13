@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dieta-v124';
+const CACHE_NAME = 'dieta-v148';
 
 self.addEventListener('install', e => {
   self.skipWaiting();

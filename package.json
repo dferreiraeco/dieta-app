@@ -1,0 +1,9 @@
+{
+  "name": "dieta-app",
+  "version": "1.0.0",
+  "description": "PWA de planejamento de refeições e lista de compras",
+  "private": true,
+  "scripts": {
+    "test": "node tests/generator.test.js"
+  }
+}
