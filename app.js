@@ -112,6 +112,30 @@ function getPortionScale() {
   catch (e) { return 1; }
 }
 
+// v2.1.34: wrappers que entregam MARMITA_DEFS / DINNER_DEFS já escalados pro
+// portion scale do usuário. Toda função que precisa de macros/ingredientes/
+// cooked string de uma marmita ou jantar deve usar estes helpers em vez de
+// MARMITA_DEFS/DINNER_DEFS direto.
+//
+// IMPORTANTE: getStock(), getMarmitaPlan() e similares NÃO devem usar essas
+// versões escaladas — elas só lidam com IDs e quantidades, não com macros.
+function getScaledMarmita(id) {
+  const def = MARMITA_DEFS.find(x => x.id === id);
+  return def ? scaleMealDef(def, getPortionScale()) : null;
+}
+function getScaledDinner(id) {
+  const def = DINNER_DEFS.find(x => x.id === id);
+  return def ? scaleMealDef(def, getPortionScale()) : null;
+}
+function getScaledMarmitas() {
+  const scale = getPortionScale();
+  return MARMITA_DEFS.map(d => scaleMealDef(d, scale));
+}
+function getScaledDinners() {
+  const scale = getPortionScale();
+  return DINNER_DEFS.map(d => scaleMealDef(d, scale));
+}
+
 // Constrói a refeição fixa escalada para a meta atual do usuário.
 // Retorna o mesmo shape que o resto do app consome: {id, time, name, desc, foods, kcal, p, c, g, color}.
 function buildFixedMeal(recipeId) {
@@ -170,7 +194,7 @@ function getMeals() {
 
   // Build lunch (marmita)
   const selections = getTodaySelections();
-  const lunchSalad = buildSaladText(MARMITA_DEFS, selections, { alface: 50, pepino: 80, azeite: 5 });
+  const lunchSalad = buildSaladText(getScaledMarmitas(), selections, { alface: 50, pepino: 80, azeite: 5 });
   const single = isSinglePerson();
   let lunch;
   if (selections.length === 0) {
@@ -183,7 +207,7 @@ function getMeals() {
     const grouped = {};
     selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
     Object.entries(grouped).forEach(([type, count]) => {
-      const def = MARMITA_DEFS.find(x => x.id === type);
+      const def = getScaledMarmita(type);
       if (!def) return;
       kcal += def.kcal * count; p += def.p * count; c += def.c * count; g += def.g * count;
       names.push(count > 1 ? `${count}x ${def.name.split(' - ')[1]}` : def.name.split(' - ')[1]);
@@ -204,7 +228,7 @@ function getMeals() {
 
   // Build dinner
   const dSel = getTodayDinnerSelections();
-  const dinnerSalad = buildSaladText(DINNER_DEFS, dSel, { alface: 40, pepino: 60, azeite: 5 });
+  const dinnerSalad = buildSaladText(getScaledDinners(), dSel, { alface: 40, pepino: 60, azeite: 5 });
   let dinner;
   if (dSel.length === 0) {
     dinner = { id: 'jantar', time: '20h', name: 'Jantar',
@@ -216,7 +240,7 @@ function getMeals() {
     const grouped = {};
     dSel.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
     Object.entries(grouped).forEach(([type, count]) => {
-      const def = DINNER_DEFS.find(x => x.id === type);
+      const def = getScaledDinner(type);
       if (!def) return;
       kcal += def.kcal * count; p += def.p * count; c += def.c * count; g += def.g * count;
       names.push(count > 1 ? `${count}x ${def.name}` : def.name);
@@ -633,7 +657,7 @@ function renderMarmitaPlanner() {
   const plan = getMarmitaPlan();
   let html = '';
 
-  const addedMarmitas = MARMITA_DEFS.filter(m => (plan[m.id] || 0) > 0);
+  const addedMarmitas = getScaledMarmitas().filter(m => (plan[m.id] || 0) > 0);
 
   if (addedMarmitas.length === 0) {
     html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
@@ -678,7 +702,7 @@ function openMarmitaPicker() {
   document.getElementById('history-title').textContent = 'Adicionar Novo Sabor de Marmita';
 
   let html = '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:12px">Escolha o sabor de marmita para adicionar ao planejamento. Se já estiver adicionado, o toque aumenta a quantidade em 1.</div>';
-  MARMITA_DEFS.forEach(m => {
+  getScaledMarmitas().forEach(m => {
     const typeName = getMarmitaTypeName(m.id);
     const current = plan[m.id] || 0;
     const added = current > 0;
@@ -707,7 +731,7 @@ function addMarmitaToPlan(id) {
 }
 
 function showMarmitaRecipe(id) {
-  const m = MARMITA_DEFS.find(x => x.id === id);
+  const m = getScaledMarmita(id);
   if (!m || !m.recipe) return;
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
@@ -759,7 +783,7 @@ function renderDinnerPlanner() {
   if (!container) return;
   let html = '';
 
-  const addedDinners = DINNER_DEFS.filter(m => (plan[m.id] || 0) > 0);
+  const addedDinners = getScaledDinners().filter(m => (plan[m.id] || 0) > 0);
 
   if (addedDinners.length === 0) {
     html += `<div style="background:var(--gray-bg);padding:18px;border-radius:var(--radius-lg);text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:8px">
@@ -803,7 +827,7 @@ function openDinnerPicker() {
   document.getElementById('history-title').textContent = 'Adicionar Novo Sabor de Jantar';
 
   let html = '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:12px">Escolha o sabor de jantar para adicionar ao planejamento. Se já estiver adicionado, o toque aumenta a quantidade em 1.</div>';
-  DINNER_DEFS.forEach(m => {
+  getScaledDinners().forEach(m => {
     const current = plan[m.id] || 0;
     const added = current > 0;
     html += `<button onclick="addDinnerToPlan('${m.id}')"
@@ -831,7 +855,7 @@ function addDinnerToPlan(id) {
 }
 
 function showDinnerRecipe(id) {
-  const m = DINNER_DEFS.find(x => x.id === id);
+  const m = getScaledDinner(id);
   if (!m || !m.recipe) return;
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
@@ -1058,7 +1082,7 @@ function renderMarmitaSelector() {
     const grouped = {};
     selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
     Object.entries(grouped).forEach(([type, count]) => {
-      const m = MARMITA_DEFS.find(x => x.id === type);
+      const m = getScaledMarmita(type);
       if (!m) return;
       html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--green-bg);border-radius:8px;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:var(--green)">${count}x ${getMarmitaTypeName(m.id)} (${m.kcal} kcal | ${m.p}g P)</span>
@@ -1079,7 +1103,7 @@ function renderMarmitaSelector() {
 
   // Show options to add
   html += '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:6px">Toque para adicionar:</div>';
-  MARMITA_DEFS.forEach(m => {
+  getScaledMarmitas().forEach(m => {
     if ((planned[m.id] || 0) === 0) return; // só mostrar marmitas programadas
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
@@ -1184,7 +1208,7 @@ function renderDinnerSelector() {
     const grouped = {};
     selections.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
     Object.entries(grouped).forEach(([type, count]) => {
-      const m = DINNER_DEFS.find(x => x.id === type);
+      const m = getScaledDinner(type);
       if (!m) return;
       html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--purple-light);border-radius:8px;margin-bottom:4px">
         <span style="font-size:13px;font-weight:600;color:var(--purple)">${count}x ${m.name} (${m.kcal} kcal | ${m.p}g P)</span>
@@ -1204,7 +1228,7 @@ function renderDinnerSelector() {
   }
 
   html += '<div style="font-size:12px;color:var(--gray-mid);margin-bottom:6px">Toque para adicionar:</div>';
-  DINNER_DEFS.forEach(m => {
+  getScaledDinners().forEach(m => {
     if ((planned[m.id] || 0) === 0) return; // só mostrar jantares programados
     const remaining = stock[m.id] || 0;
     const disabled = remaining <= 0;
@@ -1280,7 +1304,7 @@ function renderStockCard() {
 function updatePlannerSummary() {
   const plan = getMarmitaPlan();
   let mTotal = 0, mKcal = 0, mP = 0, mC = 0, mG = 0;
-  MARMITA_DEFS.forEach(m => {
+  getScaledMarmitas().forEach(m => {
     const qty = plan[m.id] || 0;
     mTotal += qty;
     mKcal += m.kcal * qty; mP += m.p * qty; mC += m.c * qty; mG += m.g * qty;
@@ -1288,7 +1312,7 @@ function updatePlannerSummary() {
 
   const dinnerPlan = getDinnerPlan();
   let dTotal = 0, dKcal = 0, dP = 0, dC = 0, dG = 0;
-  DINNER_DEFS.forEach(d => {
+  getScaledDinners().forEach(d => {
     const qty = dinnerPlan[d.id] || 0;
     dTotal += qty;
     dKcal += d.kcal * qty; dP += d.p * qty; dC += d.c * qty; dG += d.g * qty;
@@ -1508,15 +1532,20 @@ const BREAKFAST_BASELINE = {
 function buildShoppingList() {
   const plan = getMarmitaPlan();
   const dinnerPlan = getDinnerPlan();
+  const portionScale = getPortionScale();
 
   // Home stock (to subtract from needed quantities)
   const stock = getHomeStock();
   const have = (k) => stock[k] || 0;
 
-  // Necessidade total = ingredientes das receitas selecionadas + baseline fixo do café
-  const needs = computeIngredientNeeds(plan, dinnerPlan);
+  // v2.1.34: necessidades das marmitas/jantares já vêm escaladas pelo portion
+  // scale do usuário (target_kcal / 2000). O BREAKFAST_BASELINE também é
+  // escalado, porque os cafés/lanches fixos consomem mais ingredientes quando
+  // o target é mais alto. Dessa forma a lista de compras inteira reflete o
+  // cardápio escalado pra meta do usuário, em vez de uma base fixa de 2000 kcal.
+  const needs = computeIngredientNeeds(plan, dinnerPlan, portionScale);
   Object.entries(BREAKFAST_BASELINE).forEach(([k, v]) => {
-    needs[k] = (needs[k] || 0) + v;
+    needs[k] = (needs[k] || 0) + v * portionScale;
   });
 
   // v2.1.33: modo 1 pessoa — divide tudo por 2.
@@ -1605,7 +1634,8 @@ function buildShoppingList() {
   // Aromatics dinâmicos (alho, cebola, limão, tomate, polpa de tomate) escalonados
   // com base no rendimento de cada receita e nas quantidades planejadas.
   // v2.1.33: aplica o mesmo halve do modo single-person.
-  const aromaticsRaw = computeAromatics(plan, dinnerPlan);
+  // v2.1.34: também passa o portionScale pra escalar com o target do usuário.
+  const aromaticsRaw = computeAromatics(plan, dinnerPlan, portionScale);
   const aromaticsScale = isSinglePerson() ? 0.5 : 1;
   const alhoDentes   = Math.ceil(aromaticsRaw.alho * aromaticsScale);
   const alhoCabecas  = alhoDentes > 0 ? Math.ceil(alhoDentes / 10) : 0; // 1 cabeça = 10 dentes
@@ -2446,7 +2476,7 @@ function showDayDetail(dateStr) {
     const grouped = {};
     arr.forEach(t => { grouped[t] = (grouped[t] || 0) + 1; });
     Object.entries(grouped).forEach(([type, count]) => {
-      const def = MARMITA_DEFS.find(x => x.id === type);
+      const def = getScaledMarmita(type);
       const name = def ? def.name.split(' - ')[1] : type;
       const macros = def ? `${def.kcal} kcal | ${def.p}g P` : '';
       html += `<div class="dd-exercise">

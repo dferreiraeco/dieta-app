@@ -586,21 +586,62 @@ function computePortionScale(goalsKcal) {
   return goalsKcal / DEFAULT_GOALS.kcal;
 }
 
+// v2.1.34: helper compartilhado que retorna uma cópia escalada de um def
+// de marmita ou jantar. Aplica o portion scale (target / 2000) em:
+//   - kcal/p/c/g (round simples)
+//   - ingredients[k] (gramas, arredondado pra múltiplo de 5g, mín 5g)
+//   - recipe.aromatics[k] (linear, sem rounding — computeAromatics arredonda)
+//   - cooked string (regex \d+g → escala + arredondamento)
+// recipe.items (texto das instruções) NÃO é escalado — fica como receita-base.
+function scaleMealDef(def, scale) {
+  if (!def || scale === 1) return def;
+  const scaled = { ...def };
+  scaled.kcal = Math.round(def.kcal * scale);
+  scaled.p    = Math.round(def.p    * scale);
+  scaled.c    = Math.round(def.c    * scale);
+  scaled.g    = Math.round(def.g    * scale);
+  if (def.ingredients) {
+    scaled.ingredients = {};
+    Object.entries(def.ingredients).forEach(([k, v]) => {
+      scaled.ingredients[k] = Math.max(5, Math.round((v * scale) / 5) * 5);
+    });
+  }
+  if (def.recipe) {
+    scaled.recipe = { ...def.recipe };
+    if (def.recipe.aromatics) {
+      scaled.recipe.aromatics = {};
+      Object.entries(def.recipe.aromatics).forEach(([k, v]) => {
+        scaled.recipe.aromatics[k] = v * scale;
+      });
+    }
+  }
+  if (def.cooked) {
+    scaled.cooked = def.cooked.replace(/(\d+)\s*g\b/g, (m, num) => {
+      const sg = Math.max(5, Math.round((parseInt(num, 10) * scale) / 5) * 5);
+      return `${sg}g`;
+    });
+  }
+  return scaled;
+}
+
 // Helper: soma as necessidades de ingredientes a partir de um plano de marmitas + jantares
 // Retorna { key: quantidadeTotal } somando todas as refeições selecionadas.
-function computeIngredientNeeds(marmitaPlan, dinnerPlan) {
+// scale (default 1) aplica o portion scale do usuário aos ingredientes via scaleMealDef.
+function computeIngredientNeeds(marmitaPlan, dinnerPlan, scale = 1) {
   const needs = {};
   MARMITA_DEFS.forEach(m => {
     const qty = marmitaPlan[m.id] || 0;
     if (qty <= 0) return;
-    Object.entries(m.ingredients).forEach(([k, raw]) => {
+    const def = scaleMealDef(m, scale);
+    Object.entries(def.ingredients).forEach(([k, raw]) => {
       needs[k] = (needs[k] || 0) + qty * raw;
     });
   });
   DINNER_DEFS.forEach(d => {
     const qty = dinnerPlan[d.id] || 0;
     if (qty <= 0) return;
-    Object.entries(d.ingredients).forEach(([k, raw]) => {
+    const def = scaleMealDef(d, scale);
+    Object.entries(def.ingredients).forEach(([k, raw]) => {
       needs[k] = (needs[k] || 0) + qty * raw;
     });
   });
@@ -884,16 +925,19 @@ const DEFAULT_DINNER_PLAN = {"O":0,"T":0,"C":0,"A":0,"S":0,"W":0};
 // Scale recipe aromatics by user's plan and aggregate. Aromatics are defined per-batch
 // (see `yield` and `aromatics` in each recipe). Returns totals in the unit each field uses
 // (alho in dentes, cebola/limao/tomate in unidades, polpa_tomate in gramas).
-function computeAromatics(marmitaPlan, dinnerPlan) {
+// portionScale (default 1) escala os aromáticos junto com os ingredientes,
+// pra manter consistência com o portion scale do usuário (v2.1.34).
+function computeAromatics(marmitaPlan, dinnerPlan, portionScale = 1) {
   const totals = { alho: 0, cebola: 0, limao: 0, tomate: 0, polpa_tomate: 0 };
   const accumulate = (defs, plan) => {
     defs.forEach(item => {
       const qty = plan[item.id] || 0;
-      const r = item.recipe;
+      const def = scaleMealDef(item, portionScale);
+      const r = def.recipe;
       if (qty <= 0 || !r || !r.yield || !r.aromatics) return;
-      const scale = qty / r.yield;
+      const yieldScale = qty / r.yield;
       Object.keys(totals).forEach(k => {
-        if (r.aromatics[k]) totals[k] += r.aromatics[k] * scale;
+        if (r.aromatics[k]) totals[k] += r.aromatics[k] * yieldScale;
       });
     });
   };
