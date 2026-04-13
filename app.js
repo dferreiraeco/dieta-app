@@ -453,6 +453,43 @@ function renderMacroLines(consumed, goals) {
 // cálculo se necessário — não poluem o daily tracker.
 
 // Atualiza o subtítulo da aba Dieta com a meta dinâmica derivada do perfil.
+// v2.1.37: dark mode toggle.
+// Estados: 'light', 'dark', 'auto' (segue prefers-color-scheme). Default 'auto'.
+// O tema é aplicado inicialmente via inline script no <head> (zero flash).
+// Aqui só ficam os helpers pro toggle no profile view e o listener de mudança
+// do prefers-color-scheme quando o usuário está em modo 'auto'.
+function getStoredTheme() {
+  return localStorage.getItem('theme') || 'auto';
+}
+function applyTheme(themeChoice) {
+  const resolved = themeChoice === 'auto'
+    ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : themeChoice;
+  if (resolved === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+  } else {
+    delete document.documentElement.dataset.theme;
+  }
+}
+function setTheme(themeChoice) {
+  localStorage.setItem('theme', themeChoice);
+  applyTheme(themeChoice);
+  // Sincroniza o segmented control do profile view modal
+  document.querySelectorAll('.theme-toggle button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeValue === themeChoice);
+  });
+}
+function initTheme() {
+  // O tema já foi aplicado pelo inline script no <head>. Aqui só o listener
+  // pra system changes (relevante quando theme === 'auto').
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = () => { if (getStoredTheme() === 'auto') applyTheme('auto'); };
+    if (mq.addEventListener) mq.addEventListener('change', handler);
+    else if (mq.addListener) mq.addListener(handler); // Safari < 14 fallback
+  }
+}
+
 // v2.1.33: helper que diz se o app está em modo single-person.
 // Default false (cardapio_para_dois é true por default — comportamento legado).
 function isSinglePerson() {
@@ -2100,13 +2137,13 @@ function renderCardioEntries() {
       ${showDist ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-left:4px">
         <input type="number" inputmode="decimal" value="${e.km || ''}" placeholder="km"
           onchange="updateCardio(${i},'km',this.value)"
-          style="width:70px;padding:6px 4px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;text-align:center;background:#fff">
+          style="width:70px;padding:6px 4px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;text-align:center;background:var(--surface)">
         <span style="font-size:12px;color:var(--gray-mid)">km percorridos</span>
       </div>` : ''}
       ${showDesc ? `<div style="margin-top:6px">
         <input type="text" value="${e.desc || ''}" placeholder="Descreva a atividade..."
           onchange="updateCardio(${i},'desc',this.value)"
-          style="width:100%;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box">
+          style="width:100%;padding:8px;border:1.5px solid var(--gray-light);border-radius:8px;font-size:13px;background:var(--surface);box-sizing:border-box">
       </div>` : ''}
     </div>`;
   });
@@ -2967,11 +3004,11 @@ function showModePicker() {
         Marque as opções desejadas. A escolha vale para <b>todos</b> os ingredientes — se marcar só Marmita, só marmitas serão sugeridas (mesmo que você tenha colocado ingredientes de jantar).
       </div>
       ${warning}
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:#fff;border-radius:8px;margin-bottom:6px;border:1.5px solid var(--gray-light)">
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:var(--surface);border-radius:8px;margin-bottom:6px;border:1.5px solid var(--gray-light)">
         <input type="checkbox" id="share_marmita" style="width:18px;height:18px;accent-color:var(--green)">
         <span>Gerar Marmita</span>
       </label>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:#fff;border-radius:8px;border:1.5px solid var(--gray-light)">
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:14px;cursor:pointer;background:var(--surface);border-radius:8px;border:1.5px solid var(--gray-light)">
         <input type="checkbox" id="share_dinner" style="width:18px;height:18px;accent-color:var(--purple)">
         <span>Gerar Jantar</span>
       </label>
@@ -3992,8 +4029,26 @@ function openProfileView() {
       <div class="pv-row"><span class="pv-label">Cardápio para 2 pessoas</span><span class="pv-value">${profile.cardapio_para_dois === false ? 'Não (somente 1 pessoa)' : 'Sim'}</span></div>
     </div>
 
+    <div class="pv-section">
+      <h3>Aparência</h3>
+      <div class="pv-row">
+        <span class="pv-label">Tema</span>
+        <div class="theme-toggle" role="radiogroup" aria-label="Tema">
+          <button type="button" data-theme-value="light" onclick="setTheme('light')">Claro</button>
+          <button type="button" data-theme-value="dark"  onclick="setTheme('dark')">Escuro</button>
+          <button type="button" data-theme-value="auto"  onclick="setTheme('auto')">Auto</button>
+        </div>
+      </div>
+    </div>
+
     ${criadoTxt ? `<div class="pv-footer">Perfil criado em ${criadoTxt}</div>` : ''}
   `;
+
+  // v2.1.37: marca o botão ativo do segmented control de tema
+  const currentTheme = getStoredTheme();
+  document.querySelectorAll('.theme-toggle button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeValue === currentTheme);
+  });
 
   document.getElementById('profile-view-modal').classList.add('open');
 }
@@ -4462,6 +4517,7 @@ function initApp() {
   renderWeightLog();
   setupIntensityToggle();
   setupOnboardingValidation();
+  initTheme();
   showOnboardingIfNeeded();
 
   renderUserBar();
