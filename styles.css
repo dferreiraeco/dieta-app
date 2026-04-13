@@ -877,20 +877,21 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .google-btn:active { background: var(--gray-bg); transform: scale(0.98); }
 .google-btn img { width: 20px; height: 20px; }
 
-/* v2.1.52: email/senha button — mesma estrutura do google-btn */
+/* v2.1.55: email/senha segue o mesmo estilo do .google-btn (neutro) */
 .email-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  width: 100%; padding: 14px; border: 2px solid var(--green-primary); border-radius: 12px;
-  background: var(--green-soft); font-size: 15px; font-weight: 700; cursor: pointer;
-  color: var(--green-primary); transition: all 0.2s;
+  width: 100%; padding: 14px; border: 2px solid var(--gray-light); border-radius: 12px;
+  background: var(--surface); font-size: 15px; font-weight: 600; cursor: pointer;
+  color: var(--gray); transition: all 0.2s;
   margin-top: 10px;
 }
-.email-btn:active { background: var(--surface); transform: scale(0.98); }
+.email-btn:active { background: var(--gray-bg); transform: scale(0.98); }
 .email-btn-icon {
   font-size: 18px;
   line-height: 1;
   width: 20px;
   text-align: center;
+  color: var(--ink-medium);
 }
 
 /* v2.1.52: email form view */
