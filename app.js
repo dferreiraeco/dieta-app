@@ -4022,12 +4022,18 @@ function uploadLocalToFirestore() {
 
 // Auth functions
 function googleLogin() {
+  // v2.1.87: marca auth action antes do popup (mesmo que o popup seja cancelado,
+  // a flag só persiste se o login for bem-sucedido — no cancelamento
+  // onAuthStateChanged não dispara e a flag fica orfã em sessionStorage sem
+  // efeito, já que o usuário continua na auth screen).
+  sessionStorage.setItem('auth_action_taken', '1');
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(err => {
     // Fallback for mobile: use redirect
     if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
       auth.signInWithRedirect(provider);
     } else {
+      sessionStorage.removeItem('auth_action_taken');
       alert('Erro ao fazer login: ' + err.message);
     }
   });
@@ -4035,6 +4041,10 @@ function googleLogin() {
 
 function skipLogin() {
   localStorage.setItem(STORAGE_KEYS.skipLogin, '1');
+  // v2.1.87: marca que o usuário tomou uma ação de auth nesta sessão.
+  // Se ele abandonar o onboarding e recarregar, a flag some (sessionStorage)
+  // e o app força retorno pra auth screen.
+  sessionStorage.setItem('auth_action_taken', '1');
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-container').style.display = 'block';
   initApp();
@@ -4257,6 +4267,8 @@ async function submitAuthEmail() {
     } else {
       await auth.signInWithEmailAndPassword(email, password);
     }
+    // v2.1.87: marca auth action bem-sucedida
+    sessionStorage.setItem('auth_action_taken', '1');
     // Sucesso: auth.onAuthStateChanged cuida de esconder a auth screen
     // e chamar initApp(). Não precisa fazer mais nada aqui.
   } catch (e) {
@@ -4409,6 +4421,8 @@ async function submitConsentModal() {
     return;
   }
   _closeConsentModal();
+  // v2.1.87: consentimento é uma ação ativa — marca flag pra onboarding ser permitido
+  sessionStorage.setItem('auth_action_taken', '1');
   // Libera o app
   const authScreen = document.getElementById('auth-screen');
   const appContainer = document.getElementById('app-container');
@@ -4981,13 +4995,57 @@ function showOnboardingIfNeeded() {
   if (getUserProfile()) {
     // Already has profile — make sure modal is hidden (handles late Firestore sync)
     modal.classList.remove('open');
+    sessionStorage.removeItem('auth_action_taken');
     return;
   }
-  // No profile yet — show modal
+  // v2.1.87: sem profile. Só mostra o onboarding se o usuário tomou uma
+  // ação de auth ATIVA na sessão atual (skipLogin / login / signup / consent).
+  // Se não tomou, é porque recarregou o app após ter abandonado o onboarding
+  // antes — neste caso, volta pra tela de login ao invés de prender aqui.
+  if (!sessionStorage.getItem('auth_action_taken')) {
+    _returnToAuthScreen({ silent: true });
+    return;
+  }
   // v2.1.76: garante modo avançado desligado em create (default seguro)
   const advCb = document.getElementById('ob-advanced-deficit');
   if (advCb) { advCb.checked = false; _toggleAdvancedDeficit(advCb); }
   modal.classList.add('open');
+}
+
+// v2.1.87: fluxo de retorno pra tela de login. Chamado:
+// - Automaticamente quando o usuário recarrega o app com onboarding incompleto
+// - Manualmente quando clica no X do onboarding em modo create
+async function _returnToAuthScreen(opts) {
+  opts = opts || {};
+  if (!opts.silent) {
+    const ok = await customConfirm(
+      'Seus dados ainda não foram salvos. Deseja mesmo voltar pra tela inicial?',
+      { title: 'Voltar sem salvar?', okLabel: 'Voltar' }
+    );
+    if (!ok) return;
+  }
+  sessionStorage.removeItem('auth_action_taken');
+  if (currentUser) {
+    // Login via email/Google — sair e recarregar
+    try { await auth.signOut(); } catch (_) {}
+  } else {
+    // Modo "Sem conta" — limpar flag e recarregar
+    localStorage.removeItem(STORAGE_KEYS.skipLogin);
+  }
+  location.reload();
+}
+
+// v2.1.87: handler unificado do botão X do onboarding.
+// Em modo edit → fecha o modal (closeEditProfile)
+// Em modo create → volta pra tela de login (_returnToAuthScreen)
+function onOnboardingClose() {
+  const modal = document.getElementById('onboarding-modal');
+  if (!modal) return;
+  if (modal.dataset.mode === 'edit') {
+    closeEditProfile();
+  } else {
+    _returnToAuthScreen();
+  }
 }
 
 function renderUserBar() {

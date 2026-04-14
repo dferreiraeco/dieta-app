@@ -625,9 +625,10 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
   width: 34px; height: 34px; border-radius: 50%;
   border: none; background: var(--gray-bg); color: var(--gray);
   font-size: 22px; line-height: 1; cursor: pointer;
-  display: none; align-items: center; justify-content: center;
+  /* v2.1.87: sempre visível (edit OU create). Click dispatches via
+     onOnboardingClose() que sabe o que fazer em cada modo. */
+  display: flex; align-items: center; justify-content: center;
 }
-#onboarding-modal[data-mode="edit"] .ob-close-btn { display: flex; }
 .modal .close-btn {
   float: right; background: none; border: none; font-size: 24px;
   color: var(--gray-mid); cursor: pointer; padding: 0 4px;
