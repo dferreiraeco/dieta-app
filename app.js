@@ -4853,7 +4853,7 @@ const TOUR_STEPS = [
     tab: 'compras',
     targetSelector: '#page-compras button[onclick*="exportShoppingPDF"]',
     title: 'Compartilhar Lista',
-    text: 'Gera um PDF com a lista pra você enviar pro WhatsApp, imprimir ou anotar no mercado.',
+    text: 'Gera um PDF com a lista pra você enviar pro WhatsApp, ou imprimir e anotar no mercado.',
   },
 
   // ===== Aba Dieta =====
