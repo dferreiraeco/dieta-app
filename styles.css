@@ -2076,38 +2076,42 @@ body {
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"] {
-  /* Custom circular checkbox — 0.5em (metade do font-size do texto) */
-  margin: 6px 0 0 0;
-  width: 0.5em;
-  height: 0.5em;
+  /* Custom circular checkbox — tamanho fixo 14px (menor que o texto 12.5px
+     mas visível no toque). em não funciona confiável em input appearance:none
+     no Safari iOS / PWA standalone. */
+  margin: 3px 0 0 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
   flex-shrink: 0;
+  box-sizing: border-box;
   cursor: pointer;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  border: 1px solid var(--gray-mid);
+  border: 1.5px solid var(--gray-mid);
   border-radius: 50%;
   background: var(--surface);
   position: relative;
   transition: background 0.15s, border-color 0.15s;
+  padding: 0;
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"]:checked {
   background: var(--accent-danger);
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"]:checked::after {
-  /* Checkmark centralizado: pseudo-element absolutamente posicionado
-     em 50%/50% com translate + rotate pra ajustar. O truque é que
-     a origem do rotate é o centro do próprio elemento, então o
-     translate compensa antes da rotação. */
   content: '';
   position: absolute;
   left: 50%;
   top: 45%;
-  width: 0.3em;
-  height: 0.6em;
+  width: 3px;
+  height: 6px;
   border: solid #fff;
-  border-width: 0 0.14em 0.14em 0;
+  border-width: 0 1.5px 1.5px 0;
   transform: translate(-50%, -55%) rotate(45deg);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"]:focus-visible {
@@ -2122,8 +2126,9 @@ body {
   background: var(--accent-danger-soft);
   border-left: 3px solid var(--accent-danger);
   border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  /* v2.1.82: fonte reduzida em 20% (de 12px pra 9.6px) */
+  font-size: 9.6px;
+  line-height: 1.45;
   color: var(--gray);
   font-weight: 400;
   text-transform: none;
