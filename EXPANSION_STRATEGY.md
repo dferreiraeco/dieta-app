@@ -3,8 +3,8 @@
 Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de usuários mais ampla. Atualize o status de cada item conforme progride.
 
 **Criado:** 2026-04-13 (v2.1.68)
-**Status global:** 🟡 Fase 0 em progresso — Sprint 0B (docs legais) drafts concluídos, aguardando integração no app
-**Última atualização:** 2026-04-13 (PRIVACY.md e TERMS.md draftados com sac.dietplan@gmail.com)
+**Status global:** 🟡 Fase 0 quase concluída — Sprints 0A-0D ✅, 0E aguardando ação do usuário, 0F smoke test pendente
+**Última atualização:** 2026-04-14 (v2.1.86 — Sprint 0D completo com tour + imagens, 0E docs prontos em SECURITY.md, 0F SMOKE_TEST.md criado)
 
 ---
 
@@ -435,21 +435,27 @@ Dependência: email DPO criado.
 - Tour/walkthrough no primeiro uso (opcional, decide depois)
 - Feedback canal (botão/link pro email DPO)
 
-### Sprint 0E — Operacional (parte pelo usuário)
+### Sprint 0E — Operacional (parte pelo usuário) ✅ docs prontos
 
-**Ação do usuário:**
-- Migrar Firebase pra plano Blaze (pay-as-you-go) — gratuito até consumo exceder free tier
-- Definir budget alerta em Firebase Console (ex: $10/mês)
+**Ação do usuário** (pendente):
+- Migrar Firebase pra plano Blaze (pay-as-you-go) — seguindo SECURITY.md seção 3
+- Definir budget alert no Google Cloud (R$ 50/mês com thresholds 50%/80%/100%)
+- Opcional: habilitar backups automáticos do Firestore (retenção 7 dias)
 
-**Ação minha:**
-- Documentar no SECURITY.md (seção nova sobre Blaze + alerts)
-- Atualizar ROADMAP.md referenciando EXPANSION_STRATEGY
+**Ação minha** ✅ concluído:
+- SECURITY.md seção 3 "Infraestrutura e Billing" com passo-a-passo completo
+- Expectativa de custo real por faixa de usuários
+- Monitoramento contínuo documentado
 
-### Sprint 0F — Validação
+### Sprint 0F — Validação ✅ checklist pronto
 
-- Smoke test completo end-to-end simulando usuário novo
-- Auditoria manual de todos os checkboxes de Fase 0
-- Marcar Fase 0 como ✅ 100% concluída
+**Checklist E2E em `SMOKE_TEST.md`** (pendente execução):
+- 10 cenários cobrindo todo o fluxo de Fase 0
+- Primeiro acesso, cadastro email+Google, onboarding, tour, 5 abas
+- Direitos LGPD, apagar conta com re-auth, importar backup
+- Dark mode, offline/PWA, Firestore Rules Playground
+- Execução estimada: 30-45 minutos no celular
+- Conclusão: marcar Fase 0 como 100% ✅ e avançar pra Fase 1
 
 ### Estimativa total Fase 0
 

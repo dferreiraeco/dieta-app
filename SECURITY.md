@@ -154,5 +154,91 @@ Esta decisão deve ser reavaliada se:
 - **Password reset:** `sendPasswordResetEmail` via Firebase (link por email, expira 1h)
 - **Logout:** `auth.signOut()` + `location.reload()` pra limpar state em memória (v2.1.53)
 - **Firestore sync:** snapshots em tempo real, updates apenas pelo próprio usuário autenticado
-- **Backup em export:** o usuário pode exportar seus dados como JSON via "Backup/Exportar" (se disponível no app)
+- **Backup em export:** o usuário pode exportar seus dados como JSON via "Exportar meus dados" no profile view (v2.1.70+)
+- **Account deletion:** exclusão real da conta Firebase + Firestore com re-auth obrigatório (v2.1.70+)
 - **Error messages:** mapeadas pra PT-BR mas não expõem stack traces ou informações sensíveis
+
+---
+
+## 3) Infraestrutura e Billing (Sprint 0E)
+
+### Por que habilitar Blaze plan
+
+O Firebase tem dois níveis de billing:
+
+| Plano | Custo | Limites | Problema |
+|---|---|---|---|
+| **Spark (free)** | R$ 0 | Firestore: 50k reads/dia, 20k writes/dia, 1 GB storage. Auth: 50k usuários. | **Bloqueia** ao exceder — app fica offline até reset diário |
+| **Blaze (pay-as-you-go)** | Pay-as-you-go | Mesmas quotas gratuitas, só cobra o excesso | Nada bloqueia. Até 50k usuários ativos/mês, geralmente fica em R$ 0 |
+
+**Recomendação pra expansão:** migrar pra **Blaze** antes de abrir o app pro público, por dois motivos:
+
+1. **Continuidade:** se o Spark limite for atingido em um dia de pico, o app fica fora do ar até meia-noite UTC. Blaze evita isso.
+2. **Confiabilidade:** a maioria das features avançadas do Firebase (Cloud Functions, backups automáticos, analytics granular) exige Blaze.
+
+**Custo real esperado** (projeto DietPLAN em `southamerica-east1`):
+
+- **0-50 usuários ativos:** R$ 0/mês (dentro do free tier do Blaze)
+- **50-200 usuários ativos:** R$ 0-5/mês
+- **200-1000 usuários ativos:** R$ 5-30/mês
+- **1000+ usuários ativos:** depende do uso — configurar budget alerts
+
+### Como migrar pra Blaze (passo a passo)
+
+1. Abrir https://console.firebase.google.com/project/peitudasnow/usage/details
+2. Clicar em **"Upgrade"** ou **"Modify plan"** no canto inferior esquerdo
+3. Selecionar **"Blaze (Pay as you go)"**
+4. Vincular uma **conta de pagamento do Google Cloud**:
+   - Se não tiver, criar nova em https://console.cloud.google.com/billing/create
+   - Cartão de crédito necessário — não cobra nada até exceder o free tier
+5. Confirmar upgrade
+6. Aguardar ~30s pra propagação
+
+**Após upgrade:** todas as features que exigem Blaze ficam disponíveis, e você pode configurar budget alerts (próxima seção).
+
+### Budget Alerts (obrigatório antes de abrir ao público)
+
+Mesmo com custo esperado baixo, você deve configurar alertas de gastos pra evitar surpresas:
+
+1. Abrir https://console.cloud.google.com/billing → selecionar a conta de billing
+2. Menu lateral → **Budgets & alerts** → **Create budget**
+3. Nome: `DietPLAN — limite mensal`
+4. Período: **Mensal**
+5. Scope: selecionar o projeto **DietPLAN**
+6. Budget amount: **R$ 50,00** (ou valor confortável pra você)
+7. Threshold rules:
+   - 50% → email apenas
+   - 80% → email + pausar novos signups (manual)
+   - 100% → email + revisar Firestore Rules pra bloquear escritas
+8. Destinatários: seu email pessoal + `sac.dietplan@gmail.com`
+9. **Save**
+
+**Ação em caso de alerta em 80%:**
+- Investigar causa (acesso normal crescendo? bug de loop? ataque?)
+- Se for ataque, bloquear via Firestore Rules temporariamente
+- Considerar subir o budget ou otimizar queries
+
+### Monitoramento contínuo
+
+- **Firebase Console → Usage:** quantos reads/writes por dia, por coleção
+- **Firebase Console → Authentication → Users:** contagem total de usuários
+- **Cloud Console → Billing → Reports:** gasto real do mês, por serviço
+- **Rotina recomendada:** revisar semanalmente durante a fase 1-2 (soft launch), depois quinzenal
+
+### Backups do Firestore
+
+A partir do Blaze, você pode habilitar **backups automáticos** do Firestore:
+
+1. https://console.cloud.google.com/firestore/backups → selecionar database
+2. **Create backup schedule** → diário, retenção 7 dias
+3. Custo: ~R$ 0,01 por GB por dia (pra uma base pequena, centavos/mês)
+
+Isso protege contra:
+- Bugs no app que corrompem dados
+- Exclusão acidental
+- Ransomware (improvável mas possível)
+
+### Histórico
+
+- **v1 (2026-04-13)** — projeto no plano Spark (free)
+- **v2 (2026-04-14, Sprint 0E)** — **migração pra Blaze pendente**, docs preparados
