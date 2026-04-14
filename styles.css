@@ -1965,7 +1965,10 @@ body {
   bottom: calc(90px + var(--safe-bottom));
   left: 14px;
   right: 14px;
-  max-width: 520px;
+  /* v2.1.88: card mais estreito pra imagens 1:1 + altura padronizada */
+  max-width: 340px;
+  min-height: 560px;
+  max-height: calc(100vh - 110px - var(--safe-bottom));
   margin: 0 auto;
   background: var(--surface);
   border-radius: 14px;
@@ -1974,18 +1977,24 @@ body {
   z-index: 453;
   animation: tourCardIn 0.25s ease-out;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .tour-card h3,
 .tour-card p,
 .tour-card .tour-nav { padding-left: 20px; padding-right: 20px; }
 .tour-card h3 { padding-top: 16px; }
+/* v2.1.88: tour-nav sempre no fim do card (cards com menos texto ganham
+   espaço vazio antes da nav, mantendo altura uniforme entre passos) */
+.tour-card .tour-nav { margin-top: auto; }
 .tour-card-img {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   background: #f0f0e8;
+  flex-shrink: 0;
 }
 .tour-card.centered {
   bottom: auto;
