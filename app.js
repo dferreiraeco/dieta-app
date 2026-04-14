@@ -4972,11 +4972,14 @@ function _clearTourSpotlight() {
   }
 }
 
-// v2.1.95: cria uma div em position:fixed sobre o elemento alvo com um
-// box-shadow gigante que escurece todo o resto da tela. Como está no body
-// direto (fora de qualquer stacking context), o escurecimento é confiável.
+// v2.1.95/96: cria uma div em position:fixed sobre o elemento alvo com um
+// box-shadow gigante que escurece o resto da tela. O cutout é anexado DENTRO
+// do #tour-overlay pro stacking context ficar consistente: overlay > cutout
+// < card, garantindo que o card NÃO seja escurecido pelo shadow do cutout.
 function _createTourCutout(target) {
   if (!target) return;
+  const overlay = document.getElementById('tour-overlay');
+  if (!overlay) return;
   const rect = target.getBoundingClientRect();
   const pad = 8;
   const el = document.createElement('div');
@@ -4985,7 +4988,7 @@ function _createTourCutout(target) {
   el.style.left   = Math.max(0, rect.left - pad) + 'px';
   el.style.width  = (rect.width + pad * 2) + 'px';
   el.style.height = (rect.height + pad * 2) + 'px';
-  document.body.appendChild(el);
+  overlay.appendChild(el);
   _tourCutoutEl = el;
 }
 
@@ -5062,7 +5065,7 @@ function _renderTourStep() {
     card.style.transform = '';
   }
   const imgHtml = step.image
-    ? '<img class="tour-card-img" src="' + step.image + '?v=2195" alt="">'
+    ? '<img class="tour-card-img" src="' + step.image + '?v=2196" alt="">'
     : '';
   card.innerHTML =
     imgHtml +
