@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=2175">
+<link rel="stylesheet" href="styles.css?v=2176">
 <script>
   // v2.1.37: aplica o tema (data-theme) ANTES do CSS pintar pra evitar flash.
   // v2.1.51: default é 'light'. Usuário pode mudar pra 'dark' ou 'auto' no
@@ -279,17 +279,29 @@
           <li><b>Suave (15%):</b> progresso lento mas sustentável, ideal para iniciantes ou quem quer evitar fome excessiva</li>
           <li><b>Moderado (20%):</b> balanceado entre velocidade e sustentabilidade — padrão recomendado pra maioria</li>
           <li><b>Agressivo (30%):</b> progresso mais rápido, exige disciplina, dieta mais rígida e maior risco de perder massa muscular</li>
-          <li><b>Extremo (40%):</b> modo avançado, só com acompanhamento profissional, alto risco de perda de massa magra</li>
         </ul>
+        Um 4º nível (Extremo, 40%) pode ser habilitado via "modo avançado" abaixo do seletor, mas só é recomendado com acompanhamento profissional.
       </div>
       <select id="ob-deficit">
         <option value="">Selecione...</option>
         <option value="suave">Suave — 15% do TDEE (~0,35 kg/sem)</option>
         <option value="moderado" selected>Moderado — 20% do TDEE (~0,5 kg/sem)</option>
         <option value="agressivo">Agressivo — 30% do TDEE (~0,85 kg/sem)</option>
-        <option value="extremo">Extremo — 40% do TDEE (~1,0+ kg/sem, teto Longland 2016)</option>
       </select>
       <div class="ob-error" id="ob-deficit-err"></div>
+      <!-- v2.1.76: modo avançado libera a opção "extremo" (40%) que estava
+           escondida por padrão, protegendo usuários iniciantes -->
+      <label class="ob-advanced-toggle">
+        <input type="checkbox" id="ob-advanced-deficit" onchange="_toggleAdvancedDeficit(this)">
+        <span>Habilitar <b>modo avançado</b> (inclui déficit extremo de 40%)</span>
+      </label>
+      <div class="ob-advanced-warning" id="ob-advanced-warning" hidden>
+        ⚠ <b>Modo avançado ativado.</b> O déficit de 40% do TDEE é considerado extremo
+        pela literatura científica (teto Longland 2016). <b>Só use com acompanhamento
+        profissional</b> — risco alto de perda de massa magra, comprometimento hormonal
+        e efeito rebote. Para a maioria dos usuários, o déficit <b>moderado (20%)</b>
+        é mais eficaz a longo prazo.
+      </div>
     </div>
 
     <div class="ob-field" id="ob-surplus-field">
@@ -583,7 +595,7 @@
 </div><!-- /app-container -->
 
 <script src="glyphs.js?v=2114"></script>
-<script src="data.js?v=2175"></script>
-<script src="app.js?v=2175"></script>
+<script src="data.js?v=2176"></script>
+<script src="app.js?v=2176"></script>
 </body>
 </html>

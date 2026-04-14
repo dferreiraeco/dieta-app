@@ -4844,6 +4844,45 @@ function _toggleOBHelp(helpId, btn) {
   }
 }
 
+// v2.1.76: habilita/desabilita a opção "extremo" (40%) no déficit.
+// Ao marcar, adiciona a opção e mostra o aviso forte. Ao desmarcar, remove
+// a opção e, se estava selecionada, volta pra "moderado" (padrão seguro).
+function _toggleAdvancedDeficit(checkbox) {
+  const select  = document.getElementById('ob-deficit');
+  const warning = document.getElementById('ob-advanced-warning');
+  if (!select) return;
+  if (checkbox && checkbox.checked) {
+    // Adiciona opção "extremo" se ainda não existir
+    if (!select.querySelector('option[value="extremo"]')) {
+      const opt = document.createElement('option');
+      opt.value = 'extremo';
+      opt.textContent = 'Extremo — 40% do TDEE (~1,0+ kg/sem, modo avançado)';
+      select.appendChild(opt);
+    }
+    if (warning) warning.removeAttribute('hidden');
+  } else {
+    // Remove opção "extremo" se existir
+    const extreme = select.querySelector('option[value="extremo"]');
+    if (extreme) {
+      // Se estava selecionada, volta pra moderado
+      if (select.value === 'extremo') select.value = 'moderado';
+      extreme.remove();
+    }
+    if (warning) warning.setAttribute('hidden', '');
+  }
+}
+
+// v2.1.76: sincroniza o estado do toggle "modo avançado" com o perfil
+// atual na abertura do modal. Se o perfil já tem deficit_intensity='extremo',
+// mantém o modo avançado ligado pra não apagar a escolha do usuário.
+function _syncAdvancedDeficitFromProfile(profile) {
+  const cb = document.getElementById('ob-advanced-deficit');
+  if (!cb) return;
+  const isExtreme = !!(profile && profile.deficit_intensity === 'extremo');
+  cb.checked = isExtreme;
+  _toggleAdvancedDeficit(cb);
+}
+
 function getUserProfile() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.userProfile) || 'null'); }
   catch (e) { return null; }
@@ -4863,6 +4902,9 @@ function showOnboardingIfNeeded() {
     return;
   }
   // No profile yet — show modal
+  // v2.1.76: garante modo avançado desligado em create (default seguro)
+  const advCb = document.getElementById('ob-advanced-deficit');
+  if (advCb) { advCb.checked = false; _toggleAdvancedDeficit(advCb); }
   modal.classList.add('open');
 }
 
@@ -5276,6 +5318,9 @@ function openEditProfile() {
     : profile.nivel_atividade) || '';
   set('ob-atividade',  nivelKey);
   set('ob-bf',         profile.body_fat_pct != null ? profile.body_fat_pct : '');
+  // v2.1.76: habilita modo avançado ANTES de setar o valor — senão o set
+  // não encontraria a opção "extremo" se o perfil anterior usava essa intensidade
+  _syncAdvancedDeficitFromProfile(profile);
   set('ob-deficit',    profile.deficit_intensity || 'moderado');
   set('ob-surplus',    profile.surplus_intensity || 'moderado');
   set('ob-dois',       profile.cardapio_para_dois === false ? 'nao' : 'sim');

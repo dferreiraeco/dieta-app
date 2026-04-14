@@ -2050,6 +2050,45 @@ body {
 .ob-tooltip-body b { color: var(--ink-strong); }
 .ob-tooltip-body ul { margin: 6px 0 0 18px; padding: 0; }
 .ob-tooltip-body li { margin: 3px 0; }
+
+/* v2.1.76: toggle "modo avançado" e warning pro déficit extremo */
+.ob-advanced-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--gray-mid);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.ob-advanced-toggle input[type="checkbox"] {
+  margin-top: 2px;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--accent-danger);
+}
+.ob-advanced-toggle b { color: var(--accent-danger); }
+.ob-advanced-warning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--accent-danger-soft);
+  border-left: 3px solid var(--accent-danger);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gray);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.ob-advanced-warning[hidden] { display: none !important; }
+.ob-advanced-warning b { color: var(--accent-danger); }
 /* pv-lgpd-btn precisa render como link quando é <a> */
 a.pv-lgpd-btn {
   text-decoration: none;
