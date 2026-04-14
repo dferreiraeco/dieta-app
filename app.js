@@ -5563,6 +5563,13 @@ function submitOnboarding() {
   // modo single/dois — re-render pra refletir a mudança imediatamente.
   if (typeof renderShoppingList === 'function') renderShoppingList();
   if (typeof renderMeals === 'function') renderMeals();
+
+  // v2.1.89: dispara o tour walkthrough após onboarding de novo usuário.
+  // Só em modo create (não em edit) e só se o usuário nunca viu o tour.
+  // maybeStartFirstTour checa profile.tour_completed_at antes de começar.
+  if (!isEdit) {
+    setTimeout(maybeStartFirstTour, 400);
+  }
 }
 
 // ============================================================
