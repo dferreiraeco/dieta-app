@@ -4878,7 +4878,11 @@ const TOUR_STEPS = [
   },
   {
     tab: 'dieta',
-    targetSelector: '#marmita-selector',
+    // v2.1.103: destaca os dois cards inteiros (Almoço + Jantar) em um só spotlight
+    targetSelectors: [
+      '#page-dieta .card:has(#marmita-selector)',
+      '#page-dieta .card:has(#dinner-selector)',
+    ],
     title: 'Almoço e jantar de hoje',
     text: 'Selecione qual marmita e qual jantar do planejamento semanal você vai comer hoje. As escolhas aparecem nas refeições abaixo pra você marcar.',
   },
@@ -4917,7 +4921,11 @@ const TOUR_STEPS = [
   },
   {
     tab: 'treino',
-    targetSelector: '#page-treino button[onclick="saveWorkout()"]',
+    // v2.1.103: destaca os dois botões juntos (Salvar Treino + Ver Histórico)
+    targetSelectors: [
+      '#page-treino button[onclick="saveWorkout()"]',
+      '#page-treino button[onclick="openHistory()"]',
+    ],
     title: 'Salvar e ver histórico',
     text: 'Salve o treino atual e consulte sua progressão ao longo das semanas pelo botão "Ver Histórico de Progressão".',
   },
@@ -4976,28 +4984,53 @@ function _clearTourSpotlight() {
 // box-shadow gigante que escurece o resto da tela. O cutout é anexado DENTRO
 // do #tour-overlay pro stacking context ficar consistente: overlay > cutout
 // < card, garantindo que o card NÃO seja escurecido pelo shadow do cutout.
-function _createTourCutout(target) {
-  if (!target) return;
+// v2.1.103: aceita array de elementos — computa rect union pra spotlight
+// único envolvendo vários elementos (ex: Almoço + Jantar, Salvar + Histórico).
+function _createTourCutout(targetOrList) {
   const overlay = document.getElementById('tour-overlay');
   if (!overlay) return;
-  const rect = target.getBoundingClientRect();
+  const targets = Array.isArray(targetOrList) ? targetOrList : [targetOrList];
+  const validTargets = targets.filter(t => t);
+  if (!validTargets.length) return;
+  // Union bounding rect
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  validTargets.forEach(t => {
+    const r = t.getBoundingClientRect();
+    if (r.left   < left)   left = r.left;
+    if (r.top    < top)    top = r.top;
+    if (r.right  > right)  right = r.right;
+    if (r.bottom > bottom) bottom = r.bottom;
+  });
   const pad = 8;
   const el = document.createElement('div');
   el.className = 'tour-cutout';
-  el.style.top    = Math.max(0, rect.top - pad) + 'px';
-  el.style.left   = Math.max(0, rect.left - pad) + 'px';
-  el.style.width  = (rect.width + pad * 2) + 'px';
-  el.style.height = (rect.height + pad * 2) + 'px';
+  el.style.top    = Math.max(0, top - pad) + 'px';
+  el.style.left   = Math.max(0, left - pad) + 'px';
+  el.style.width  = (right - left + pad * 2) + 'px';
+  el.style.height = (bottom - top + pad * 2) + 'px';
   overlay.appendChild(el);
   _tourCutoutEl = el;
 }
 
-// v2.1.95: posiciona o card de tour perto do target. Se target está
-// na metade superior da viewport, card aparece abaixo dele; se está
-// na metade inferior, card aparece acima. Clamp pros limites da viewport.
-function _positionTourCardNearTarget(card, target) {
-  if (!card || !target) return;
-  const rect = target.getBoundingClientRect();
+// v2.1.95/103: posiciona o card de tour perto do target. Aceita elemento
+// único ou array (computa rect union). Se target está na metade superior
+// da viewport, card aparece abaixo dele; se está na metade inferior,
+// card aparece acima. Clamp pros limites da viewport.
+function _positionTourCardNearTarget(card, targetOrList) {
+  if (!card || !targetOrList) return;
+  const targets = Array.isArray(targetOrList) ? targetOrList : [targetOrList];
+  const validTargets = targets.filter(t => t);
+  if (!validTargets.length) return;
+  // Union bounding rect
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  validTargets.forEach(t => {
+    const r = t.getBoundingClientRect();
+    if (r.left   < left)   left = r.left;
+    if (r.top    < top)    top = r.top;
+    if (r.right  > right)  right = r.right;
+    if (r.bottom > bottom) bottom = r.bottom;
+  });
+  const rect = { left, top, right, bottom, width: right - left, height: bottom - top };
   const viewH = window.innerHeight;
   const viewW = window.innerWidth;
   const margin = 16;
@@ -5045,9 +5078,15 @@ function _renderTourStep() {
   // Visibilidade é restaurada depois que o spotlight/posição estão aplicados.
   card.style.visibility = 'hidden';
 
-  // Troca de aba se necessário (dá tempo pro DOM atualizar antes do spotlight)
+  // v2.1.103: só troca de aba se realmente mudou. switchTab faz
+  // window.scrollTo(0,0), então chamar pra mesma aba reseta o scroll
+  // desnecessariamente e cria animação "sobe-desce" entre passos da mesma aba.
   if (step.tab && typeof switchTab === 'function') {
-    switchTab(step.tab);
+    const currentPage = document.querySelector('.page.active');
+    const currentKey  = currentPage ? currentPage.id.replace('page-', '') : null;
+    if (currentKey !== step.tab) {
+      switchTab(step.tab);
+    }
   }
   const total = TOUR_STEPS.length;
   const isFirst = _tourStep === 0;
@@ -5098,23 +5137,25 @@ function _renderTourStep() {
       }
       // Card pode ser mostrado imediatamente (usa posição CSS padrão)
       card.style.visibility = 'visible';
-    } else if (step.targetSelector) {
-      const el = document.querySelector(step.targetSelector);
-      if (el) {
-        // Scroll pra posicionar o target visível
+    } else if (step.targetSelector || step.targetSelectors) {
+      // v2.1.103: aceita um único selector OU um array de selectors (cutout
+      // único cobrindo todos os elementos, ex: Almoço+Jantar, Salvar+Histórico)
+      const selectors = step.targetSelectors || [step.targetSelector];
+      const els = selectors
+        .map(sel => document.querySelector(sel))
+        .filter(el => el);
+      if (els.length) {
+        // Scroll pra posicionar o PRIMEIRO target visível. block:start usa
+        // menos scroll vertical quando há múltiplos targets alinhados.
         try {
-          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          els[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
         } catch (_) {}
-        // Aguarda scroll terminar antes de criar cutout, posicionar card
-        // e torná-lo visível. Antes disso, card fica escondido pra não
-        // aparecer brevemente na posição CSS padrão (bottom fixed).
         setTimeout(() => {
-          _createTourCutout(el);
-          _positionTourCardNearTarget(card, el);
+          _createTourCutout(els);
+          _positionTourCardNearTarget(card, els);
           card.style.visibility = 'visible';
         }, 320);
       } else {
-        // Target não encontrado: mostra o card assim mesmo
         card.style.visibility = 'visible';
       }
     } else {
