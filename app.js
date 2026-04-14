@@ -4271,94 +4271,35 @@ async function submitAuthEmail() {
   }
 }
 
-// v2.1.70: modal para exibir Termos de Uso e Política de Privacidade.
-// Busca o .md do servidor e renderiza com um parser minimal (headers, bold,
-// italic, listas, tabelas, links). Pra manter o bundle leve, nada de lib externa.
-async function showLegalDoc(which) {
+// v2.1.84: modal para exibir Termos de Uso e Política de Privacidade.
+// Os docs são EMBUTIDOS no bundle via legal-docs.js (variável global
+// LEGAL_DOCS), eliminando fetch completamente. Isso resolve definitivamente
+// todos os problemas de SW stale, Jekyll processing e cache do navegador.
+// Pra atualizar os docs: editar PRIVACY.md/TERMS.md + rodar
+// `node scripts/build-legal-docs.js` antes do commit.
+function showLegalDoc(which) {
   const titles = { terms: 'Termos de Uso', privacy: 'Política de Privacidade' };
-  const files  = { terms: 'TERMS.md', privacy: 'PRIVACY.md' };
   const titleEl = document.getElementById('legal-modal-title');
   const bodyEl  = document.getElementById('legal-modal-body');
   const modal   = document.getElementById('legal-modal');
   if (!titleEl || !bodyEl || !modal) return;
   titleEl.textContent = titles[which] || 'Documento';
-  bodyEl.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--gray-mid)">Carregando…</div>';
   modal.classList.add('open');
 
-  // v2.1.72: tenta múltiplas estratégias pra burlar SW antigo e cache stale.
-  // 1. fetch relativo com cache:reload (força rerequest completo)
-  // 2. fetch absoluto com timestamp pra evitar qualquer cache intermediário
-  // 3. XHR como último recurso (comportamento diferente em relação ao SW)
-  const ts = Date.now();
-  const candidates = [
-    { url: files[which], opts: { cache: 'reload' } },
-    { url: files[which] + '?t=' + ts, opts: { cache: 'no-store' } },
-    { url: new URL(files[which] + '?t=' + ts, location.href).toString(), opts: { cache: 'no-store' } },
-  ];
-  let md = null;
-  let lastErr = null;
-  for (const c of candidates) {
-    try {
-      const resp = await fetch(c.url, c.opts);
-      if (!resp.ok) { lastErr = new Error('HTTP ' + resp.status); continue; }
-      const text = await resp.text();
-      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-        lastErr = new Error('Servidor devolveu HTML em vez do Markdown');
-        continue;
-      }
-      md = text;
-      break;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  // 4. Última tentativa: XHR (rota diferente do fetch, pode escapar do SW antigo)
-  if (!md) {
-    try {
-      md = await _fetchViaXHR(files[which] + '?xhr=' + ts);
-      if (md && (md.trim().startsWith('<!DOCTYPE') || md.trim().startsWith('<html'))) {
-        md = null;
-      }
-    } catch (e) { lastErr = e; }
-  }
-
+  // Lê do LEGAL_DOCS (definido em legal-docs.js, carregado antes de app.js)
+  const md = (typeof LEGAL_DOCS !== 'undefined') ? LEGAL_DOCS[which] : null;
   if (md) {
     bodyEl.innerHTML = _renderMarkdown(md);
     bodyEl.scrollTop = 0;
     return;
   }
 
-  // Fallback: tudo falhou. Mostra mensagem clara + link pra abrir direto.
-  const rawUrl = files[which];
+  // Fallback defensivo: só dispara se legal-docs.js não carregou.
   bodyEl.innerHTML =
     '<div style="padding:20px;line-height:1.6">' +
-    '<p style="color:var(--accent-danger);font-weight:700;margin-bottom:10px">⚠ Não foi possível carregar o documento no app.</p>' +
-    '<p style="color:var(--gray);font-size:13px;margin-bottom:14px">Isso pode acontecer se o cache do navegador estiver desatualizado. Tente:</p>' +
-    '<ul style="font-size:13px;color:var(--gray);margin:0 0 14px 20px">' +
-    '<li>Recarregar a página (puxe de cima pra baixo ou F5)</li>' +
-    '<li>Limpar o cache do app nas configurações do navegador</li>' +
-    '<li>Abrir o documento direto no link abaixo</li>' +
-    '</ul>' +
-    '<a href="' + rawUrl + '" target="_blank" rel="noopener" style="display:inline-block;padding:10px 16px;background:var(--green);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">Abrir em nova aba</a>' +
-    '<p style="margin-top:16px;font-size:11px;color:var(--gray-mid)"><small>Erro técnico: ' + ((lastErr && lastErr.message) || 'desconhecido') + '</small></p>' +
+    '<p style="color:var(--accent-danger);font-weight:700;margin-bottom:10px">⚠ Documento não disponível</p>' +
+    '<p style="color:var(--gray);font-size:13px">O conteúdo legal não foi carregado corretamente. Por favor feche e reabra o app, ou contate sac.dietplan@gmail.com.</p>' +
     '</div>';
-}
-
-// v2.1.72: fetch alternativo via XHR. Usa caminhos diferentes do fetch()
-// e em alguns casos escapa de SWs antigos com handlers mal-formados.
-function _fetchViaXHR(url) {
-  return new Promise((resolve, reject) => {
-    try {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
-        else reject(new Error('XHR HTTP ' + xhr.status));
-      };
-      xhr.onerror = () => reject(new Error('XHR network error'));
-      xhr.send();
-    } catch (e) { reject(e); }
-  });
 }
 
 function closeLegalDoc() {
