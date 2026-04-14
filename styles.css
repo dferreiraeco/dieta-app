@@ -799,7 +799,10 @@ body.logged-in { padding-top: calc(36px + var(--safe-top)); }
 .cal-dot {
   width: 6px; height: 6px; border-radius: 50%;
 }
-.cal-dot.forca { background: var(--blue-mid); }
+/* v2.1.109: forca era --blue-mid mas esse alias virou verde na
+   refatoração de paleta (v2.1.0), fazendo marmita e treino terem
+   a mesma cor. Mudado pra roxo pra ter 3 cores distintas na legenda. */
+.cal-dot.forca { background: var(--purple); }
 .cal-dot.cardio { background: var(--orange); }
 .cal-dot.marmita { background: var(--green); }
 .cal-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px; color: var(--gray-mid); }

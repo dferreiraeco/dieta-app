@@ -2725,7 +2725,7 @@ function renderCalendar() {
     if (hasMarmita || hasForca || hasCardio) {
       dots = '<div class="cal-dots">';
       if (hasMarmita) dots += '<div class="cal-dot marmita"></div>';
-      if (hasForca) dots += `<div class="cal-dot forca" style="width:auto;height:auto;border-radius:3px;padding:0 3px;font-size:8px;font-weight:700;color:#fff;background:var(--blue-mid)">${entry.forca}</div>`;
+      if (hasForca) dots += `<div class="cal-dot forca" style="width:auto;height:auto;border-radius:3px;padding:0 3px;font-size:8px;font-weight:700;color:#fff;background:var(--purple)">${entry.forca}</div>`;
       if (hasCardio) dots += '<div class="cal-dot cardio"></div>';
       dots += '</div>';
     }
