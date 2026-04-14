@@ -4780,40 +4780,47 @@ function resetUserProfile() {
 
 const TOUR_STEPS = [
   {
+    image: 'tour-images/tour-1.jpg',
     title: '👋 Bem-vindo ao DietPLAN!',
     text: 'Vamos fazer um tour rápido pra você conhecer as 5 abas principais do app. Leva menos de 1 minuto — ou clique em "Pular tour" se preferir explorar por conta própria.',
   },
   {
+    image: 'tour-images/tour-2.jpg',
     tab: 'marmitas',
     targetKey: 'marmitas',
     title: '1. Marmitas — Planejamento Semanal',
     text: 'Planeje suas refeições de almoço e jantar pra cada dia da semana. Use o <b>Gerador de Cardápio</b> pra sugestões automáticas a partir do que você tem em casa.',
   },
   {
+    image: 'tour-images/tour-3.jpg',
     tab: 'compras',
     targetKey: 'compras',
     title: '2. Compras — Lista Automática',
     text: 'Lista de compras gerada automaticamente a partir do cardápio planejado. Marque os itens conforme compra, adicione substituições customizadas e controle o estoque em casa.',
   },
   {
+    image: 'tour-images/tour-4.jpg',
     tab: 'dieta',
     targetKey: 'dieta',
     title: '3. Dieta — Meta e Refeições do Dia',
     text: 'Veja sua meta calórica e macros diários. Marque cada refeição ao consumir pra acompanhar o progresso em tempo real.',
   },
   {
+    image: 'tour-images/tour-5.jpg',
     tab: 'treino',
     targetKey: 'treino',
     title: '4. Treino — Musculação + Cardio',
     text: 'Rastreie seus treinos A/B com pesos e repetições salvos semana a semana. Registre cardio diário e acompanhe sua evolução.',
   },
   {
+    image: 'tour-images/tour-6.jpg',
     tab: 'calendário',
     targetKey: 'calendário',
     title: '5. Agenda — Histórico Completo',
     text: 'Calendário mostrando tudo que você fez: marmitas, treinos, cardio e peso. Perfeito pra ver a evolução a longo prazo.',
   },
   {
+    image: 'tour-images/tour-7.jpg',
     title: '✓ Tudo pronto!',
     text: 'Você pode refazer este tour a qualquer momento pelo botão <b>"Refazer tour"</b> no seu perfil. Bom uso!',
   },
@@ -4862,7 +4869,11 @@ function _renderTourStep() {
   const isCentered = !step.tab; // welcome e final centralizam
 
   card.className = 'tour-card' + (isCentered ? ' centered' : '');
+  const imgHtml = step.image
+    ? '<img class="tour-card-img" src="' + step.image + '?v=2186" alt="">'
+    : '';
   card.innerHTML =
+    imgHtml +
     '<h3>' + step.title + '</h3>' +
     '<p>' + step.text + '</p>' +
     '<div class="tour-nav">' +

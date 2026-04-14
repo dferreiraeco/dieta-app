@@ -1968,10 +1968,23 @@ body {
   margin: 0 auto;
   background: var(--surface);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 0 0 18px 0;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   z-index: 453;
   animation: tourCardIn 0.25s ease-out;
+  overflow: hidden;
+}
+.tour-card h3,
+.tour-card p,
+.tour-card .tour-nav { padding-left: 20px; padding-right: 20px; }
+.tour-card h3 { padding-top: 16px; }
+.tour-card-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #f0f0e8;
 }
 .tour-card.centered {
   bottom: auto;
