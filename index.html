@@ -119,6 +119,31 @@
   </div>
 </div>
 
+<!-- v2.1.70: modal blocante de consentimento LGPD. Exibido pra usuários Google
+     ou qualquer outro que tenha logado mas não tenha health_consent_at registrado. -->
+<div id="consent-modal" class="modal-overlay" style="z-index:500;align-items:center">
+  <div class="modal consent-modal-content">
+    <h2 style="margin-bottom:10px">Consentimento necessário</h2>
+    <p class="consent-intro">
+      Antes de usar o DietPLAN, precisamos do seu consentimento expresso conforme a
+      <b>Lei Geral de Proteção de Dados (LGPD)</b>. Por favor leia os documentos e
+      marque os dois itens abaixo para continuar.
+    </p>
+    <label class="auth-consent-row">
+      <input type="checkbox" id="consent-modal-terms" onchange="_updateConsentModalState()">
+      <span>Declaro que li e aceito os <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>, e que sou <b>maior de 18 anos completos</b></span>
+    </label>
+    <label class="auth-consent-row">
+      <input type="checkbox" id="consent-modal-health" onchange="_updateConsentModalState()">
+      <span>Autorizo o tratamento dos meus <b>dados de saúde</b> (peso, altura, composição corporal, metas, histórico alimentar e de exercícios) para as finalidades descritas na Política de Privacidade</span>
+    </label>
+    <div class="consent-modal-actions">
+      <button class="save-btn" id="consent-modal-accept" onclick="submitConsentModal()" disabled>Aceitar e continuar</button>
+      <button class="skip-btn" onclick="rejectConsentModal()">Não aceito — sair</button>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== APP CONTAINER ==================== -->
 <div id="app-container" style="display:none">
 <div id="user-bar" class="user-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99"></div>

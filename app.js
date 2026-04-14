@@ -4224,6 +4224,13 @@ async function submitAuthEmail() {
       } catch (err) {
         console.warn('Falha ao gravar consentimento LGPD no profile:', err);
       }
+      // v2.1.70: envia email de verificação logo após criar a conta.
+      // Não bloqueia o acesso — é só um lembrete visual pro usuário confirmar.
+      try {
+        await cred.user.sendEmailVerification();
+      } catch (err) {
+        console.warn('Falha ao enviar email de verificação:', err);
+      }
     } else {
       await auth.signInWithEmailAndPassword(email, password);
     }
@@ -4267,6 +4274,96 @@ async function showLegalDoc(which) {
 
 function closeLegalDoc() {
   const modal = document.getElementById('legal-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+// v2.1.70: verifica se o usuário autenticado já deu consentimento LGPD.
+// Se não, exibe o modal blocante antes de liberar o app. Cobre login Google
+// (que não passa pelo form de signup) e qualquer usuário legado sem registro.
+async function _checkConsentForAuthedUser(user) {
+  if (!user || !user.uid) return true;
+  try {
+    const snap = await db.collection('users').doc(user.uid).collection('data')
+                         .doc(STORAGE_KEYS.userProfile).get();
+    const val = snap.exists ? (snap.data() && snap.data().value) : null;
+    if (val && val.health_consent_at && val.accepted_terms_at) {
+      return true; // já consentiu, libera
+    }
+  } catch (e) {
+    console.warn('Erro ao verificar consentimento:', e);
+    // Em caso de erro de rede, permite entrar (evita bloquear usuário por
+    // problema técnico). Próximo login tenta de novo.
+    return true;
+  }
+  _showConsentModal();
+  return false;
+}
+
+function _showConsentModal() {
+  const modal = document.getElementById('consent-modal');
+  if (!modal) return;
+  document.getElementById('consent-modal-terms').checked  = false;
+  document.getElementById('consent-modal-health').checked = false;
+  _updateConsentModalState();
+  modal.classList.add('open');
+}
+
+function _updateConsentModalState() {
+  const cbTerms  = document.getElementById('consent-modal-terms');
+  const cbHealth = document.getElementById('consent-modal-health');
+  const btn      = document.getElementById('consent-modal-accept');
+  if (!btn) return;
+  btn.disabled = !(cbTerms && cbTerms.checked && cbHealth && cbHealth.checked);
+}
+
+async function submitConsentModal() {
+  if (!currentUser || !currentUser.uid) {
+    _closeConsentModal();
+    return;
+  }
+  const btn = document.getElementById('consent-modal-accept');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  const nowIso = new Date().toISOString();
+  try {
+    // Merge nos campos de consentimento sem sobrescrever o perfil existente
+    const ref = db.collection('users').doc(currentUser.uid).collection('data')
+                  .doc(STORAGE_KEYS.userProfile);
+    const snap = await ref.get();
+    const existing = snap.exists ? (snap.data().value || {}) : {};
+    const merged = {
+      ...existing,
+      accepted_terms_at:   nowIso,
+      terms_version:       LEGAL_VERSIONS.terms,
+      accepted_privacy_at: nowIso,
+      privacy_version:     LEGAL_VERSIONS.privacy,
+      health_consent_at:   nowIso,
+    };
+    await ref.set({ value: merged, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  } catch (e) {
+    console.error('Falha ao salvar consentimento:', e);
+    alert('Erro ao salvar consentimento. Tente novamente.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Aceitar e continuar'; }
+    return;
+  }
+  _closeConsentModal();
+  // Libera o app
+  const authScreen = document.getElementById('auth-screen');
+  const appContainer = document.getElementById('app-container');
+  if (authScreen) authScreen.style.display = 'none';
+  if (appContainer) appContainer.style.display = 'block';
+  initApp();
+  startFirestoreSync();
+}
+
+async function rejectConsentModal() {
+  _closeConsentModal();
+  // Logout forçado: usuário recusou, não pode usar o app
+  try { await auth.signOut(); } catch (_) {}
+  location.reload();
+}
+
+function _closeConsentModal() {
+  const modal = document.getElementById('consent-modal');
   if (modal) modal.classList.remove('open');
 }
 
@@ -4391,12 +4488,22 @@ async function logout() {
 }
 
 // Auth state listener
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
   currentUser = user;
   const authScreen = document.getElementById('auth-screen');
   const appContainer = document.getElementById('app-container');
 
   if (user) {
+    // v2.1.70: antes de liberar o app, verifica se há consentimento LGPD
+    // registrado. Se não, o modal blocante é exibido e a liberação do app
+    // fica pendente até o usuário aceitar (ou ser forçado a sair).
+    const hasConsent = await _checkConsentForAuthedUser(user);
+    if (!hasConsent) {
+      // Modal de consentimento foi aberto. Não libera app ainda.
+      // submitConsentModal() ou rejectConsentModal() finaliza o fluxo.
+      return;
+    }
+
     authScreen.style.display = 'none';
     appContainer.style.display = 'block';
 
