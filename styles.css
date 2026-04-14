@@ -1447,6 +1447,23 @@ body {
   min-width: 0;
 }
 .user-bar .user-bar-main:active { opacity: 0.75; }
+/* v2.1.106: ícone hamburger à esquerda do avatar — affordance visual
+   de "clique aqui pra abrir menu/perfil" */
+.user-bar .user-hamburger {
+  width: 18px;
+  height: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.user-bar .user-hamburger span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 1px;
+}
 .user-bar .edit-btn, .user-bar .logout-btn {
   background: var(--green-soft);
   border: none;

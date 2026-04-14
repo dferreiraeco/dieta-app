@@ -5374,9 +5374,15 @@ function renderUserBar() {
 
   // v2.1.2: clicar no avatar/info abre o profile-view modal (bottom-sheet).
   // O botão "Sair" fica isolado e usa stopPropagation pra não disparar o view.
+  // v2.1.106: ícone hamburger à esquerda da área clicável como affordance
+  // visual de "menu" (três barras horizontais).
   const clickableOpen = profile ? 'onclick="openProfileView()"' : '';
+  const hamburgerHtml = profile
+    ? `<div class="user-hamburger" aria-hidden="true"><span></span><span></span><span></span></div>`
+    : '';
   userBar.innerHTML = `
     <div class="user-bar-main" ${clickableOpen}>
+      ${hamburgerHtml}
       <div class="user-avatar">${avatarHtml}</div>
       <div class="user-info">
         <span class="line1">${line1}</span>
