@@ -4830,7 +4830,7 @@ const TOUR_STEPS = [
   },
   {
     tab: 'marmitas',
-    targetSelector: '#planner-status .history-btn',
+    targetSelector: '#planner-summary button[onclick*="openMarmitaHistory"]',
     title: 'Histórico de Semanas',
     text: 'Consulte semanas passadas com estatísticas de calorias, proteína e macros das marmitas e jantares escolhidos.',
   },
