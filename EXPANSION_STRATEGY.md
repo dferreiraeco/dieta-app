@@ -3,8 +3,8 @@
 Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de usuários mais ampla. Atualize o status de cada item conforme progride.
 
 **Criado:** 2026-04-13 (v2.1.68)
-**Status global:** 🟡 Fase 0 em progresso — decisões tomadas, aguardando criação do email DPO pra avançar Sprint 0B
-**Última atualização:** 2026-04-13 (decisões 1-4 registradas)
+**Status global:** 🟡 Fase 0 em progresso — Sprint 0B (docs legais) drafts concluídos, aguardando integração no app
+**Última atualização:** 2026-04-13 (PRIVACY.md e TERMS.md draftados com sac.dietplan@gmail.com)
 
 ---
 
@@ -39,18 +39,15 @@ Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de 
 
 ### 0.1 — Legal / Compliance LGPD
 
-- [ ] **Política de Privacidade** escrita e acessível antes do cadastro
-  - Arquivo: `PRIVACY.md` ou página HTML dedicada
-  - Cobre: quais dados coletamos, por quê, com quem compartilhamos (Firebase/Google), direitos do titular, contato
-  - Link no footer do login + dentro do app (profile view modal)
-  - Base legal: consentimento pra dados sensíveis, execução de contrato pra cadastrais
+- [x] **Política de Privacidade** escrita — `PRIVACY.md` v1.0 (2026-04-13)
+  - ✅ Cobre: dados coletados por modo (sem conta / email / Google), finalidade, base legal LGPD, compartilhamento Firebase/Google, direitos do titular (Art. 18), retenção, contato DPO
+  - ⏳ Pendente: link no footer do auth screen + profile view modal (Sprint 0B continuação)
 
-- [ ] **Termos de Uso** escritos
-  - Arquivo: `TERMS.md` ou página HTML
-  - Disclaimer médico forte: "não é aconselhamento profissional, consulte médico/nutricionista"
-  - Limitação de responsabilidade
-  - Foro (Brasil)
-  - Link no footer do login
+- [x] **Termos de Uso** escritos — `TERMS.md` v1.0 (2026-04-13)
+  - ✅ Disclaimer médico forte no topo (quem não deve usar, contraindica grávidas/menores/condições crônicas)
+  - ✅ Limitação de responsabilidade (seção 10), gratuidade, uso aceitável, propriedade intelectual
+  - ✅ Foro: comarca do domicílio do usuário (CDC Art. 101, I)
+  - ⏳ Pendente: link no footer do auth screen + profile view modal
 
 - [ ] **Consentimento explícito no cadastro**
   - Checkbox obrigatório: "Li e aceito os [Termos] e [Política de Privacidade]"
@@ -180,15 +177,15 @@ Documento vivo para expandir o app de uso familiar (2 pessoas) para uma base de 
   - Impacto: elimina complexidade de billing, payment integration, tiers
   - Revisitar se custo Firebase virar problema real
 
-- [x] **DPO / ponto de contato: email Gmail dedicado (a criar)**
-  - Ação pendente: criar `dietplan.contato@gmail.com` (ou nome similar disponível)
-  - Usar esse email em:
-    - Política de Privacidade (contato DPO)
-    - Termos de Uso (suporte e reclamações)
-    - Auth screen footer
-    - Profile view modal (ajuda/contato)
+- [x] **DPO / ponto de contato: `sac.dietplan@gmail.com`** ✅ criado 2026-04-13
+  - Já embutido em:
+    - ✅ `PRIVACY.md` (seção 13 — Contato)
+    - ✅ `TERMS.md` (seção 15 — Contato)
+  - Ainda falta aparecer em:
+    - ⏳ Auth screen footer
+    - ⏳ Profile view modal (botão "Ajuda / Contato")
   - Tempo de resposta prometido: **15 dias** (conforme LGPD Art. 18 §3)
-  - **Não avançar** a Fase 0.1 sem o email criado (senão os docs legais ficam com placeholder)
+  - Assuntos padronizados: `[SUPORTE]`, `[BUG]`, `[LGPD]`, `[CONTA]`, `[JURÍDICO]`
 
 ---
 
@@ -385,6 +382,10 @@ Conforme cada item da Fase 0 for sendo completado, registrar aqui com a versão 
 | Item | Fase | Versão | Commit | Data | Notas |
 |---|---|---|---|---|---|
 | Documento de estratégia criado | — | v2.1.69 | — | 2026-04-13 | Este arquivo |
+| Decisões 1-4 da Fase 0 | 0.5 | v2.1.69 | 5eaf2ff | 2026-04-13 | Brasil only, receitas fixas, gratuito, DPO Gmail |
+| Email DPO criado (`sac.dietplan@gmail.com`) | 0A | — | — | 2026-04-13 | Sprint 0A concluído |
+| `PRIVACY.md` v1.0 | 0.1 | v2.1.69 | — | 2026-04-13 | LGPD-compliant, 13 seções, DPO embutido |
+| `TERMS.md` v1.0 | 0.1 | v2.1.69 | — | 2026-04-13 | Disclaimer médico, limitação de responsabilidade, foro BR |
 
 ---
 
