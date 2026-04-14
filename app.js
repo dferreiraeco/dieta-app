@@ -5044,24 +5044,24 @@ function _positionTourCardNearTarget(card, targetOrList) {
   const cardW = card.offsetWidth;
 
   // Horizontal: centralizado no target, clampado pra não sair da tela
-  let left = rect.left + rect.width / 2 - cardW / 2;
-  left = Math.max(14, Math.min(viewW - cardW - 14, left));
+  let cardLeft = rect.left + rect.width / 2 - cardW / 2;
+  cardLeft = Math.max(14, Math.min(viewW - cardW - 14, cardLeft));
 
   // Vertical: preferência por colocar abaixo, fallback pra acima
   const spaceBelow = viewH - rect.bottom - margin;
   const spaceAbove = rect.top - margin;
-  let top;
+  let cardTop;
   if (spaceBelow >= cardH) {
-    top = rect.bottom + margin;
+    cardTop = rect.bottom + margin;
   } else if (spaceAbove >= cardH) {
-    top = rect.top - cardH - margin;
+    cardTop = rect.top - cardH - margin;
   } else {
     // Sem espaço nenhum — usa abaixo da tab-bar
-    top = Math.max(14, viewH - cardH - 100);
+    cardTop = Math.max(14, viewH - cardH - 100);
   }
 
-  card.style.top  = top + 'px';
-  card.style.left = left + 'px';
+  card.style.top  = cardTop + 'px';
+  card.style.left = cardLeft + 'px';
 }
 
 function _renderTourStep() {
