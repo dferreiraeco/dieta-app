@@ -5232,7 +5232,18 @@ function openProfileView() {
       </label>
       <button type="button" class="pv-lgpd-btn pv-lgpd-danger" onclick="deleteAccount()">🗑 Apagar minha conta</button>
     </div>
-    ` : ''}
+    ` : `
+    <div class="pv-section">
+      <h3>Dados Locais</h3>
+      <p class="pv-lgpd-desc">Você está no modo <b>"Sem conta"</b> — todos os dados ficam apenas neste dispositivo. Exporte regularmente se quiser evitar perder informações.</p>
+      <button type="button" class="pv-lgpd-btn" onclick="exportUserData()">📤 Exportar meus dados (JSON)</button>
+      <label class="pv-lgpd-btn" style="cursor:pointer">
+        📥 Importar backup (JSON)
+        <input type="file" accept=".json,application/json" onchange="importData(event)" style="display:none">
+      </label>
+      <button type="button" class="pv-lgpd-btn pv-lgpd-danger" onclick="resetAllData()">🗑 Apagar todos os dados</button>
+    </div>
+    `}
 
     <div class="pv-section">
       <h3>Ajuda e Contato</h3>
