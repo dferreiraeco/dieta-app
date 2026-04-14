@@ -4884,7 +4884,7 @@ const TOUR_STEPS = [
   },
   {
     tab: 'dieta',
-    targetSelector: '#meals-container',
+    targetSelector: '#meals-container .meal:first-of-type',
     title: 'Marcar refeição como feita',
     text: 'Toque em cada refeição ao consumir. O progresso do dia acima atualiza automaticamente a cada toque.',
   },
@@ -4905,7 +4905,7 @@ const TOUR_STEPS = [
   },
   {
     tab: 'treino',
-    targetSelector: '#exercises-container',
+    targetSelector: '#exercises-container .exercise-card:first-of-type',
     title: 'Peso e repetições',
     text: 'Adicione peso (kg) e repetições feitas em cada série. Os valores são salvos pra você comparar com semanas anteriores.',
   },
@@ -4932,9 +4932,9 @@ const TOUR_STEPS = [
   },
   {
     tab: 'calendário',
-    targetSelector: '#cal-grid',
+    targetSelector: '#cal-card',
     title: 'Calendário',
-    text: 'Cada dia mostra dots coloridos marcando marmita feita, treino registrado e cardio. Toque em qualquer dia pra ver detalhes.',
+    text: 'Cada dia mostra dots coloridos marcando marmita feita, treino registrado e cardio. Toque em qualquer dia pra ver detalhes. A legenda abaixo explica o significado de cada cor.',
   },
   {
     tab: 'calendário',
