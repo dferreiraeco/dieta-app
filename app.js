@@ -4771,6 +4771,136 @@ function resetUserProfile() {
   }
 })();
 
+// ============================================================
+// v2.1.85: TOUR WALKTHROUGH (coach marks)
+// ============================================================
+// Tour sequencial das 5 abas principais, disparado automaticamente
+// após o primeiro onboarding e também manualmente via profile view.
+// Flag tour_completed_at no profile controla "já viu".
+
+const TOUR_STEPS = [
+  {
+    title: '👋 Bem-vindo ao DietPLAN!',
+    text: 'Vamos fazer um tour rápido pra você conhecer as 5 abas principais do app. Leva menos de 1 minuto — ou clique em "Pular tour" se preferir explorar por conta própria.',
+  },
+  {
+    tab: 'marmitas',
+    targetKey: 'marmitas',
+    title: '1. Marmitas — Planejamento Semanal',
+    text: 'Planeje suas refeições de almoço e jantar pra cada dia da semana. Use o <b>Gerador de Cardápio</b> pra sugestões automáticas a partir do que você tem em casa.',
+  },
+  {
+    tab: 'compras',
+    targetKey: 'compras',
+    title: '2. Compras — Lista Automática',
+    text: 'Lista de compras gerada automaticamente a partir do cardápio planejado. Marque os itens conforme compra, adicione substituições customizadas e controle o estoque em casa.',
+  },
+  {
+    tab: 'dieta',
+    targetKey: 'dieta',
+    title: '3. Dieta — Meta e Refeições do Dia',
+    text: 'Veja sua meta calórica e macros diários. Marque cada refeição ao consumir pra acompanhar o progresso em tempo real.',
+  },
+  {
+    tab: 'treino',
+    targetKey: 'treino',
+    title: '4. Treino — Musculação + Cardio',
+    text: 'Rastreie seus treinos A/B com pesos e repetições salvos semana a semana. Registre cardio diário e acompanhe sua evolução.',
+  },
+  {
+    tab: 'calendário',
+    targetKey: 'calendário',
+    title: '5. Agenda — Histórico Completo',
+    text: 'Calendário mostrando tudo que você fez: marmitas, treinos, cardio e peso. Perfeito pra ver a evolução a longo prazo.',
+  },
+  {
+    title: '✓ Tudo pronto!',
+    text: 'Você pode refazer este tour a qualquer momento pelo botão <b>"Refazer tour"</b> no seu perfil. Bom uso!',
+  },
+];
+
+let _tourStep = 0;
+
+function startTour() {
+  _tourStep = 0;
+  const overlay = document.getElementById('tour-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  _renderTourStep();
+}
+
+function _clearTourSpotlight() {
+  document.querySelectorAll('.tour-spotlight').forEach(el => el.classList.remove('tour-spotlight'));
+}
+
+function _renderTourStep() {
+  _clearTourSpotlight();
+  const step = TOUR_STEPS[_tourStep];
+  if (!step) { _closeTour(true); return; }
+
+  // Troca de aba se necessário (dá tempo pro DOM atualizar antes do spotlight)
+  if (step.tab && typeof switchTab === 'function') {
+    switchTab(step.tab);
+  }
+
+  // Aplica spotlight no target (tab-btn no nav bottom)
+  setTimeout(() => {
+    if (step.targetKey) {
+      const idx = TABS.indexOf(step.targetKey);
+      const btns = document.querySelectorAll('.tab-btn');
+      if (btns[idx]) btns[idx].classList.add('tour-spotlight');
+    }
+  }, 80);
+
+  // Renderiza card
+  const card = document.getElementById('tour-card');
+  if (!card) return;
+  const total = TOUR_STEPS.length;
+  const progress = (_tourStep + 1) + ' / ' + total;
+  const isFirst = _tourStep === 0;
+  const isLast  = _tourStep === total - 1;
+  const isCentered = !step.tab; // welcome e final centralizam
+
+  card.className = 'tour-card' + (isCentered ? ' centered' : '');
+  card.innerHTML =
+    '<h3>' + step.title + '</h3>' +
+    '<p>' + step.text + '</p>' +
+    '<div class="tour-nav">' +
+      '<button type="button" class="tour-skip" onclick="_closeTour(true)">Pular tour</button>' +
+      '<span class="tour-progress">' + progress + '</span>' +
+      '<div class="tour-actions">' +
+        (isFirst ? '' : '<button type="button" onclick="_tourPrev()">Anterior</button>') +
+        '<button type="button" class="tour-next" onclick="' + (isLast ? '_closeTour(true)' : '_tourNext()') + '">' +
+          (isLast ? 'Concluir' : 'Próximo') +
+        '</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function _tourNext() { _tourStep++; _renderTourStep(); }
+function _tourPrev() { _tourStep--; _renderTourStep(); }
+
+function _closeTour(saveFlag) {
+  _clearTourSpotlight();
+  const overlay = document.getElementById('tour-overlay');
+  if (overlay) overlay.classList.remove('open');
+  if (saveFlag) {
+    const profile = getUserProfile() || {};
+    profile.tour_completed_at = new Date().toISOString();
+    saveUserProfile(profile);
+  }
+}
+
+// Dispara o tour automaticamente após primeiro onboarding se o usuário
+// ainda não viu. Chamado ao final do initApp().
+function maybeStartFirstTour() {
+  const profile = getUserProfile();
+  if (!profile) return;
+  if (profile.tour_completed_at) return;
+  // Dá tempo pra UI renderizar completamente antes de começar
+  setTimeout(() => startTour(), 700);
+}
+
 // v2.1.75: toggle dos tooltips de ajuda no formulário de onboarding
 function _toggleOBHelp(helpId, btn) {
   const el = document.getElementById(helpId);
@@ -5038,6 +5168,7 @@ function openProfileView() {
     <div class="pv-section">
       <h3>Ajuda e Contato</h3>
       <p class="pv-lgpd-desc">Dúvidas, bugs, solicitações LGPD ou questões legais. Prazo máximo de resposta: 15 dias corridos.</p>
+      <button type="button" class="pv-lgpd-btn" onclick="closeProfileView();setTimeout(startTour,200)">🧭 Refazer tour do app</button>
       <a class="pv-lgpd-btn" href="mailto:sac.dietplan@gmail.com?subject=%5BSUPORTE%5D%20">✉ Falar com o suporte</a>
       <button type="button" class="pv-lgpd-btn" onclick="showLegalDoc('terms')">📄 Termos de Uso</button>
       <button type="button" class="pv-lgpd-btn" onclick="showLegalDoc('privacy')">🔒 Política de Privacidade</button>
@@ -5533,6 +5664,10 @@ function initApp() {
   // Roda no init: se hoje é domingo e a semana atual ficou pra trás,
   // arquiva e zera tudo (incluindo homeStock).
   setTimeout(autoSundayRollover, 500);
+
+  // v2.1.85: se o usuário tem perfil mas nunca viu o tour, dispara.
+  // Rodando depois do rollover pra não competir por foco no UI inicial.
+  setTimeout(maybeStartFirstTour, 900);
 }
 
 // Block pinch-to-zoom and double-tap zoom on iOS

@@ -1899,7 +1899,8 @@ body {
 }
 .auth-landing-section h3 {
   margin: 0 0 8px 0;
-  font-size: 13px;
+  /* v2.1.85: fonte reduzida em 20% (13px → 10.4px) */
+  font-size: 10.4px;
   font-weight: 700;
   color: var(--green);
   text-transform: none;
@@ -1908,18 +1909,20 @@ body {
 .auth-landing-section.danger h3 { color: var(--accent-danger); }
 .auth-landing-section ul {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 16px;
   list-style: disc;
 }
 .auth-landing-section li {
-  font-size: 12px;
+  /* v2.1.85: fonte reduzida em 20% (12px → 9.6px) */
+  font-size: 9.6px;
   line-height: 1.5;
   color: var(--gray);
   margin: 3px 0;
 }
 .auth-landing-note {
   margin-top: 12px;
-  font-size: 11px;
+  /* v2.1.85: fonte reduzida em 20% (11px → 8.8px) */
+  font-size: 8.8px;
   line-height: 1.5;
   color: var(--gray-mid);
   font-style: italic;
@@ -1931,6 +1934,117 @@ body {
   font-weight: 600;
 }
 .auth-landing-note b { color: var(--ink-strong); font-style: normal; }
+
+/* ============ v2.1.85: Tour walkthrough (coach marks) ============ */
+.tour-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 451;
+  pointer-events: none;
+}
+.tour-overlay.open {
+  display: block;
+  pointer-events: auto;
+}
+/* Elemento alvo do spotlight: box-shadow gigante cria o overlay escuro,
+   deixando só o próprio elemento visível com destaque verde */
+.tour-spotlight {
+  position: relative;
+  z-index: 452 !important;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 3px var(--green),
+    0 0 16px 4px rgba(39, 103, 73, 0.5);
+  transition: box-shadow 0.2s;
+}
+.tour-card {
+  position: fixed;
+  bottom: calc(90px + var(--safe-bottom));
+  left: 14px;
+  right: 14px;
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  z-index: 453;
+  animation: tourCardIn 0.25s ease-out;
+}
+.tour-card.centered {
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+@keyframes tourCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tour-card.centered {
+  animation: tourCardCentered 0.25s ease-out;
+}
+@keyframes tourCardCentered {
+  from { opacity: 0; transform: translate(0, -40%); }
+  to   { opacity: 1; transform: translate(0, -50%); }
+}
+.tour-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.tour-card p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gray);
+}
+.tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tour-progress {
+  font-size: 12px;
+  color: var(--gray-mid);
+  font-weight: 600;
+}
+.tour-skip {
+  background: none;
+  border: none;
+  color: var(--gray-mid);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 2px;
+  text-decoration: underline;
+}
+.tour-skip:hover { color: var(--gray); }
+.tour-actions {
+  display: flex;
+  gap: 8px;
+}
+.tour-actions button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid var(--gray-light);
+  background: var(--surface);
+  color: var(--gray);
+}
+.tour-actions button.tour-next {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.tour-actions button:hover { opacity: 0.85; }
 
 .auth-consent-row {
   display: flex;
