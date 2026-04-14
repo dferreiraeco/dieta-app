@@ -2076,12 +2076,39 @@ body {
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"] {
+  /* Custom circular checkbox — não confia no accent-color nativo */
   margin: 1px 0 0 0;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   cursor: pointer;
-  accent-color: var(--accent-danger);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: 2px solid var(--gray-mid);
+  border-radius: 50%;
+  background: var(--surface);
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ob-field label.ob-advanced-toggle input[type="checkbox"]:checked {
+  background: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+.ob-field label.ob-advanced-toggle input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ob-field label.ob-advanced-toggle input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent-danger);
+  outline-offset: 2px;
 }
 .ob-field label.ob-advanced-toggle span { flex: 1; }
 .ob-field label.ob-advanced-toggle b { color: var(--accent-danger); font-weight: 700; }
