@@ -596,7 +596,7 @@ function renderDietHeader(goals) {
   const fiberTxt = g.fiber != null ? `${g.fiber}g` : '≥25g';
   const waterLiters = g.water_ml != null ? (g.water_ml / 1000).toFixed(1).replace('.', ',') : '2,5';
   el.innerHTML =
-    `Meta: ~${kcalTxt} kcal/dia | Objetivo: ${objetivo}` +
+    `Meta: ~${kcalTxt} kcal/dia<sup class="meta-asterisk">*</sup> | Objetivo: ${objetivo}` +
     `<br><span style="font-size:11px;opacity:0.85">Fibra: ${fiberTxt}/dia • Água: ${waterLiters} L/dia</span>`;
   // v2.1.30: link "ⓘ Detalhes" agora vive no row do título, alinhado à direita.
   // Aqui só liga/desliga a visibilidade conforme existe perfil.

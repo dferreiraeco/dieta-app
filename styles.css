@@ -2011,18 +2011,42 @@ a.pv-lgpd-btn {
   display: block;
 }
 
-/* Disclaimer médico discreto na aba Dieta */
-.medical-disclaimer {
-  margin: 6px 0 0 0;
-  font-size: 11px;
-  line-height: 1.4;
+/* v2.1.71: asterisco discreto ao lado do "kcal/dia" no header da Dieta */
+.meta-asterisk {
+  color: var(--accent-danger);
+  font-weight: 700;
+  font-size: 0.9em;
+  margin-left: 1px;
+}
+
+/* v2.1.71: card de disclaimer médico ao final da aba Dieta */
+.medical-disclaimer-card {
+  background: var(--gray-bg);
+  border: 1px solid var(--gray-light);
+  margin-top: 20px;
+}
+.medical-disclaimer-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
   color: var(--gray-mid);
   font-style: italic;
-  opacity: 0.85;
 }
-.medical-disclaimer a {
-  color: var(--gray-mid);
+.medical-disclaimer-card .disclaimer-asterisk {
+  color: var(--accent-danger);
+  font-weight: 800;
+  font-style: normal;
+  font-size: 14px;
+  margin-right: 2px;
+}
+.medical-disclaimer-card a {
+  color: var(--green);
   text-decoration: underline;
   text-decoration-style: dotted;
+  font-style: normal;
 }
-.medical-disclaimer a:hover { color: var(--green); }
+.medical-disclaimer-card a:hover { opacity: 0.8; }
+.medical-disclaimer-card b {
+  color: var(--ink-medium);
+  font-style: normal;
+}

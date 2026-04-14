@@ -316,12 +316,7 @@
       <h1>Dieta de Recomposição</h1>
       <a href="#" id="calc-details-link" class="calc-details-link" onclick="openCalcDetails();return false" aria-label="Ver detalhes do cálculo" style="display:none">ⓘ Detalhes</a>
     </div>
-    <p id="diet-goal-text">Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
-    <!-- v2.1.70: disclaimer médico discreto (link para Termos, seção de aviso) -->
-    <p class="medical-disclaimer">
-      ⚕ Estimativas baseadas em fórmulas populacionais.
-      <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Não substitui avaliação profissional</a>
-    </p>
+    <p id="diet-goal-text">Meta: ~2.000 kcal/dia* | Objetivo: Perda de Gordura e Ganho de Massa</p>
   </div>
 
   <!-- v2.1.0 daily tracker com donut + linhas textuais -->
@@ -365,6 +360,20 @@
       <b>Caseina:</b> 1 scoop pre-sono (opcional)<br>
       <b>Cafeina:</b> 350-500mg pré-treino (opcional)
     </div>
+  </div>
+
+  <!-- v2.1.71: card de disclaimer médico ao final da aba Dieta.
+       O asterisco faz referência ao * no "Meta: ~X kcal/dia*" do header. -->
+  <div class="card medical-disclaimer-card">
+    <p>
+      <span class="disclaimer-asterisk">*</span>
+      Estimativas baseadas em fórmulas populacionais (Harris-Benedict,
+      Mifflin-St Jeor). O DietPLAN <b>não substitui avaliação profissional</b>
+      de médico, nutricionista ou educador físico. Consulte um especialista
+      antes de iniciar qualquer dieta ou programa de treino. Leia os
+      <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a>
+      para mais informações.
+    </p>
   </div>
 
   <button class="reset-btn" onclick="resetDailyMeals()" style="margin-top:20px">Resetar Dia</button>
