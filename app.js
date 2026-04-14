@@ -5036,14 +5036,19 @@ function _renderTourStep() {
   const step = TOUR_STEPS[_tourStep];
   if (!step) { _closeTour(true); return; }
 
+  // Renderiza card primeiro pra saber offsetHeight
+  const card = document.getElementById('tour-card');
+  if (!card) return;
+
+  // v2.1.102: esconde o card instantaneamente pra evitar "jump" visual
+  // entre o step atual e o próximo quando há reposicionamento dinâmico.
+  // Visibilidade é restaurada depois que o spotlight/posição estão aplicados.
+  card.style.visibility = 'hidden';
+
   // Troca de aba se necessário (dá tempo pro DOM atualizar antes do spotlight)
   if (step.tab && typeof switchTab === 'function') {
     switchTab(step.tab);
   }
-
-  // Renderiza card primeiro pra saber offsetHeight
-  const card = document.getElementById('tour-card');
-  if (!card) return;
   const total = TOUR_STEPS.length;
   const isFirst = _tourStep === 0;
   const isLast  = _tourStep === total - 1;
@@ -5090,8 +5095,9 @@ function _renderTourStep() {
       const btns = document.querySelectorAll('.tab-btn');
       if (btns[idx]) {
         _createTourCutout(btns[idx]);
-        // Tab-btn não precisa de scroll nem posicionamento dinâmico do card
       }
+      // Card pode ser mostrado imediatamente (usa posição CSS padrão)
+      card.style.visibility = 'visible';
     } else if (step.targetSelector) {
       const el = document.querySelector(step.targetSelector);
       if (el) {
@@ -5099,12 +5105,21 @@ function _renderTourStep() {
         try {
           el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         } catch (_) {}
-        // Aguarda scroll terminar antes de criar cutout e posicionar card
+        // Aguarda scroll terminar antes de criar cutout, posicionar card
+        // e torná-lo visível. Antes disso, card fica escondido pra não
+        // aparecer brevemente na posição CSS padrão (bottom fixed).
         setTimeout(() => {
           _createTourCutout(el);
           _positionTourCardNearTarget(card, el);
+          card.style.visibility = 'visible';
         }, 320);
+      } else {
+        // Target não encontrado: mostra o card assim mesmo
+        card.style.visibility = 'visible';
       }
+    } else {
+      // Step centered (welcome/final) — sem target, mostra imediatamente
+      card.style.visibility = 'visible';
     }
   }, 80);
 }
