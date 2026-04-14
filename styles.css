@@ -2076,16 +2076,17 @@ body {
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"] {
-  /* Custom circular checkbox — não confia no accent-color nativo */
-  margin: 1px 0 0 0;
-  width: 20px;
-  height: 20px;
+  /* Custom circular checkbox — escala com font-size do texto */
+  /* 1.15em ≈ altura da linha do texto ao lado (12.5px * 1.15 ≈ 14.4px) */
+  margin: 2px 0 0 0;
+  width: 1.15em;
+  height: 1.15em;
   flex-shrink: 0;
   cursor: pointer;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  border: 2px solid var(--gray-mid);
+  border: 1.5px solid var(--gray-mid);
   border-radius: 50%;
   background: var(--surface);
   position: relative;
@@ -2096,15 +2097,19 @@ body {
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"]:checked::after {
+  /* Checkmark centralizado: pseudo-element absolutamente posicionado
+     em 50%/50% com translate + rotate pra ajustar. O truque é que
+     a origem do rotate é o centro do próprio elemento, então o
+     translate compensa antes da rotação. */
   content: '';
   position: absolute;
-  left: 5px;
-  top: 1px;
-  width: 5px;
-  height: 10px;
+  left: 50%;
+  top: 45%;
+  width: 0.3em;
+  height: 0.6em;
   border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  border-width: 0 0.14em 0.14em 0;
+  transform: translate(-50%, -55%) rotate(45deg);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"]:focus-visible {
   outline: 2px solid var(--accent-danger);
