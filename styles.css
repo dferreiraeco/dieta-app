@@ -1854,15 +1854,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ============ v2.1.70: Auth screen — LGPD consent, 18+ warning, legal docs ============ */
-.auth-age-warning {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent-danger);
-  margin: 0 0 14px 0;
-  letter-spacing: 0.3px;
-}
+/* ============ v2.1.70: Auth screen — LGPD consent, legal docs ============ */
+/* v2.1.72: .auth-age-warning removido — 18+ virou checkbox dedicado */
 .auth-consent-row {
   display: flex;
   align-items: flex-start;

@@ -4098,8 +4098,10 @@ function _updateAuthEmailUI() {
     passwordEl.setAttribute('autocomplete', 'new-password');
     // Reset checkboxes e desabilita botão até aceite
     const cbTerms  = document.getElementById('auth-consent-terms');
+    const cbAge    = document.getElementById('auth-consent-age');
     const cbHealth = document.getElementById('auth-consent-health');
     if (cbTerms)  cbTerms.checked  = false;
+    if (cbAge)    cbAge.checked    = false;
     if (cbHealth) cbHealth.checked = false;
     _updateAuthSubmitState();
   }
@@ -4107,15 +4109,17 @@ function _updateAuthEmailUI() {
   _setAuthInfo('');
 }
 
-// v2.1.70: habilita o botão "Criar conta" apenas quando ambos os checkboxes
+// v2.1.70: habilita o botão "Criar conta" apenas quando os 3 checkboxes
 // de consentimento LGPD estão marcados. Chamado a cada mudança de checkbox.
+// v2.1.72: 18+ virou checkbox próprio.
 function _updateAuthSubmitState() {
   if (_authEmailMode !== 'signup') return;
   const submit   = document.getElementById('auth-email-submit');
   const cbTerms  = document.getElementById('auth-consent-terms');
+  const cbAge    = document.getElementById('auth-consent-age');
   const cbHealth = document.getElementById('auth-consent-health');
   if (!submit) return;
-  const ok = !!(cbTerms && cbTerms.checked && cbHealth && cbHealth.checked);
+  const ok = !!(cbTerms && cbTerms.checked && cbAge && cbAge.checked && cbHealth && cbHealth.checked);
   submit.disabled = !ok;
 }
 
@@ -4194,11 +4198,16 @@ async function submitAuthEmail() {
       _showAuthEmailError('auth-confirm', 'As senhas não coincidem');
       return;
     }
-    // v2.1.70: valida checkboxes de consentimento LGPD
+    // v2.1.70/72: valida 3 checkboxes de consentimento LGPD
     const cbTerms  = document.getElementById('auth-consent-terms');
+    const cbAge    = document.getElementById('auth-consent-age');
     const cbHealth = document.getElementById('auth-consent-health');
     if (!cbTerms || !cbTerms.checked) {
       _showAuthEmailError('auth-consent-terms', 'É necessário aceitar os Termos e a Política de Privacidade');
+      return;
+    }
+    if (!cbAge || !cbAge.checked) {
+      _showAuthEmailError('auth-consent-age', 'É necessário declarar ser maior de 18 anos');
       return;
     }
     if (!cbHealth || !cbHealth.checked) {
@@ -4224,6 +4233,7 @@ async function submitAuthEmail() {
         terms_version:       LEGAL_VERSIONS.terms,
         accepted_privacy_at: nowIso,
         privacy_version:     LEGAL_VERSIONS.privacy,
+        age_confirmed_at:    nowIso,  // v2.1.72: checkbox 18+ dedicado
         health_consent_at:   nowIso,
       };
       try {
@@ -4271,30 +4281,41 @@ async function showLegalDoc(which) {
   bodyEl.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--gray-mid)">Carregando…</div>';
   modal.classList.add('open');
 
-  // Tenta duas rotas: caminho relativo (funciona servido pelo servidor) e
-  // caminho com cache-buster (forçando bypass do SW). A primeira que funcionar
-  // ganha. Se ambas falharem, mostra fallback com link externo.
+  // v2.1.72: tenta múltiplas estratégias pra burlar SW antigo e cache stale.
+  // 1. fetch relativo com cache:reload (força rerequest completo)
+  // 2. fetch absoluto com timestamp pra evitar qualquer cache intermediário
+  // 3. XHR como último recurso (comportamento diferente em relação ao SW)
+  const ts = Date.now();
   const candidates = [
-    files[which],
-    files[which] + '?v=' + Date.now(),
+    { url: files[which], opts: { cache: 'reload' } },
+    { url: files[which] + '?t=' + ts, opts: { cache: 'no-store' } },
+    { url: new URL(files[which] + '?t=' + ts, location.href).toString(), opts: { cache: 'no-store' } },
   ];
   let md = null;
   let lastErr = null;
-  for (const url of candidates) {
+  for (const c of candidates) {
     try {
-      const resp = await fetch(url, { cache: 'no-store' });
+      const resp = await fetch(c.url, c.opts);
       if (!resp.ok) { lastErr = new Error('HTTP ' + resp.status); continue; }
-      md = await resp.text();
-      // Detecta se o servidor devolveu HTML (Jekyll) em vez do md cru
-      if (md.trim().startsWith('<!DOCTYPE') || md.trim().startsWith('<html')) {
-        lastErr = new Error('Servidor devolveu HTML em vez do Markdown cru');
-        md = null;
+      const text = await resp.text();
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        lastErr = new Error('Servidor devolveu HTML em vez do Markdown');
         continue;
       }
+      md = text;
       break;
     } catch (e) {
       lastErr = e;
     }
+  }
+  // 4. Última tentativa: XHR (rota diferente do fetch, pode escapar do SW antigo)
+  if (!md) {
+    try {
+      md = await _fetchViaXHR(files[which] + '?xhr=' + ts);
+      if (md && (md.trim().startsWith('<!DOCTYPE') || md.trim().startsWith('<html'))) {
+        md = null;
+      }
+    } catch (e) { lastErr = e; }
   }
 
   if (md) {
@@ -4317,6 +4338,23 @@ async function showLegalDoc(which) {
     '<a href="' + rawUrl + '" target="_blank" rel="noopener" style="display:inline-block;padding:10px 16px;background:var(--green);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">Abrir em nova aba</a>' +
     '<p style="margin-top:16px;font-size:11px;color:var(--gray-mid)"><small>Erro técnico: ' + ((lastErr && lastErr.message) || 'desconhecido') + '</small></p>' +
     '</div>';
+}
+
+// v2.1.72: fetch alternativo via XHR. Usa caminhos diferentes do fetch()
+// e em alguns casos escapa de SWs antigos com handlers mal-formados.
+function _fetchViaXHR(url) {
+  return new Promise((resolve, reject) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
+        else reject(new Error('XHR HTTP ' + xhr.status));
+      };
+      xhr.onerror = () => reject(new Error('XHR network error'));
+      xhr.send();
+    } catch (e) { reject(e); }
+  });
 }
 
 function closeLegalDoc() {
@@ -4356,6 +4394,7 @@ function _showConsentModal() {
   const modal = document.getElementById('consent-modal');
   if (!modal) return;
   document.getElementById('consent-modal-terms').checked  = false;
+  document.getElementById('consent-modal-age').checked    = false;
   document.getElementById('consent-modal-health').checked = false;
   _updateConsentModalState();
   modal.classList.add('open');
@@ -4363,10 +4402,11 @@ function _showConsentModal() {
 
 function _updateConsentModalState() {
   const cbTerms  = document.getElementById('consent-modal-terms');
+  const cbAge    = document.getElementById('consent-modal-age');
   const cbHealth = document.getElementById('consent-modal-health');
   const btn      = document.getElementById('consent-modal-accept');
   if (!btn) return;
-  btn.disabled = !(cbTerms && cbTerms.checked && cbHealth && cbHealth.checked);
+  btn.disabled = !(cbTerms && cbTerms.checked && cbAge && cbAge.checked && cbHealth && cbHealth.checked);
 }
 
 async function submitConsentModal() {
@@ -4389,6 +4429,7 @@ async function submitConsentModal() {
       terms_version:       LEGAL_VERSIONS.terms,
       accepted_privacy_at: nowIso,
       privacy_version:     LEGAL_VERSIONS.privacy,
+      age_confirmed_at:    nowIso,  // v2.1.72: checkbox 18+ dedicado
       health_consent_at:   nowIso,
     };
     await ref.set({ value: merged, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
@@ -5483,5 +5524,10 @@ document.addEventListener('touchstart', function(e) {
 // Sunday prompt is now called inside initApp (only after login/skip)
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // v2.1.72: força checagem de update a cada abertura do app. Sem isso,
+    // browsers podem manter o SW antigo em cache até 24h, o que atrapalha
+    // rollout de fixes críticos como o do modal legal.
+    if (reg && typeof reg.update === 'function') reg.update();
+  }).catch(() => {});
 }

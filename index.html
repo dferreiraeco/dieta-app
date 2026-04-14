@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=2171">
+<link rel="stylesheet" href="styles.css?v=2172">
 <script>
   // v2.1.37: aplica o tema (data-theme) ANTES do CSS pintar pra evitar flash.
   // v2.1.51: default é 'light'. Usuário pode mudar pra 'dark' ou 'auto' no
@@ -45,7 +45,6 @@
   <div class="auth-card">
     <!-- v2.1.52: main view com 3 opções de login -->
     <div id="auth-main">
-      <p class="auth-age-warning">🔞 Uso restrito a maiores de 18 anos</p>
       <button class="google-btn" onclick="googleLogin()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
         Entrar com Google
@@ -80,12 +79,18 @@
         <div class="ob-error" id="auth-confirm-err"></div>
       </div>
       <!-- v2.1.70: checkboxes de consentimento LGPD (só aparecem em modo signup) -->
+      <!-- v2.1.72: 18+ virou checkbox próprio ao invés de aviso visual no topo -->
       <div id="auth-consent-fields" style="display:none">
         <label class="auth-consent-row">
           <input type="checkbox" id="auth-consent-terms" onchange="_updateAuthSubmitState()">
-          <span>Declaro que li e aceito os <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>, e que sou <b>maior de 18 anos completos</b></span>
+          <span>Li e aceito os <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a></span>
         </label>
         <div class="ob-error" id="auth-consent-terms-err"></div>
+        <label class="auth-consent-row">
+          <input type="checkbox" id="auth-consent-age" onchange="_updateAuthSubmitState()">
+          <span>Declaro ser <b>maior de 18 anos completos</b> e ter plena capacidade civil</span>
+        </label>
+        <div class="ob-error" id="auth-consent-age-err"></div>
         <label class="auth-consent-row">
           <input type="checkbox" id="auth-consent-health" onchange="_updateAuthSubmitState()">
           <span>Autorizo o tratamento dos meus <b>dados de saúde</b> (peso, altura, composição corporal, metas, histórico alimentar e de exercícios) para as finalidades descritas na Política de Privacidade</span>
@@ -131,7 +136,11 @@
     </p>
     <label class="auth-consent-row">
       <input type="checkbox" id="consent-modal-terms" onchange="_updateConsentModalState()">
-      <span>Declaro que li e aceito os <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>, e que sou <b>maior de 18 anos completos</b></span>
+      <span>Li e aceito os <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a></span>
+    </label>
+    <label class="auth-consent-row">
+      <input type="checkbox" id="consent-modal-age" onchange="_updateConsentModalState()">
+      <span>Declaro ser <b>maior de 18 anos completos</b> e ter plena capacidade civil</span>
     </label>
     <label class="auth-consent-row">
       <input type="checkbox" id="consent-modal-health" onchange="_updateConsentModalState()">
@@ -526,7 +535,7 @@
 </div><!-- /app-container -->
 
 <script src="glyphs.js?v=2114"></script>
-<script src="data.js?v=2171"></script>
-<script src="app.js?v=2171"></script>
+<script src="data.js?v=2172"></script>
+<script src="app.js?v=2172"></script>
 </body>
 </html>
