@@ -5194,8 +5194,9 @@ function _closeTour(saveFlag) {
   }
 }
 
-// Dispara o tour automaticamente após primeiro onboarding se o usuário
-// ainda não viu. Chamado ao final do initApp().
+// v2.1.107: Dispara o tour apenas pra novos usuários que acabaram de
+// completar o onboarding (chamado em submitOnboarding). Não roda mais
+// no initApp — usuários existentes não veem o tour automaticamente.
 function maybeStartFirstTour() {
   const profile = getUserProfile();
   if (!profile) return;
@@ -6036,9 +6037,11 @@ function initApp() {
   // arquiva e zera tudo (incluindo homeStock).
   setTimeout(autoSundayRollover, 500);
 
-  // v2.1.85: se o usuário tem perfil mas nunca viu o tour, dispara.
-  // Rodando depois do rollover pra não competir por foco no UI inicial.
-  setTimeout(maybeStartFirstTour, 900);
+  // v2.1.107: tour NÃO dispara mais automaticamente no initApp.
+  // Só é disparado em submitOnboarding pra novos usuários que acabaram
+  // de completar o cadastro, ou manualmente via "Refazer tour" no profile.
+  // Usuários existentes (com perfil antes do tour existir) nunca veem
+  // automaticamente.
 }
 
 // Block pinch-to-zoom and double-tap zoom on iOS
