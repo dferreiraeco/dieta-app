@@ -4367,6 +4367,177 @@ function _closeConsentModal() {
   if (modal) modal.classList.remove('open');
 }
 
+// v2.1.70: exporta todos os dados do usuário como JSON download.
+// Atende Art. 18, V (portabilidade) da LGPD. Roda 100% local — lê do
+// localStorage que já é cache/espelho do Firestore.
+function exportUserData() {
+  const data = {};
+  // Chaves fixas do STORAGE_KEYS
+  Object.values(STORAGE_KEYS).forEach(key => {
+    const raw = localStorage.getItem(key);
+    if (raw != null) {
+      try { data[key] = JSON.parse(raw); }
+      catch (_) { data[key] = raw; }
+    }
+  });
+  // Chaves dinâmicas meals_YYYY-MM-DD
+  const meals = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith(STORAGE_PREFIXES.meals)) {
+      try { meals[k] = JSON.parse(localStorage.getItem(k)); }
+      catch (_) { meals[k] = localStorage.getItem(k); }
+    }
+  });
+  if (Object.keys(meals).length) data._meals_by_date = meals;
+  // Chaves dinâmicas cardio_ (legado)
+  const cardio = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith(STORAGE_PREFIXES.cardio)) {
+      try { cardio[k] = JSON.parse(localStorage.getItem(k)); }
+      catch (_) { cardio[k] = localStorage.getItem(k); }
+    }
+  });
+  if (Object.keys(cardio).length) data._cardio_legacy = cardio;
+
+  // Metadados do export
+  const exportPayload = {
+    app:             'DietPLAN',
+    app_version:     'v2.1.70',
+    terms_version:   LEGAL_VERSIONS.terms,
+    privacy_version: LEGAL_VERSIONS.privacy,
+    export_date:     new Date().toISOString(),
+    user: currentUser ? {
+      uid:           currentUser.uid,
+      email:         currentUser.email,
+      display_name:  currentUser.displayName || null,
+      provider:      (currentUser.providerData[0] && currentUser.providerData[0].providerId) || null,
+      email_verified: currentUser.emailVerified,
+    } : { mode: 'offline_no_account' },
+    data: data,
+  };
+
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const ts   = new Date().toISOString().slice(0, 10);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `dietplan-meus-dados-${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// v2.1.70: apaga a conta do usuário completamente.
+// Fluxo: confirmação dupla → delete Firestore → reauth se necessário →
+// auth.currentUser.delete() → clear localStorage → reload.
+async function deleteAccount() {
+  if (!currentUser) {
+    alert('Você precisa estar logado para apagar a conta.');
+    return;
+  }
+
+  // Confirmação 1 — avisa sobre irreversibilidade
+  if (!await customConfirm(
+    'Esta ação é IRREVERSÍVEL e vai apagar permanentemente:\n\n' +
+    '• Sua conta no Firebase (email + senha / Google)\n' +
+    '• Todos os dados do perfil (peso, altura, metas, BF%)\n' +
+    '• Histórico completo (peso, treinos, cardio, refeições)\n' +
+    '• Planejamento de marmitas e jantares\n' +
+    '• Lista de compras e substituições\n' +
+    '• Qualquer outro dado sincronizado na nuvem\n\n' +
+    'Após a exclusão, NÃO É POSSÍVEL recuperar nada.\n\n' +
+    'Recomendamos que você exporte seus dados primeiro (botão "Exportar meus dados").',
+    { title: 'ATENÇÃO — Apagar conta?', okLabel: 'Continuar', danger: true }
+  )) return;
+
+  // Confirmação 2 — última chance
+  if (!await customConfirm(
+    'Tem absoluta certeza? Esta é a última confirmação.\n\nSua conta e todos os dados serão apagados permanentemente.',
+    { title: 'Última confirmação', okLabel: 'Sim, apagar tudo', danger: true }
+  )) return;
+
+  // Tenta apagar os dados do Firestore PRIMEIRO (antes do delete do auth).
+  // Se deletar o auth antes, perdemos permissão de gravação (uid deixa de existir).
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('data').get();
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  } catch (e) {
+    console.warn('Falha ao apagar dados no Firestore:', e);
+    // Mesmo se falhar, continua — o usuário pediu pra apagar
+  }
+
+  // Tenta deletar a conta. Firebase pode exigir reauth se o login for antigo.
+  try {
+    await currentUser.delete();
+    _finishAccountDeletion();
+  } catch (e) {
+    if (e.code === 'auth/requires-recent-login') {
+      // Re-autentica o usuário e tenta de novo
+      const ok = await _reauthenticateCurrentUser();
+      if (!ok) {
+        alert('Não foi possível re-autenticar. A exclusão foi cancelada. Seus dados do servidor podem ter sido parcialmente removidos — contate sac.dietplan@gmail.com se precisar de ajuda.');
+        return;
+      }
+      try {
+        await currentUser.delete();
+        _finishAccountDeletion();
+      } catch (err2) {
+        alert('Erro ao apagar conta após re-autenticação: ' + (err2.message || err2.code));
+      }
+    } else {
+      alert('Erro ao apagar conta: ' + (e.message || e.code));
+    }
+  }
+}
+
+// v2.1.70: re-autentica o currentUser antes de uma operação sensível como delete.
+// Detecta o provedor (password ou google.com) e usa o fluxo apropriado.
+async function _reauthenticateCurrentUser() {
+  if (!currentUser) return false;
+  const providerId = currentUser.providerData[0] && currentUser.providerData[0].providerId;
+  try {
+    if (providerId === 'password') {
+      // Email/senha: pede a senha via prompt
+      const pwd = window.prompt(
+        'Por segurança, confirme sua senha para apagar a conta:'
+      );
+      if (!pwd) return false;
+      const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+      await currentUser.reauthenticateWithCredential(cred);
+      return true;
+    } else if (providerId === 'google.com') {
+      // Google: popup de re-autenticação
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await currentUser.reauthenticateWithPopup(provider);
+      return true;
+    } else {
+      alert('Provedor de autenticação não suportado para re-auth: ' + providerId);
+      return false;
+    }
+  } catch (e) {
+    console.error('Re-auth falhou:', e);
+    alert('Falha na re-autenticação: ' + (e.message || e.code));
+    return false;
+  }
+}
+
+// v2.1.70: finaliza o fluxo de exclusão: limpa localStorage e recarrega a página.
+function _finishAccountDeletion() {
+  // Limpa todo o localStorage do DietPLAN
+  SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith(STORAGE_PREFIXES.meals) || k.startsWith(STORAGE_PREFIXES.cardio)) {
+      localStorage.removeItem(k);
+    }
+  });
+  localStorage.removeItem(STORAGE_KEYS.skipLogin);
+  alert('Sua conta e todos os dados foram apagados com sucesso.');
+  location.reload();
+}
+
 // Parser minimal de Markdown. NÃO é uma implementação completa — cobre só
 // o subset usado em PRIVACY.md / TERMS.md: headers (# ## ###), bold (**text**),
 // italic (*text*), links [text](url), listas (- item), tabelas simples,
@@ -4741,6 +4912,15 @@ function openProfileView() {
         </div>
       </div>
     </div>
+
+    ${currentUser ? `
+    <div class="pv-section">
+      <h3>Privacidade e Dados (LGPD)</h3>
+      <p class="pv-lgpd-desc">Exerça seus direitos previstos na Lei Geral de Proteção de Dados (Art. 18). Para mais detalhes, consulte a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>.</p>
+      <button type="button" class="pv-lgpd-btn" onclick="exportUserData()">📥 Exportar meus dados (JSON)</button>
+      <button type="button" class="pv-lgpd-btn pv-lgpd-danger" onclick="deleteAccount()">🗑 Apagar minha conta</button>
+    </div>
+    ` : ''}
 
     ${criadoTxt ? `<div class="pv-footer">Perfil criado em ${criadoTxt}</div>` : ''}
   `;

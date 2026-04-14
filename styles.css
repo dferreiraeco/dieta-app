@@ -1968,3 +1968,40 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Profile view — seção LGPD (Exportar / Apagar) */
+.pv-lgpd-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gray-mid);
+  margin: 4px 0 12px 0;
+}
+.pv-lgpd-desc a { color: var(--green); text-decoration: underline; }
+.pv-lgpd-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  margin: 8px 0;
+  border: 1.5px solid var(--gray-light);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pv-lgpd-btn:hover {
+  border-color: var(--green);
+  background: var(--gray-bg);
+}
+.pv-lgpd-btn:active { transform: scale(0.99); }
+.pv-lgpd-danger {
+  color: var(--accent-danger);
+  border-color: var(--accent-danger-soft);
+}
+.pv-lgpd-danger:hover {
+  border-color: var(--accent-danger);
+  background: var(--accent-danger-soft);
+}
