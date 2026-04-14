@@ -4792,51 +4792,162 @@ function resetUserProfile() {
 // após o primeiro onboarding e também manualmente via profile view.
 // Flag tour_completed_at no profile controla "já viu".
 
+// v2.1.94: tour expandido com 23 passos — cada aba tem seus sub-passos
+// destacando ações específicas com spotlight em elementos individuais.
 const TOUR_STEPS = [
+  // ===== Welcome (centered) =====
   {
     image: 'tour-images/tour-1.jpg',
     title: '👋 Bem-vindo ao DietPLAN!',
-    text: 'Vamos fazer um tour rápido pra você conhecer as 5 abas principais do app. Leva menos de 1 minuto — ou clique em "Pular tour" se preferir explorar por conta própria.',
+    text: 'Vamos fazer um tour pra você conhecer as funcionalidades do app. Leva ~2 minutos — ou clique em "Pular tour" se preferir explorar por conta própria.',
   },
+
+  // ===== Aba Marmitas =====
   {
     image: 'tour-images/tour-2.jpg',
     tab: 'marmitas',
     targetKey: 'marmitas',
     title: '1. Marmitas — Planejamento Semanal',
-    text: 'Planeje suas refeições de almoço e jantar pra cada dia da semana. Use o <b>Gerador de Cardápio</b> pra sugestões automáticas a partir do que você tem em casa.',
+    text: 'Aqui você planeja almoços e jantares da semana. Vamos ver as principais ações desta aba.',
   },
+  {
+    tab: 'marmitas',
+    targetSelector: '#page-marmitas button[onclick*="openMenuGenerator"]',
+    title: 'Gerador de Cardápio',
+    text: 'Toque aqui pra gerar um cardápio semanal automático baseado no que você já tem em casa e no seu perfil alimentar.',
+  },
+  {
+    tab: 'marmitas',
+    targetSelector: '#planner-cards .history-btn',
+    title: 'Adicionar Novo Sabor de Marmita',
+    text: 'Escolha uma das 6 marmitas disponíveis e defina quantas vezes ela vai aparecer na semana.',
+  },
+  {
+    tab: 'marmitas',
+    targetSelector: '#dinner-cards .history-btn',
+    title: 'Adicionar Novo Sabor de Jantar',
+    text: 'Mesma ideia pros jantares — tem 6 opções pra distribuir nos dias da semana.',
+  },
+  {
+    tab: 'marmitas',
+    targetSelector: '#planner-status .history-btn',
+    title: 'Histórico de Semanas',
+    text: 'Consulte semanas passadas com estatísticas de calorias, proteína e macros das marmitas e jantares escolhidos.',
+  },
+
+  // ===== Aba Compras =====
   {
     image: 'tour-images/tour-3.jpg',
     tab: 'compras',
     targetKey: 'compras',
     title: '2. Compras — Lista Automática',
-    text: 'Lista de compras gerada automaticamente a partir do cardápio planejado. Marque os itens conforme compra, adicione substituições customizadas e controle o estoque em casa.',
+    text: 'Lista gerada a partir do seu cardápio semanal. Vamos ver como marcar itens e compartilhar.',
   },
+  {
+    tab: 'compras',
+    targetSelector: '#shopping-list .check-item',
+    title: 'Marque ao comprar',
+    text: 'Toque em qualquer linha da lista pra marcar o item como comprado. Use o ✎ à direita pra registrar uma substituição (quando comprar algo diferente do original).',
+  },
+  {
+    tab: 'compras',
+    targetSelector: '#page-compras button[onclick*="exportShoppingPDF"]',
+    title: 'Compartilhar Lista',
+    text: 'Gera um PDF com a lista pra você enviar pro WhatsApp, imprimir ou anotar no mercado.',
+  },
+
+  // ===== Aba Dieta =====
   {
     image: 'tour-images/tour-4.jpg',
     tab: 'dieta',
     targetKey: 'dieta',
-    title: '3. Dieta — Meta e Refeições do Dia',
-    text: 'Veja sua meta calórica e macros diários. Marque cada refeição ao consumir pra acompanhar o progresso em tempo real.',
+    title: '3. Dieta — Meta e Refeições',
+    text: 'Aqui você vê suas metas e marca as refeições do dia. Vamos passar pelos principais componentes.',
   },
+  {
+    tab: 'dieta',
+    targetSelector: '#page-dieta .page-header',
+    title: 'Meta calórica e objetivo',
+    text: 'Sua meta diária (com asterisco lembrando que é estimativa) e o objetivo atual: perda de gordura, ganho de massa ou manutenção.',
+  },
+  {
+    tab: 'dieta',
+    targetSelector: '#page-dieta .daily-tracker',
+    title: 'Progresso do dia',
+    text: 'Donut com calorias e macros consumidos vs meta. Atualiza em tempo real conforme você marca as refeições feitas.',
+  },
+  {
+    tab: 'dieta',
+    targetSelector: '#marmita-selector',
+    title: 'Almoço e jantar de hoje',
+    text: 'Selecione qual marmita e qual jantar do planejamento semanal você vai comer hoje. As escolhas aparecem nas refeições abaixo pra você marcar.',
+  },
+  {
+    tab: 'dieta',
+    targetSelector: '#meals-container',
+    title: 'Marcar refeição como feita',
+    text: 'Toque em cada refeição ao consumir. O progresso do dia acima atualiza automaticamente a cada toque.',
+  },
+
+  // ===== Aba Treino =====
   {
     image: 'tour-images/tour-5.jpg',
     tab: 'treino',
     targetKey: 'treino',
     title: '4. Treino — Musculação + Cardio',
-    text: 'Rastreie seus treinos A/B com pesos e repetições salvos semana a semana. Registre cardio diário e acompanhe sua evolução.',
+    text: 'Registre seus treinos e acompanhe evolução semana a semana.',
   },
+  {
+    tab: 'treino',
+    targetSelector: '#page-treino .workout-toggle',
+    title: '3 tipos de treino',
+    text: 'Escolha entre Treino A, Treino B ou Funcional. Cada um tem sua lista de exercícios independente.',
+  },
+  {
+    tab: 'treino',
+    targetSelector: '#exercises-container',
+    title: 'Peso e repetições',
+    text: 'Adicione peso (kg) e repetições feitas em cada série. Os valores são salvos pra você comparar com semanas anteriores.',
+  },
+  {
+    tab: 'treino',
+    targetSelector: '#page-treino .cardio-section',
+    title: 'Registro de cardio',
+    text: 'Adicione sessões de cardio do dia (corrida, bike, caminhada) com duração e calorias estimadas.',
+  },
+  {
+    tab: 'treino',
+    targetSelector: '#page-treino button[onclick="saveWorkout()"]',
+    title: 'Salvar e ver histórico',
+    text: 'Salve o treino atual e consulte sua progressão ao longo das semanas pelo botão "Ver Histórico de Progressão".',
+  },
+
+  // ===== Aba Agenda =====
   {
     image: 'tour-images/tour-6.jpg',
     tab: 'calendário',
     targetKey: 'calendário',
     title: '5. Agenda — Histórico Completo',
-    text: 'Calendário mostrando tudo que você fez: marmitas, treinos, cardio e peso. Perfeito pra ver a evolução a longo prazo.',
+    text: 'Calendário com tudo que você fez. Vamos ver os dois componentes principais.',
   },
+  {
+    tab: 'calendário',
+    targetSelector: '#cal-grid',
+    title: 'Calendário',
+    text: 'Cada dia mostra dots coloridos marcando marmita feita, treino registrado e cardio. Toque em qualquer dia pra ver detalhes.',
+  },
+  {
+    tab: 'calendário',
+    targetSelector: '#weight-log-card',
+    title: 'Evolução de peso',
+    text: 'Registre seu peso regularmente (ex: toda semana) e visualize o gráfico de evolução ao longo do tempo.',
+  },
+
+  // ===== Final (centered) =====
   {
     image: 'tour-images/tour-7.jpg',
     title: '✓ Tudo pronto!',
-    text: 'Você pode refazer este tour a qualquer momento pelo botão <b>"Refazer tour"</b> no seu perfil. Bom uso!',
+    text: 'Você pode refazer este tour a qualquer momento pelo botão <b>"Refazer tour do app"</b> no seu perfil. Bom uso!',
   },
 ];
 
@@ -4864,12 +4975,26 @@ function _renderTourStep() {
     switchTab(step.tab);
   }
 
-  // Aplica spotlight no target (tab-btn no nav bottom)
+  // v2.1.94: spotlight no target — suporta tab-btn (targetKey) OU elemento
+  // arbitrário via CSS selector (targetSelector)
   setTimeout(() => {
     if (step.targetKey) {
       const idx = TABS.indexOf(step.targetKey);
       const btns = document.querySelectorAll('.tab-btn');
       if (btns[idx]) btns[idx].classList.add('tour-spotlight');
+    } else if (step.targetSelector) {
+      const el = document.querySelector(step.targetSelector);
+      if (el) {
+        // Scroll pra centralizar o target na viewport, acima do card
+        try {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (_) {}
+        // Aplica spotlight depois do scroll animar
+        setTimeout(() => {
+          el.classList.add('tour-spotlight');
+        }, 220);
+      }
+      // Se target não existe, segue sem spotlight (card mostra a info mesmo assim)
     }
   }, 80);
 
@@ -4880,11 +5005,16 @@ function _renderTourStep() {
   const progress = (_tourStep + 1) + ' / ' + total;
   const isFirst = _tourStep === 0;
   const isLast  = _tourStep === total - 1;
-  const isCentered = !step.tab; // welcome e final centralizam
+  // Centered: welcome e final (sem tab nem selector)
+  const isCentered = !step.tab && !step.targetSelector;
+  // Compact: passos intermediários sem imagem
+  const isCompact  = !step.image;
 
-  card.className = 'tour-card' + (isCentered ? ' centered' : '');
+  card.className = 'tour-card'
+    + (isCentered ? ' centered' : '')
+    + (isCompact ? ' compact' : '');
   const imgHtml = step.image
-    ? '<img class="tour-card-img" src="' + step.image + '?v=2193" alt="">'
+    ? '<img class="tour-card-img" src="' + step.image + '?v=2194" alt="">'
     : '';
   card.innerHTML =
     imgHtml +

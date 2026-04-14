@@ -1996,6 +1996,21 @@ body {
   background: #f0f0e8;
   flex-shrink: 0;
 }
+/* v2.1.94: variante compacta pra passos intermediários (sem imagem, só texto) */
+.tour-card.compact {
+  max-width: 320px;
+  min-height: auto;
+  padding: 0 0 14px 0;
+}
+.tour-card.compact h3 {
+  padding-top: 14px;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.tour-card.compact p {
+  font-size: 13px;
+  margin-bottom: 14px;
+}
 .tour-card.centered {
   bottom: auto;
   top: 50%;
