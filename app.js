@@ -4884,7 +4884,7 @@ function _renderTourStep() {
 
   card.className = 'tour-card' + (isCentered ? ' centered' : '');
   const imgHtml = step.image
-    ? '<img class="tour-card-img" src="' + step.image + '?v=2192" alt="">'
+    ? '<img class="tour-card-img" src="' + step.image + '?v=2193" alt="">'
     : '';
   card.innerHTML =
     imgHtml +
