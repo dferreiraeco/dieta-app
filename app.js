@@ -4807,7 +4807,7 @@ const TOUR_STEPS = [
     image: 'tour-images/tour-2.jpg',
     tab: 'marmitas',
     targetKey: 'marmitas',
-    title: '1. Marmitas — Planejamento Semanal',
+    title: 'Marmitas — Planejamento Semanal',
     text: 'Aqui você planeja almoços e jantares da semana. Vamos ver as principais ações desta aba.',
   },
   {
@@ -4820,7 +4820,7 @@ const TOUR_STEPS = [
     tab: 'marmitas',
     targetSelector: '#planner-cards .history-btn',
     title: 'Adicionar Novo Sabor de Marmita',
-    text: 'Escolha uma das 6 marmitas disponíveis e defina quantas vezes ela vai aparecer na semana.',
+    text: 'Escolha uma das 6 marmitas disponíveis e defina quantas unidades você irá preparar para a semana.',
   },
   {
     tab: 'marmitas',
@@ -4840,14 +4840,14 @@ const TOUR_STEPS = [
     image: 'tour-images/tour-3.jpg',
     tab: 'compras',
     targetKey: 'compras',
-    title: '2. Compras — Lista Automática',
+    title: 'Compras — Lista Automática',
     text: 'Lista gerada a partir do seu cardápio semanal. Vamos ver como marcar itens e compartilhar.',
   },
   {
     tab: 'compras',
     targetSelector: '#shopping-list .check-item',
     title: 'Marque ao comprar',
-    text: 'Toque em qualquer linha da lista pra marcar o item como comprado. Use o ✎ à direita pra registrar uma substituição (quando comprar algo diferente do original).',
+    text: 'Toque em qualquer linha da lista pra marcar o item como comprado. Use o ícone ✎ à direita pra registrar uma substituição (quando comprar algo diferente do original).',
   },
   {
     tab: 'compras',
@@ -4861,20 +4861,20 @@ const TOUR_STEPS = [
     image: 'tour-images/tour-4.jpg',
     tab: 'dieta',
     targetKey: 'dieta',
-    title: '3. Dieta — Meta e Refeições',
+    title: 'Dieta — Meta e Refeições',
     text: 'Aqui você vê suas metas e marca as refeições do dia. Vamos passar pelos principais componentes.',
   },
   {
     tab: 'dieta',
     targetSelector: '#page-dieta .page-header',
     title: 'Meta calórica e objetivo',
-    text: 'Sua meta diária (com asterisco lembrando que é estimativa) e o objetivo atual: perda de gordura, ganho de massa ou manutenção.',
+    text: 'Sua meta diária (estimada) e o objetivo atual: perda de gordura, ganho de massa ou manutenção.',
   },
   {
     tab: 'dieta',
     targetSelector: '#page-dieta .daily-tracker',
     title: 'Progresso do dia',
-    text: 'Donut com calorias e macros consumidos vs meta. Atualiza em tempo real conforme você marca as refeições feitas.',
+    text: 'Progresso de calorias e macros consumidos em relação à meta.',
   },
   {
     tab: 'dieta',
@@ -4898,7 +4898,7 @@ const TOUR_STEPS = [
     image: 'tour-images/tour-5.jpg',
     tab: 'treino',
     targetKey: 'treino',
-    title: '4. Treino — Musculação + Cardio',
+    title: 'Treino — Musculação + Cardio',
     text: 'Registre seus treinos e acompanhe evolução semana a semana.',
   },
   {
@@ -4935,14 +4935,14 @@ const TOUR_STEPS = [
     image: 'tour-images/tour-6.jpg',
     tab: 'calendário',
     targetKey: 'calendário',
-    title: '5. Agenda — Histórico Completo',
+    title: 'Agenda — Histórico Completo',
     text: 'Calendário com tudo que você fez. Vamos ver os dois componentes principais.',
   },
   {
     tab: 'calendário',
     targetSelector: '#cal-card',
     title: 'Calendário',
-    text: 'Cada dia mostra dots coloridos marcando marmita feita, treino registrado e cardio. Toque em qualquer dia pra ver detalhes. A legenda abaixo explica o significado de cada cor.',
+    text: 'Cada dia mostra indicadores coloridos marcando marmita feita, treino registrado e cardio. Toque em qualquer dia pra ver detalhes.',
   },
   {
     tab: 'calendário',
@@ -5172,10 +5172,25 @@ function _closeTour(saveFlag) {
   _clearTourSpotlight();
   const overlay = document.getElementById('tour-overlay');
   if (overlay) overlay.classList.remove('open');
+  // Limpa estilos inline do card pra restaurar o layout default
+  const card = document.getElementById('tour-card');
+  if (card) {
+    card.style.top = '';
+    card.style.left = '';
+    card.style.right = '';
+    card.style.bottom = '';
+    card.style.transform = '';
+    card.style.visibility = '';
+  }
   if (saveFlag) {
     const profile = getUserProfile() || {};
     profile.tour_completed_at = new Date().toISOString();
     saveUserProfile(profile);
+  }
+  // v2.1.105: ao finalizar o tour, volta pra aba Marmitas no topo.
+  // switchTab já faz window.scrollTo(0,0), então o scroll do topo é garantido.
+  if (typeof switchTab === 'function') {
+    switchTab('marmitas');
   }
 }
 
