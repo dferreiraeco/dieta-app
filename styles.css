@@ -1970,7 +1970,10 @@ body {
    destacada com border verde. Não depende de stacking context do target. */
 .tour-cutout {
   position: fixed;
-  pointer-events: none;
+  /* v2.1.108: cutout captura cliques pra avançar o tour em vez de disparar
+     a ação do elemento destacado abaixo. Cursor pointer como affordance. */
+  pointer-events: auto;
+  cursor: pointer;
   border-radius: 10px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.75),

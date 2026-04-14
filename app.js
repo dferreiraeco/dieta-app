@@ -5008,6 +5008,19 @@ function _createTourCutout(targetOrList) {
   el.style.left   = Math.max(0, left - pad) + 'px';
   el.style.width  = (right - left + pad * 2) + 'px';
   el.style.height = (bottom - top + pad * 2) + 'px';
+  // v2.1.108: cutout captura cliques no target pra AVANÇAR o tour em vez
+  // de disparar a ação real do elemento destacado. Evita UX confusa onde
+  // o usuário clica no botão destacado achando que avança o tour e em vez
+  // disso dispara a ação (ex: Registrar peso).
+  el.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (_tourStep < TOUR_STEPS.length - 1) {
+      _tourNext();
+    } else {
+      _closeTour(true);
+    }
+  });
   overlay.appendChild(el);
   _tourCutoutEl = el;
 }
