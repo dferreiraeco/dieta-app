@@ -1998,6 +1998,58 @@ body {
   border-color: var(--accent-danger);
   background: var(--accent-danger-soft);
 }
+
+/* v2.1.75: tooltips contextuais no onboarding */
+.ob-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.ob-label-wrap label { margin-bottom: 0; flex: 1; }
+.ob-help-btn {
+  flex-shrink: 0;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--gray-bg);
+  color: var(--gray-mid);
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gray-light);
+  user-select: none;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.ob-help-btn:hover,
+.ob-help-btn[aria-expanded="true"] {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+.ob-tooltip-body {
+  margin: 0 0 10px 0;
+  padding: 10px 12px;
+  background: var(--gray-bg);
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gray);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.ob-tooltip-body[hidden] { display: none !important; }
+.ob-tooltip-body b { color: var(--ink-strong); }
+.ob-tooltip-body ul { margin: 6px 0 0 18px; padding: 0; }
+.ob-tooltip-body li { margin: 3px 0; }
 /* pv-lgpd-btn precisa render como link quando é <a> */
 a.pv-lgpd-btn {
   text-decoration: none;

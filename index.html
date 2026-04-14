@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=2174">
+<link rel="stylesheet" href="styles.css?v=2175">
 <script>
   // v2.1.37: aplica o tema (data-theme) ANTES do CSS pintar pra evitar flash.
   // v2.1.51: default é 'light'. Usuário pode mudar pra 'dark' ou 'auto' no
@@ -217,14 +217,44 @@
         <div class="ob-error" id="ob-meta-err"></div>
       </div>
       <div class="ob-field">
-        <label>Gordura corporal % <span style="font-weight:400;color:var(--gray-mid)">(opcional)</span></label>
+        <div class="ob-label-wrap">
+          <label for="ob-bf">Gordura corporal % <span style="font-weight:400;color:var(--gray-mid)">(opcional)</span></label>
+          <button type="button" class="ob-help-btn" aria-expanded="false" aria-controls="ob-bf-help" onclick="_toggleOBHelp('ob-bf-help', this)" aria-label="O que é gordura corporal">?</button>
+        </div>
+        <div class="ob-tooltip-body" id="ob-bf-help" hidden>
+          Percentual do seu peso total que é gordura corporal. <b>Se não souber, deixe em branco</b> — o app usa a fórmula Mifflin-St Jeor que não precisa desse dado.
+          <br><br>
+          <b>Valores típicos:</b>
+          <ul>
+            <li>Homens: 10-25% (atletas 6-13%)</li>
+            <li>Mulheres: 18-32% (atletas 14-20%)</li>
+          </ul>
+          <b>Como medir:</b> bioimpedância (balança ou aparelho profissional), DEXA scan, ou plicometria com profissional. Estimativas visuais e fórmulas online têm erro alto.
+        </div>
         <input type="number" id="ob-bf" inputmode="decimal" step="0.1" placeholder="ex: 25">
         <div class="ob-error" id="ob-bf-err"></div>
       </div>
     </div>
 
     <div class="ob-field">
-      <label>Nível de atividade física</label>
+      <div class="ob-label-wrap">
+        <label for="ob-atividade">Nível de atividade física</label>
+        <button type="button" class="ob-help-btn" aria-expanded="false" aria-controls="ob-atividade-help" onclick="_toggleOBHelp('ob-atividade-help', this)" aria-label="Como escolher o nível de atividade">?</button>
+      </div>
+      <div class="ob-tooltip-body" id="ob-atividade-help" hidden>
+        Multiplicador aplicado sobre o seu metabolismo basal (BMR) para calcular o gasto energético total diário (TDEE). <b>Considere apenas exercício estruturado</b>, não atividades do dia a dia como caminhar até o trabalho.
+        <br><br>
+        <b>Dica:</b> se estiver em dúvida entre dois níveis, escolha o mais baixo — é mais fácil ajustar pra cima depois do que descobrir que cortou demais.
+        <br><br>
+        <b>Exemplos práticos:</b>
+        <ul>
+          <li><b>Sedentário:</b> trabalho sentado, nenhum exercício</li>
+          <li><b>Levemente ativo:</b> treina 1-3x/sem, resto parado</li>
+          <li><b>Moderadamente ativo:</b> treina 3-5x/sem consistente</li>
+          <li><b>Muito ativo:</b> treina 6-7x/sem ou trabalho físico + treino</li>
+          <li><b>Extra ativo:</b> atleta ou trabalho muito pesado + treino diário</li>
+        </ul>
+      </div>
       <select id="ob-atividade">
         <option value="">Selecione...</option>
         <option value="sentado">Sedentário — sem exercício (×1,2)</option>
@@ -237,7 +267,21 @@
     </div>
 
     <div class="ob-field" id="ob-deficit-field">
-      <label>Intensidade do déficit</label>
+      <div class="ob-label-wrap">
+        <label for="ob-deficit">Intensidade do déficit</label>
+        <button type="button" class="ob-help-btn" aria-expanded="false" aria-controls="ob-deficit-help" onclick="_toggleOBHelp('ob-deficit-help', this)" aria-label="O que é déficit calórico">?</button>
+      </div>
+      <div class="ob-tooltip-body" id="ob-deficit-help" hidden>
+        Quanto menos calorias você vai consumir em relação ao gasto total (TDEE). Um déficit maior = perda de peso mais rápida, mas com mais fome, mais risco de perder massa magra e menos sustentabilidade a longo prazo.
+        <br><br>
+        <b>Guia prático:</b>
+        <ul>
+          <li><b>Suave (15%):</b> progresso lento mas sustentável, ideal para iniciantes ou quem quer evitar fome excessiva</li>
+          <li><b>Moderado (20%):</b> balanceado entre velocidade e sustentabilidade — padrão recomendado pra maioria</li>
+          <li><b>Agressivo (30%):</b> progresso mais rápido, exige disciplina, dieta mais rígida e maior risco de perder massa muscular</li>
+          <li><b>Extremo (40%):</b> modo avançado, só com acompanhamento profissional, alto risco de perda de massa magra</li>
+        </ul>
+      </div>
       <select id="ob-deficit">
         <option value="">Selecione...</option>
         <option value="suave">Suave — 15% do TDEE (~0,35 kg/sem)</option>
@@ -249,7 +293,20 @@
     </div>
 
     <div class="ob-field" id="ob-surplus-field">
-      <label>Intensidade do superávit</label>
+      <div class="ob-label-wrap">
+        <label for="ob-surplus">Intensidade do superávit</label>
+        <button type="button" class="ob-help-btn" aria-expanded="false" aria-controls="ob-surplus-help" onclick="_toggleOBHelp('ob-surplus-help', this)" aria-label="O que é superávit calórico">?</button>
+      </div>
+      <div class="ob-tooltip-body" id="ob-surplus-help" hidden>
+        Quantas calorias a mais do que o gasto total (TDEE) você vai consumir pra ganhar massa. Um superávit maior = ganho mais rápido, mas com maior proporção de gordura adicionada junto com músculo.
+        <br><br>
+        <b>Guia prático:</b>
+        <ul>
+          <li><b>Lento (10%):</b> "lean bulk" — minimiza ganho de gordura, progresso muscular mais lento. Ideal para quem já tem boa base de treino</li>
+          <li><b>Moderado (15%):</b> padrão recomendado, balanço entre ganho muscular e gordura</li>
+          <li><b>Agressivo (20%):</b> iniciantes ou quem tem dificuldade de ganhar peso; maior percentual de gordura adicionada junto</li>
+        </ul>
+      </div>
       <select id="ob-surplus">
         <option value="">Selecione...</option>
         <option value="lento">Lento — 10% do TDEE (~0,25 kg/sem, lean bulk)</option>
@@ -526,7 +583,7 @@
 </div><!-- /app-container -->
 
 <script src="glyphs.js?v=2114"></script>
-<script src="data.js?v=2174"></script>
-<script src="app.js?v=2174"></script>
+<script src="data.js?v=2175"></script>
+<script src="app.js?v=2175"></script>
 </body>
 </html>

@@ -4830,6 +4830,20 @@ function resetUserProfile() {
   }
 })();
 
+// v2.1.75: toggle dos tooltips de ajuda no formulário de onboarding
+function _toggleOBHelp(helpId, btn) {
+  const el = document.getElementById(helpId);
+  if (!el) return;
+  const isHidden = el.hasAttribute('hidden');
+  if (isHidden) {
+    el.removeAttribute('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  } else {
+    el.setAttribute('hidden', '');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+}
+
 function getUserProfile() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.userProfile) || 'null'); }
   catch (e) { return null; }
