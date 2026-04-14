@@ -317,6 +317,11 @@
       <a href="#" id="calc-details-link" class="calc-details-link" onclick="openCalcDetails();return false" aria-label="Ver detalhes do cálculo" style="display:none">ⓘ Detalhes</a>
     </div>
     <p id="diet-goal-text">Meta: ~2.000 kcal/dia | Objetivo: Perda de Gordura e Ganho de Massa</p>
+    <!-- v2.1.70: disclaimer médico discreto (link para Termos, seção de aviso) -->
+    <p class="medical-disclaimer">
+      ⚕ Estimativas baseadas em fórmulas populacionais.
+      <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Não substitui avaliação profissional</a>
+    </p>
   </div>
 
   <!-- v2.1.0 daily tracker com donut + linhas textuais -->

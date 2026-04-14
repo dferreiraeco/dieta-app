@@ -2005,3 +2005,24 @@ body {
   border-color: var(--accent-danger);
   background: var(--accent-danger-soft);
 }
+/* pv-lgpd-btn precisa render como link quando é <a> */
+a.pv-lgpd-btn {
+  text-decoration: none;
+  display: block;
+}
+
+/* Disclaimer médico discreto na aba Dieta */
+.medical-disclaimer {
+  margin: 6px 0 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--gray-mid);
+  font-style: italic;
+  opacity: 0.85;
+}
+.medical-disclaimer a {
+  color: var(--gray-mid);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.medical-disclaimer a:hover { color: var(--green); }

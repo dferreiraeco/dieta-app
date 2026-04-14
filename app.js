@@ -4922,6 +4922,14 @@ function openProfileView() {
     </div>
     ` : ''}
 
+    <div class="pv-section">
+      <h3>Ajuda e Contato</h3>
+      <p class="pv-lgpd-desc">Dúvidas, bugs, solicitações LGPD ou questões legais. Prazo máximo de resposta: 15 dias corridos.</p>
+      <a class="pv-lgpd-btn" href="mailto:sac.dietplan@gmail.com?subject=%5BSUPORTE%5D%20">✉ Falar com o suporte</a>
+      <button type="button" class="pv-lgpd-btn" onclick="showLegalDoc('terms')">📄 Termos de Uso</button>
+      <button type="button" class="pv-lgpd-btn" onclick="showLegalDoc('privacy')">🔒 Política de Privacidade</button>
+    </div>
+
     ${criadoTxt ? `<div class="pv-footer">Perfil criado em ${criadoTxt}</div>` : ''}
   `;
 
