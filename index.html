@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=2182">
+<link rel="stylesheet" href="styles.css?v=2183">
 <script>
   // v2.1.37: aplica o tema (data-theme) ANTES do CSS pintar pra evitar flash.
   // v2.1.51: default é 'light'. Usuário pode mudar pra 'dark' ou 'auto' no
@@ -56,6 +56,41 @@
       <div class="auth-divider">ou</div>
       <button class="skip-btn" onclick="skipLogin()">Continuar sem conta</button>
       <p class="skip-warning">Sem sincronização entre dispositivos e sem backup na nuvem</p>
+
+      <!-- v2.1.83: landing colapsável "Saiba mais" -->
+      <details class="auth-landing">
+        <summary>Saiba mais sobre o DietPLAN</summary>
+        <div class="auth-landing-body">
+          <div class="auth-landing-section">
+            <h3>✓ O DietPLAN é pra você se</h3>
+            <ul>
+              <li>Quer organizar suas semanas de marmitas e jantares</li>
+              <li>Treina com regularidade e quer controlar macros</li>
+              <li>Cozinha em casa e quer lista de compras automática</li>
+              <li>Gosta de acompanhar métricas (peso, composição corporal)</li>
+              <li>É maior de 18 anos e tem autonomia nas suas escolhas</li>
+            </ul>
+          </div>
+          <div class="auth-landing-section danger">
+            <h3>✗ O DietPLAN NÃO é pra você se</h3>
+            <ul>
+              <li>É menor de 18 anos</li>
+              <li>Tem histórico de transtorno alimentar (anorexia, bulimia, compulsão)</li>
+              <li>Está grávida, amamentando ou tentando engravidar</li>
+              <li>Tem condição médica crônica sem acompanhamento profissional</li>
+              <li>Precisa de prescrição nutricional individualizada</li>
+            </ul>
+          </div>
+          <p class="auth-landing-note">
+            O DietPLAN é uma ferramenta de organização pessoal, <b>não substitui</b>
+            avaliação de médico, nutricionista ou educador físico. Leia os
+            <a href="#" onclick="event.preventDefault();showLegalDoc('terms')">Termos de Uso</a>
+            e a
+            <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>
+            antes de criar sua conta.
+          </p>
+        </div>
+      </details>
     </div>
 
     <!-- v2.1.52: email/password form (signup ou signin, alterna via toggleAuthMode) -->
@@ -595,7 +630,7 @@
 </div><!-- /app-container -->
 
 <script src="glyphs.js?v=2114"></script>
-<script src="data.js?v=2182"></script>
-<script src="app.js?v=2182"></script>
+<script src="data.js?v=2183"></script>
+<script src="app.js?v=2183"></script>
 </body>
 </html>

@@ -1856,6 +1856,82 @@ body {
 
 /* ============ v2.1.70: Auth screen — LGPD consent, legal docs ============ */
 /* v2.1.72: .auth-age-warning removido — 18+ virou checkbox dedicado */
+
+/* v2.1.83: landing colapsável "Saiba mais" no auth screen */
+.auth-landing {
+  margin-top: 14px;
+  border-top: 1px solid var(--gray-light);
+  padding-top: 14px;
+}
+.auth-landing summary {
+  list-style: none;
+  cursor: pointer;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green);
+  padding: 6px 0;
+  user-select: none;
+}
+.auth-landing summary::-webkit-details-marker { display: none; }
+.auth-landing summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.auth-landing[open] summary::before {
+  transform: rotate(90deg);
+}
+.auth-landing summary:hover { opacity: 0.8; }
+.auth-landing-body {
+  margin-top: 12px;
+  padding: 0 4px;
+}
+.auth-landing-section {
+  background: var(--gray-bg);
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.auth-landing-section.danger {
+  border-left-color: var(--accent-danger);
+}
+.auth-landing-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.auth-landing-section.danger h3 { color: var(--accent-danger); }
+.auth-landing-section ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.auth-landing-section li {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gray);
+  margin: 3px 0;
+}
+.auth-landing-note {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--gray-mid);
+  font-style: italic;
+  text-align: center;
+}
+.auth-landing-note a {
+  color: var(--green);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.auth-landing-note b { color: var(--ink-strong); font-style: normal; }
+
 .auth-consent-row {
   display: flex;
   align-items: flex-start;
