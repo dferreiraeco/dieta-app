@@ -5045,7 +5045,6 @@ function _renderTourStep() {
   const card = document.getElementById('tour-card');
   if (!card) return;
   const total = TOUR_STEPS.length;
-  const progress = (_tourStep + 1) + ' / ' + total;
   const isFirst = _tourStep === 0;
   const isLast  = _tourStep === total - 1;
   // Centered: welcome e final (sem tab nem selector)
@@ -5073,7 +5072,6 @@ function _renderTourStep() {
     '<p>' + step.text + '</p>' +
     '<div class="tour-nav">' +
       '<button type="button" class="tour-skip" onclick="_closeTour(true)">Pular tour</button>' +
-      '<span class="tour-progress">' + progress + '</span>' +
       '<div class="tour-actions">' +
         (isFirst ? '' : '<button type="button" onclick="_tourPrev()">Anterior</button>') +
         '<button type="button" class="tour-next" onclick="' + (isLast ? '_closeTour(true)' : '_tourNext()') + '">' +
