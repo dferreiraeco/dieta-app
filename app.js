@@ -4262,7 +4262,7 @@ async function submitAuthEmail() {
 // italic, listas, tabelas, links). Pra manter o bundle leve, nada de lib externa.
 async function showLegalDoc(which) {
   const titles = { terms: 'Termos de Uso', privacy: 'Política de Privacidade' };
-  const files  = { terms: 'TERMS.md?v=2170', privacy: 'PRIVACY.md?v=2170' };
+  const files  = { terms: 'TERMS.md', privacy: 'PRIVACY.md' };
   const titleEl = document.getElementById('legal-modal-title');
   const bodyEl  = document.getElementById('legal-modal-body');
   const modal   = document.getElementById('legal-modal');
@@ -4270,15 +4270,53 @@ async function showLegalDoc(which) {
   titleEl.textContent = titles[which] || 'Documento';
   bodyEl.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--gray-mid)">Carregando…</div>';
   modal.classList.add('open');
-  try {
-    const resp = await fetch(files[which], { cache: 'no-store' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const md = await resp.text();
+
+  // Tenta duas rotas: caminho relativo (funciona servido pelo servidor) e
+  // caminho com cache-buster (forçando bypass do SW). A primeira que funcionar
+  // ganha. Se ambas falharem, mostra fallback com link externo.
+  const candidates = [
+    files[which],
+    files[which] + '?v=' + Date.now(),
+  ];
+  let md = null;
+  let lastErr = null;
+  for (const url of candidates) {
+    try {
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) { lastErr = new Error('HTTP ' + resp.status); continue; }
+      md = await resp.text();
+      // Detecta se o servidor devolveu HTML (Jekyll) em vez do md cru
+      if (md.trim().startsWith('<!DOCTYPE') || md.trim().startsWith('<html')) {
+        lastErr = new Error('Servidor devolveu HTML em vez do Markdown cru');
+        md = null;
+        continue;
+      }
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  if (md) {
     bodyEl.innerHTML = _renderMarkdown(md);
     bodyEl.scrollTop = 0;
-  } catch (e) {
-    bodyEl.innerHTML = '<div style="padding:20px;color:var(--red)">Erro ao carregar documento. Tente novamente.<br><small>' + (e.message || '') + '</small></div>';
+    return;
   }
+
+  // Fallback: tudo falhou. Mostra mensagem clara + link pra abrir direto.
+  const rawUrl = files[which];
+  bodyEl.innerHTML =
+    '<div style="padding:20px;line-height:1.6">' +
+    '<p style="color:var(--accent-danger);font-weight:700;margin-bottom:10px">⚠ Não foi possível carregar o documento no app.</p>' +
+    '<p style="color:var(--gray);font-size:13px;margin-bottom:14px">Isso pode acontecer se o cache do navegador estiver desatualizado. Tente:</p>' +
+    '<ul style="font-size:13px;color:var(--gray);margin:0 0 14px 20px">' +
+    '<li>Recarregar a página (puxe de cima pra baixo ou F5)</li>' +
+    '<li>Limpar o cache do app nas configurações do navegador</li>' +
+    '<li>Abrir o documento direto no link abaixo</li>' +
+    '</ul>' +
+    '<a href="' + rawUrl + '" target="_blank" rel="noopener" style="display:inline-block;padding:10px 16px;background:var(--green);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">Abrir em nova aba</a>' +
+    '<p style="margin-top:16px;font-size:11px;color:var(--gray-mid)"><small>Erro técnico: ' + ((lastErr && lastErr.message) || 'desconhecido') + '</small></p>' +
+    '</div>';
 }
 
 function closeLegalDoc() {
