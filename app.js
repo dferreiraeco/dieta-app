@@ -4164,6 +4164,14 @@ const LEGAL_VERSIONS = {
   privacy: '1.1',
 };
 
+// v2.1.70: flag pra evitar race condition entre signup email e consent check.
+// Quando o usuário faz signup via email, gravamos o consentimento no Firestore
+// depois de createUserWithEmailAndPassword resolver. Mas onAuthStateChanged
+// pode disparar antes do set() completar, fazendo o consent check ler profile
+// vazio e abrir o modal desnecessariamente. Esta flag bypassa o check durante
+// o signup, porque sabemos que o consentimento foi marcado no form.
+let _suppressConsentCheckOnce = false;
+
 async function submitAuthEmail() {
   _clearAuthEmailErrors();
   _setAuthInfo('');
@@ -4206,6 +4214,7 @@ async function submitAuthEmail() {
 
   try {
     if (isSignup) {
+      _suppressConsentCheckOnce = true;
       const cred = await auth.createUserWithEmailAndPassword(email, password);
       // v2.1.70: salva registro do aceite no perfil imediatamente após criar conta.
       // Usa set direto no Firestore pra não depender de initApp ter rodado.
@@ -4282,6 +4291,12 @@ function closeLegalDoc() {
 // (que não passa pelo form de signup) e qualquer usuário legado sem registro.
 async function _checkConsentForAuthedUser(user) {
   if (!user || !user.uid) return true;
+  // v2.1.70: bypass o check se acabamos de fazer signup via email — o
+  // consentimento está sendo gravado em paralelo pelo submitAuthEmail().
+  if (_suppressConsentCheckOnce) {
+    _suppressConsentCheckOnce = false;
+    return true;
+  }
   try {
     const snap = await db.collection('users').doc(user.uid).collection('data')
                          .doc(STORAGE_KEYS.userProfile).get();
