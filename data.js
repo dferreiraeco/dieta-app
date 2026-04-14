@@ -38,6 +38,9 @@ const STORAGE_KEYS = {
   userProfile:         'user_profile',
   skipLogin:           'skip_login',
   weightLog:           'weight_log',
+  // v2.1.73: registro de consentimento LGPD, isolado do user_profile
+  // pra não conflitar com o onboarding e com o uploadLocalToFirestore
+  lgpdConsent:         'lgpd_consent',
 };
 
 // Prefixos de chaves dinâmicas (usadas com startsWith em cleanup/backup).
@@ -67,6 +70,7 @@ const SYNC_KEYS = [
   STORAGE_KEYS.weightLog,
   STORAGE_KEYS.genLastAppliedMarmita,
   STORAGE_KEYS.genLastAppliedDinner,
+  STORAGE_KEYS.lgpdConsent,
 ];
 const BACKUP_KEYS = SYNC_KEYS;
 

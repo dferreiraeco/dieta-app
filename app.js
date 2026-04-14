@@ -4225,23 +4225,27 @@ async function submitAuthEmail() {
     if (isSignup) {
       _suppressConsentCheckOnce = true;
       const cred = await auth.createUserWithEmailAndPassword(email, password);
-      // v2.1.70: salva registro do aceite no perfil imediatamente após criar conta.
-      // Usa set direto no Firestore pra não depender de initApp ter rodado.
+      // v2.1.73: grava consentimento em chave dedicada lgpd_consent (formato
+      // padrão saveData: value como string JSON). Gravar no localStorage +
+      // Firestore diretamente — currentUser ainda é null nesse momento, então
+      // o override do setItem não consegue sincronizar sozinho.
       const nowIso = new Date().toISOString();
-      const consentProfile = {
+      const consent = {
         accepted_terms_at:   nowIso,
         terms_version:       LEGAL_VERSIONS.terms,
         accepted_privacy_at: nowIso,
         privacy_version:     LEGAL_VERSIONS.privacy,
-        age_confirmed_at:    nowIso,  // v2.1.72: checkbox 18+ dedicado
+        age_confirmed_at:    nowIso,
         health_consent_at:   nowIso,
       };
+      const consentStr = JSON.stringify(consent);
       try {
+        localStorage.setItem(STORAGE_KEYS.lgpdConsent, consentStr);
         await db.collection('users').doc(cred.user.uid).collection('data')
-                .doc(STORAGE_KEYS.userProfile)
-                .set({ value: consentProfile, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                .doc(STORAGE_KEYS.lgpdConsent)
+                .set({ value: consentStr, updated: firebase.firestore.FieldValue.serverTimestamp() });
       } catch (err) {
-        console.warn('Falha ao gravar consentimento LGPD no profile:', err);
+        console.warn('Falha ao gravar consentimento LGPD:', err);
       }
       // v2.1.70: envia email de verificação logo após criar a conta.
       // Não bloqueia o acesso — é só um lembrete visual pro usuário confirmar.
@@ -4365,6 +4369,17 @@ function closeLegalDoc() {
 // v2.1.70: verifica se o usuário autenticado já deu consentimento LGPD.
 // Se não, exibe o modal blocante antes de liberar o app. Cobre login Google
 // (que não passa pelo form de signup) e qualquer usuário legado sem registro.
+// v2.1.73: helper pra parsear o value do Firestore (que vem como string
+// JSON por causa do saveData()) ou como objeto (caso seja escrito direto).
+function _parseFirestoreValue(raw) {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+  if (typeof raw === 'object') return raw;
+  return null;
+}
+
 async function _checkConsentForAuthedUser(user) {
   if (!user || !user.uid) return true;
   // v2.1.70: bypass o check se acabamos de fazer signup via email — o
@@ -4373,12 +4388,28 @@ async function _checkConsentForAuthedUser(user) {
     _suppressConsentCheckOnce = false;
     return true;
   }
+  // v2.1.73: primeiro tenta o localStorage (rápido, sem network)
+  try {
+    const localRaw = localStorage.getItem(STORAGE_KEYS.lgpdConsent);
+    if (localRaw) {
+      const local = JSON.parse(localRaw);
+      if (local && local.health_consent_at && local.accepted_terms_at) {
+        return true;
+      }
+    }
+  } catch (_) {}
+  // Fallback: tenta o Firestore
   try {
     const snap = await db.collection('users').doc(user.uid).collection('data')
-                         .doc(STORAGE_KEYS.userProfile).get();
-    const val = snap.exists ? (snap.data() && snap.data().value) : null;
-    if (val && val.health_consent_at && val.accepted_terms_at) {
-      return true; // já consentiu, libera
+                         .doc(STORAGE_KEYS.lgpdConsent).get();
+    const consent = snap.exists ? _parseFirestoreValue(snap.data().value) : null;
+    if (consent && consent.health_consent_at && consent.accepted_terms_at) {
+      // Popula o localStorage pra próximas checagens serem offline
+      try {
+        const _origSet = (typeof _origSetItem === 'function') ? _origSetItem : localStorage.setItem.bind(localStorage);
+        _origSet(STORAGE_KEYS.lgpdConsent, JSON.stringify(consent));
+      } catch (_) {}
+      return true;
     }
   } catch (e) {
     console.warn('Erro ao verificar consentimento:', e);
@@ -4417,22 +4448,19 @@ async function submitConsentModal() {
   const btn = document.getElementById('consent-modal-accept');
   if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
   const nowIso = new Date().toISOString();
+  const consent = {
+    accepted_terms_at:   nowIso,
+    terms_version:       LEGAL_VERSIONS.terms,
+    accepted_privacy_at: nowIso,
+    privacy_version:     LEGAL_VERSIONS.privacy,
+    age_confirmed_at:    nowIso,
+    health_consent_at:   nowIso,
+  };
   try {
-    // Merge nos campos de consentimento sem sobrescrever o perfil existente
-    const ref = db.collection('users').doc(currentUser.uid).collection('data')
-                  .doc(STORAGE_KEYS.userProfile);
-    const snap = await ref.get();
-    const existing = snap.exists ? (snap.data().value || {}) : {};
-    const merged = {
-      ...existing,
-      accepted_terms_at:   nowIso,
-      terms_version:       LEGAL_VERSIONS.terms,
-      accepted_privacy_at: nowIso,
-      privacy_version:     LEGAL_VERSIONS.privacy,
-      age_confirmed_at:    nowIso,  // v2.1.72: checkbox 18+ dedicado
-      health_consent_at:   nowIso,
-    };
-    await ref.set({ value: merged, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    // v2.1.73: usa saveData() que grava local + Firestore no formato padrão
+    // (value como string JSON). Chave isolada STORAGE_KEYS.lgpdConsent pra
+    // não conflitar com user_profile nem ser sobrescrita por uploadLocalToFirestore.
+    saveData(STORAGE_KEYS.lgpdConsent, consent);
   } catch (e) {
     console.error('Falha ao salvar consentimento:', e);
     alert('Erro ao salvar consentimento. Tente novamente.');
@@ -5001,9 +5029,9 @@ function openProfileView() {
     <div class="pv-section">
       <h3>Privacidade e Dados (LGPD)</h3>
       <p class="pv-lgpd-desc">Exerça seus direitos previstos na Lei Geral de Proteção de Dados (Art. 18). Para mais detalhes, consulte a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>.</p>
-      <button type="button" class="pv-lgpd-btn" onclick="exportUserData()">📥 Exportar meus dados (JSON)</button>
+      <button type="button" class="pv-lgpd-btn" onclick="exportUserData()">📤 Exportar meus dados (JSON)</button>
       <label class="pv-lgpd-btn" style="cursor:pointer">
-        📤 Importar backup (JSON)
+        📥 Importar backup (JSON)
         <input type="file" accept=".json,application/json" onchange="importData(event)" style="display:none">
       </label>
       <button type="button" class="pv-lgpd-btn pv-lgpd-danger" onclick="deleteAccount()">🗑 Apagar minha conta</button>
