@@ -4462,55 +4462,45 @@ function _closeConsentModal() {
 }
 
 // v2.1.70: exporta todos os dados do usuário como JSON download.
-// Atende Art. 18, V (portabilidade) da LGPD. Roda 100% local — lê do
-// localStorage que já é cache/espelho do Firestore.
+// Atende Art. 18, V (portabilidade) da LGPD + serve como backup restaurável.
+// v2.1.72: formato unificado — metadados + chaves flat no root, com marker
+// _app: 'dieta-diego' pra ser compatível com importData (restore).
 function exportUserData() {
-  const data = {};
-  // Chaves fixas do STORAGE_KEYS
+  const payload = {
+    // Marcadores compatíveis com importData (restore de backup)
+    _app:            'dieta-diego',
+    _date:           new Date().toISOString(),
+    // Metadados adicionais pra LGPD / auditoria
+    app_name:        'DietPLAN',
+    app_version:     'v2.1.72',
+    terms_version:   LEGAL_VERSIONS.terms,
+    privacy_version: LEGAL_VERSIONS.privacy,
+    user: currentUser ? {
+      uid:            currentUser.uid,
+      email:          currentUser.email,
+      display_name:   currentUser.displayName || null,
+      provider:       (currentUser.providerData[0] && currentUser.providerData[0].providerId) || null,
+      email_verified: currentUser.emailVerified,
+    } : { mode: 'offline_no_account' },
+  };
+
+  // Chaves fixas do STORAGE_KEYS — flat no root
   Object.values(STORAGE_KEYS).forEach(key => {
     const raw = localStorage.getItem(key);
     if (raw != null) {
-      try { data[key] = JSON.parse(raw); }
-      catch (_) { data[key] = raw; }
+      try { payload[key] = JSON.parse(raw); }
+      catch (_) { payload[key] = raw; }
     }
   });
-  // Chaves dinâmicas meals_YYYY-MM-DD
-  const meals = {};
+  // Chaves dinâmicas meals_YYYY-MM-DD e cardio_ — também flat no root
   Object.keys(localStorage).forEach(k => {
-    if (k.startsWith(STORAGE_PREFIXES.meals)) {
-      try { meals[k] = JSON.parse(localStorage.getItem(k)); }
-      catch (_) { meals[k] = localStorage.getItem(k); }
+    if (k.startsWith(STORAGE_PREFIXES.meals) || k.startsWith(STORAGE_PREFIXES.cardio)) {
+      try { payload[k] = JSON.parse(localStorage.getItem(k)); }
+      catch (_) { payload[k] = localStorage.getItem(k); }
     }
   });
-  if (Object.keys(meals).length) data._meals_by_date = meals;
-  // Chaves dinâmicas cardio_ (legado)
-  const cardio = {};
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith(STORAGE_PREFIXES.cardio)) {
-      try { cardio[k] = JSON.parse(localStorage.getItem(k)); }
-      catch (_) { cardio[k] = localStorage.getItem(k); }
-    }
-  });
-  if (Object.keys(cardio).length) data._cardio_legacy = cardio;
 
-  // Metadados do export
-  const exportPayload = {
-    app:             'DietPLAN',
-    app_version:     'v2.1.70',
-    terms_version:   LEGAL_VERSIONS.terms,
-    privacy_version: LEGAL_VERSIONS.privacy,
-    export_date:     new Date().toISOString(),
-    user: currentUser ? {
-      uid:           currentUser.uid,
-      email:         currentUser.email,
-      display_name:  currentUser.displayName || null,
-      provider:      (currentUser.providerData[0] && currentUser.providerData[0].providerId) || null,
-      email_verified: currentUser.emailVerified,
-    } : { mode: 'offline_no_account' },
-    data: data,
-  };
-
-  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const ts   = new Date().toISOString().slice(0, 10);
   const a    = document.createElement('a');
@@ -5012,6 +5002,10 @@ function openProfileView() {
       <h3>Privacidade e Dados (LGPD)</h3>
       <p class="pv-lgpd-desc">Exerça seus direitos previstos na Lei Geral de Proteção de Dados (Art. 18). Para mais detalhes, consulte a <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')">Política de Privacidade</a>.</p>
       <button type="button" class="pv-lgpd-btn" onclick="exportUserData()">📥 Exportar meus dados (JSON)</button>
+      <label class="pv-lgpd-btn" style="cursor:pointer">
+        📤 Importar backup (JSON)
+        <input type="file" accept=".json,application/json" onchange="importData(event)" style="display:none">
+      </label>
       <button type="button" class="pv-lgpd-btn pv-lgpd-danger" onclick="deleteAccount()">🗑 Apagar minha conta</button>
     </div>
     ` : ''}
