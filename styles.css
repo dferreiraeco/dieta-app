@@ -1948,17 +1948,24 @@ body {
   display: block;
   pointer-events: auto;
 }
-/* Elemento alvo do spotlight: box-shadow gigante cria o overlay escuro,
-   deixando só o próprio elemento visível com destaque verde */
-.tour-spotlight {
-  position: relative;
-  z-index: 452 !important;
-  border-radius: 8px;
+/* v2.1.95: spotlight via cutout div em position:fixed. Cria o overlay
+   escuro via box-shadow gigante, deixando só a área do target visível
+   destacada com border verde. Não depende de stacking context do target. */
+.tour-cutout {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 10px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.75),
     0 0 0 3px var(--green),
-    0 0 16px 4px rgba(39, 103, 73, 0.5);
-  transition: box-shadow 0.2s;
+    0 0 20px 6px rgba(39, 103, 73, 0.6);
+  z-index: 452;
+  transition: top 0.2s, left 0.2s, width 0.2s, height 0.2s;
+}
+/* Legado: mantido por compatibilidade mas não usado no novo fluxo */
+.tour-spotlight {
+  position: relative;
+  z-index: 452 !important;
 }
 .tour-card {
   position: fixed;

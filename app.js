@@ -4952,6 +4952,7 @@ const TOUR_STEPS = [
 ];
 
 let _tourStep = 0;
+let _tourCutoutEl = null;       // v2.1.95: div cutout usado como spotlight
 
 function startTour() {
   _tourStep = 0;
@@ -4962,7 +4963,69 @@ function startTour() {
 }
 
 function _clearTourSpotlight() {
+  // Limpa classe do spotlight (padrão legado pro tab-btn)
   document.querySelectorAll('.tour-spotlight').forEach(el => el.classList.remove('tour-spotlight'));
+  // v2.1.95: remove cutout div se existir
+  if (_tourCutoutEl) {
+    _tourCutoutEl.remove();
+    _tourCutoutEl = null;
+  }
+}
+
+// v2.1.95: cria uma div em position:fixed sobre o elemento alvo com um
+// box-shadow gigante que escurece todo o resto da tela. Como está no body
+// direto (fora de qualquer stacking context), o escurecimento é confiável.
+function _createTourCutout(target) {
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+  const el = document.createElement('div');
+  el.className = 'tour-cutout';
+  el.style.top    = Math.max(0, rect.top - pad) + 'px';
+  el.style.left   = Math.max(0, rect.left - pad) + 'px';
+  el.style.width  = (rect.width + pad * 2) + 'px';
+  el.style.height = (rect.height + pad * 2) + 'px';
+  document.body.appendChild(el);
+  _tourCutoutEl = el;
+}
+
+// v2.1.95: posiciona o card de tour perto do target. Se target está
+// na metade superior da viewport, card aparece abaixo dele; se está
+// na metade inferior, card aparece acima. Clamp pros limites da viewport.
+function _positionTourCardNearTarget(card, target) {
+  if (!card || !target) return;
+  const rect = target.getBoundingClientRect();
+  const viewH = window.innerHeight;
+  const viewW = window.innerWidth;
+  const margin = 16;
+  // Força layout pra pegar offsetHeight/Width corretos
+  card.style.top    = '0px';
+  card.style.left   = '0px';
+  card.style.right  = 'auto';
+  card.style.bottom = 'auto';
+  card.style.transform = 'none';
+  const cardH = card.offsetHeight;
+  const cardW = card.offsetWidth;
+
+  // Horizontal: centralizado no target, clampado pra não sair da tela
+  let left = rect.left + rect.width / 2 - cardW / 2;
+  left = Math.max(14, Math.min(viewW - cardW - 14, left));
+
+  // Vertical: preferência por colocar abaixo, fallback pra acima
+  const spaceBelow = viewH - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  let top;
+  if (spaceBelow >= cardH) {
+    top = rect.bottom + margin;
+  } else if (spaceAbove >= cardH) {
+    top = rect.top - cardH - margin;
+  } else {
+    // Sem espaço nenhum — usa abaixo da tab-bar
+    top = Math.max(14, viewH - cardH - 100);
+  }
+
+  card.style.top  = top + 'px';
+  card.style.left = left + 'px';
 }
 
 function _renderTourStep() {
@@ -4975,30 +5038,7 @@ function _renderTourStep() {
     switchTab(step.tab);
   }
 
-  // v2.1.94: spotlight no target — suporta tab-btn (targetKey) OU elemento
-  // arbitrário via CSS selector (targetSelector)
-  setTimeout(() => {
-    if (step.targetKey) {
-      const idx = TABS.indexOf(step.targetKey);
-      const btns = document.querySelectorAll('.tab-btn');
-      if (btns[idx]) btns[idx].classList.add('tour-spotlight');
-    } else if (step.targetSelector) {
-      const el = document.querySelector(step.targetSelector);
-      if (el) {
-        // Scroll pra centralizar o target na viewport, acima do card
-        try {
-          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        } catch (_) {}
-        // Aplica spotlight depois do scroll animar
-        setTimeout(() => {
-          el.classList.add('tour-spotlight');
-        }, 220);
-      }
-      // Se target não existe, segue sem spotlight (card mostra a info mesmo assim)
-    }
-  }, 80);
-
-  // Renderiza card
+  // Renderiza card primeiro pra saber offsetHeight
   const card = document.getElementById('tour-card');
   if (!card) return;
   const total = TOUR_STEPS.length;
@@ -5013,8 +5053,16 @@ function _renderTourStep() {
   card.className = 'tour-card'
     + (isCentered ? ' centered' : '')
     + (isCompact ? ' compact' : '');
+  // v2.1.95: resetar estilos inline pra cards centered/hero usarem o CSS padrão
+  if (!isCompact || isCentered) {
+    card.style.top = '';
+    card.style.left = '';
+    card.style.right = '';
+    card.style.bottom = '';
+    card.style.transform = '';
+  }
   const imgHtml = step.image
-    ? '<img class="tour-card-img" src="' + step.image + '?v=2194" alt="">'
+    ? '<img class="tour-card-img" src="' + step.image + '?v=2195" alt="">'
     : '';
   card.innerHTML =
     imgHtml +
@@ -5030,6 +5078,34 @@ function _renderTourStep() {
         '</button>' +
       '</div>' +
     '</div>';
+
+  // v2.1.94/95: spotlight no target — suporta tab-btn (targetKey) OU elemento
+  // arbitrário via CSS selector (targetSelector). Usa cutout div em fixed
+  // positioning pra garantir escurecimento global confiável.
+  setTimeout(() => {
+    if (step.targetKey) {
+      // Tab button — cria cutout sobre o botão do nav bottom
+      const idx = TABS.indexOf(step.targetKey);
+      const btns = document.querySelectorAll('.tab-btn');
+      if (btns[idx]) {
+        _createTourCutout(btns[idx]);
+        // Tab-btn não precisa de scroll nem posicionamento dinâmico do card
+      }
+    } else if (step.targetSelector) {
+      const el = document.querySelector(step.targetSelector);
+      if (el) {
+        // Scroll pra posicionar o target visível
+        try {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (_) {}
+        // Aguarda scroll terminar antes de criar cutout e posicionar card
+        setTimeout(() => {
+          _createTourCutout(el);
+          _positionTourCardNearTarget(card, el);
+        }, 320);
+      }
+    }
+  }, 80);
 }
 
 function _tourNext() { _tourStep++; _renderTourStep(); }
