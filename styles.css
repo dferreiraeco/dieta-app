@@ -2076,17 +2076,16 @@ body {
   border-color: var(--accent-danger);
 }
 .ob-field label.ob-advanced-toggle input[type="checkbox"] {
-  /* Custom circular checkbox — 1em = font-size do texto (12.5px),
-     proporcional à altura do glifo, não à line-height */
-  margin: 3px 0 0 0;
-  width: 1em;
-  height: 1em;
+  /* Custom circular checkbox — 0.5em (metade do font-size do texto) */
+  margin: 6px 0 0 0;
+  width: 0.5em;
+  height: 0.5em;
   flex-shrink: 0;
   cursor: pointer;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  border: 1.5px solid var(--gray-mid);
+  border: 1px solid var(--gray-mid);
   border-radius: 50%;
   background: var(--surface);
   position: relative;
