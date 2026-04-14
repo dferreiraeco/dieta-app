@@ -4076,6 +4076,7 @@ function _updateAuthEmailUI() {
   const desc        = document.getElementById('auth-email-desc');
   const submit      = document.getElementById('auth-email-submit');
   const confirmField= document.getElementById('auth-confirm-field');
+  const consentField= document.getElementById('auth-consent-fields');
   const toggleBtn   = document.getElementById('auth-toggle-btn');
   const passwordEl  = document.getElementById('auth-password');
   if (_authEmailMode === 'signin') {
@@ -4083,18 +4084,39 @@ function _updateAuthEmailUI() {
     if (desc) desc.textContent = 'Use seu email cadastrado para acessar o app';
     submit.textContent = 'Entrar';
     confirmField.style.display = 'none';
+    if (consentField) consentField.style.display = 'none';
     toggleBtn.innerHTML = 'Não tem conta? <b>Criar conta</b>';
     passwordEl.setAttribute('autocomplete', 'current-password');
+    submit.disabled = false;
   } else {
     title.textContent  = 'Criar conta';
     if (desc) desc.textContent = 'Cadastre um email e senha para sincronizar seus dados';
     submit.textContent = 'Criar conta';
     confirmField.style.display = '';
+    if (consentField) consentField.style.display = 'block';
     toggleBtn.innerHTML = 'Já tem conta? <b>Entrar</b>';
     passwordEl.setAttribute('autocomplete', 'new-password');
+    // Reset checkboxes e desabilita botão até aceite
+    const cbTerms  = document.getElementById('auth-consent-terms');
+    const cbHealth = document.getElementById('auth-consent-health');
+    if (cbTerms)  cbTerms.checked  = false;
+    if (cbHealth) cbHealth.checked = false;
+    _updateAuthSubmitState();
   }
   _clearAuthEmailErrors();
   _setAuthInfo('');
+}
+
+// v2.1.70: habilita o botão "Criar conta" apenas quando ambos os checkboxes
+// de consentimento LGPD estão marcados. Chamado a cada mudança de checkbox.
+function _updateAuthSubmitState() {
+  if (_authEmailMode !== 'signup') return;
+  const submit   = document.getElementById('auth-email-submit');
+  const cbTerms  = document.getElementById('auth-consent-terms');
+  const cbHealth = document.getElementById('auth-consent-health');
+  if (!submit) return;
+  const ok = !!(cbTerms && cbTerms.checked && cbHealth && cbHealth.checked);
+  submit.disabled = !ok;
 }
 
 function _clearAuthEmailErrors() {
@@ -4135,6 +4157,13 @@ const AUTH_EMAIL_ERRORS = {
   'auth/user-disabled':         ['auth-email',    'Esta conta foi desativada'],
 };
 
+// v2.1.70: versão dos documentos legais que o usuário está aceitando.
+// Incremento manual a cada release com mudança relevante nos docs.
+const LEGAL_VERSIONS = {
+  terms:   '1.1',
+  privacy: '1.1',
+};
+
 async function submitAuthEmail() {
   _clearAuthEmailErrors();
   _setAuthInfo('');
@@ -4157,6 +4186,17 @@ async function submitAuthEmail() {
       _showAuthEmailError('auth-confirm', 'As senhas não coincidem');
       return;
     }
+    // v2.1.70: valida checkboxes de consentimento LGPD
+    const cbTerms  = document.getElementById('auth-consent-terms');
+    const cbHealth = document.getElementById('auth-consent-health');
+    if (!cbTerms || !cbTerms.checked) {
+      _showAuthEmailError('auth-consent-terms', 'É necessário aceitar os Termos e a Política de Privacidade');
+      return;
+    }
+    if (!cbHealth || !cbHealth.checked) {
+      _showAuthEmailError('auth-consent-health', 'É necessário autorizar o tratamento de dados de saúde');
+      return;
+    }
   }
 
   const submit = document.getElementById('auth-email-submit');
@@ -4166,7 +4206,24 @@ async function submitAuthEmail() {
 
   try {
     if (isSignup) {
-      await auth.createUserWithEmailAndPassword(email, password);
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      // v2.1.70: salva registro do aceite no perfil imediatamente após criar conta.
+      // Usa set direto no Firestore pra não depender de initApp ter rodado.
+      const nowIso = new Date().toISOString();
+      const consentProfile = {
+        accepted_terms_at:   nowIso,
+        terms_version:       LEGAL_VERSIONS.terms,
+        accepted_privacy_at: nowIso,
+        privacy_version:     LEGAL_VERSIONS.privacy,
+        health_consent_at:   nowIso,
+      };
+      try {
+        await db.collection('users').doc(cred.user.uid).collection('data')
+                .doc(STORAGE_KEYS.userProfile)
+                .set({ value: consentProfile, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      } catch (err) {
+        console.warn('Falha ao gravar consentimento LGPD no profile:', err);
+      }
     } else {
       await auth.signInWithEmailAndPassword(email, password);
     }
@@ -4182,6 +4239,120 @@ async function submitAuthEmail() {
       _showAuthEmailError('auth-email', e.message || 'Erro ao autenticar');
     }
   }
+}
+
+// v2.1.70: modal para exibir Termos de Uso e Política de Privacidade.
+// Busca o .md do servidor e renderiza com um parser minimal (headers, bold,
+// italic, listas, tabelas, links). Pra manter o bundle leve, nada de lib externa.
+async function showLegalDoc(which) {
+  const titles = { terms: 'Termos de Uso', privacy: 'Política de Privacidade' };
+  const files  = { terms: 'TERMS.md?v=2170', privacy: 'PRIVACY.md?v=2170' };
+  const titleEl = document.getElementById('legal-modal-title');
+  const bodyEl  = document.getElementById('legal-modal-body');
+  const modal   = document.getElementById('legal-modal');
+  if (!titleEl || !bodyEl || !modal) return;
+  titleEl.textContent = titles[which] || 'Documento';
+  bodyEl.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--gray-mid)">Carregando…</div>';
+  modal.classList.add('open');
+  try {
+    const resp = await fetch(files[which], { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const md = await resp.text();
+    bodyEl.innerHTML = _renderMarkdown(md);
+    bodyEl.scrollTop = 0;
+  } catch (e) {
+    bodyEl.innerHTML = '<div style="padding:20px;color:var(--red)">Erro ao carregar documento. Tente novamente.<br><small>' + (e.message || '') + '</small></div>';
+  }
+}
+
+function closeLegalDoc() {
+  const modal = document.getElementById('legal-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+// Parser minimal de Markdown. NÃO é uma implementação completa — cobre só
+// o subset usado em PRIVACY.md / TERMS.md: headers (# ## ###), bold (**text**),
+// italic (*text*), links [text](url), listas (- item), tabelas simples,
+// separadores (---), blockquotes, code inline (`code`).
+function _renderMarkdown(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const lines = md.split('\n');
+  let out = [];
+  let i = 0;
+  const inlineFmt = s => {
+    s = esc(s);
+    // bold **x**
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    // italic *x* (não colide com ** porque já rodou bold)
+    s = s.replace(/(^|\s)\*([^*]+)\*(\s|$|[.,;:!?])/g, '$1<i>$2</i>$3');
+    // code `x`
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // links [text](url)
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  };
+  while (i < lines.length) {
+    const line = lines[i];
+    // Frontmatter / horizontal rule
+    if (/^---+\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+    // Headers
+    const h = line.match(/^(#{1,6})\s+(.+)$/);
+    if (h) {
+      const level = h[1].length;
+      out.push('<h' + level + '>' + inlineFmt(h[2]) + '</h' + level + '>');
+      i++; continue;
+    }
+    // Tabela: header line + separator line + rows
+    if (/^\|.+\|\s*$/.test(line) && i + 1 < lines.length && /^\|[\s:|-]+\|\s*$/.test(lines[i+1])) {
+      const header = line.split('|').slice(1, -1).map(c => c.trim());
+      let rows = [];
+      i += 2;
+      while (i < lines.length && /^\|.+\|\s*$/.test(lines[i])) {
+        rows.push(lines[i].split('|').slice(1, -1).map(c => c.trim()));
+        i++;
+      }
+      let tbl = '<table><thead><tr>';
+      header.forEach(c => tbl += '<th>' + inlineFmt(c) + '</th>');
+      tbl += '</tr></thead><tbody>';
+      rows.forEach(r => {
+        tbl += '<tr>';
+        r.forEach(c => tbl += '<td>' + inlineFmt(c) + '</td>');
+        tbl += '</tr>';
+      });
+      tbl += '</tbody></table>';
+      out.push(tbl);
+      continue;
+    }
+    // Lista ordenada ou não-ordenada
+    if (/^[-*]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+      const ordered = /^\d+\.\s+/.test(line);
+      const tag = ordered ? 'ol' : 'ul';
+      let items = [];
+      while (i < lines.length && (/^[-*]\s+/.test(lines[i]) || /^\d+\.\s+/.test(lines[i]) || /^\s{2,}/.test(lines[i]))) {
+        if (/^[-*]\s+/.test(lines[i])) {
+          items.push(lines[i].replace(/^[-*]\s+/, ''));
+        } else if (/^\d+\.\s+/.test(lines[i])) {
+          items.push(lines[i].replace(/^\d+\.\s+/, ''));
+        } else if (/^\s{2,}/.test(lines[i]) && items.length) {
+          items[items.length - 1] += ' ' + lines[i].trim();
+        }
+        i++;
+      }
+      out.push('<' + tag + '>' + items.map(it => '<li>' + inlineFmt(it) + '</li>').join('') + '</' + tag + '>');
+      continue;
+    }
+    // Blockquote
+    if (/^>\s+/.test(line)) {
+      out.push('<blockquote>' + inlineFmt(line.replace(/^>\s+/, '')) + '</blockquote>');
+      i++; continue;
+    }
+    // Linha vazia
+    if (/^\s*$/.test(line)) { i++; continue; }
+    // Parágrafo
+    out.push('<p>' + inlineFmt(line) + '</p>');
+    i++;
+  }
+  return out.join('\n');
 }
 
 async function sendPasswordReset() {
