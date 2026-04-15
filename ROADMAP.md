@@ -6,6 +6,175 @@ Origem: análise crítica feita em abril/2026 cobrindo 33+ pontos de dívida té
 
 ---
 
+## 🚀 v2.1.70 → v2.1.109 — Fase 0 Expansão + UX polish (2026-04-14 → 2026-04-15)
+
+**Origem:** preparação pra abrir o app pra usuários além do círculo familiar. Planejado em `EXPANSION_STRATEGY.md` com 6 sprints (0A-0F). Execução cobriu LGPD compliance, integração no app, UX pra estranhos, infra e validação. Concluído com polish contínuo de UX do tour e fluxos de auth/onboarding.
+
+### Sprint 0A — Email DPO (user action)
+
+- [x] **sac.dietplan@gmail.com** criado pelo usuário como Encarregado de Proteção de Dados
+
+### Sprint 0B — Docs legais LGPD-compliant (v2.1.70 → v2.1.71)
+
+- [x] **PRIVACY.md v1.1** (14 seções, ~530 linhas)
+  - Base legal Art. 6º/7º/11 com tabela conservadora (dados de saúde = Art. 11 I consentimento específico)
+  - Compartilhamento Firebase/Google com localização São Paulo `southamerica-east1`
+  - Comunicação de incidentes Art. 48 + Resolução CD/ANPD nº 15/2024 (2 dias úteis)
+  - Política de cookies/armazenamento local (tabela, lista negativa, sem banner necessário)
+  - Restrição 18+ com princípio de precaução + proteção contra TAs em adolescentes
+  - Escala de 3 níveis pra alterações (editorial / relevante / novo consentimento)
+  - Jurisdição brasileira + ANPD + canal único sac.dietplan@gmail.com
+
+- [x] **TERMS.md v1.1** (17 seções, ~710 linhas)
+  - Aviso médico forte inicial com bariátrica, grávidas, TAs, menores
+  - Consentimento específico Art. 11 §1º via checkboxes separados
+  - Cláusula subsidiária CDC Art. 14 §3º (relação de consumo fallback)
+  - Limite proporcional Art. 944 CC em vez de cap "R$ 0"
+  - Licença limitada revogável sobre dados do usuário, privacidade por design
+  - Responsible disclosure pra reporte de vulnerabilidades
+  - Canais de resolução incluindo JEC e Defensoria Pública
+  - Declaração formal de aceite com 5 itens numerados
+
+- [x] **`.nojekyll`** criado pra GH Pages não processar os .md
+
+- [x] **`legal-docs.js`** gerado via `scripts/build-legal-docs.js` com as strings inline — elimina fetch (resolve bugs de SW stale, Jekyll processing, cache)
+
+### Sprint 0C — Integração no app (v2.1.70 → v2.1.74)
+
+**Wave 1 — Auth screen:**
+- [x] Aviso 18+ no topo do auth-main
+- [x] Footer com links pra Termos e Privacidade
+- [x] Modal `#legal-modal` pra renderizar os docs (com parser Markdown minimal inline)
+- [x] 2 checkboxes obrigatórios no signup email (Termos+Privacy / Dados de saúde Art. 11 §1º)
+
+**Wave 2 — Email verification + consent modal Google:**
+- [x] `sendEmailVerification()` automático após signup email
+- [x] Modal blocante `#consent-modal` pós-login Google pra usuários sem registro de consentimento prévio
+- [x] `_checkConsentForAuthedUser` no `onAuthStateChanged` — checa profile `accepted_terms_at` + `health_consent_at`
+- [x] Fix race condition signup email vs consent check (`_suppressConsentCheckOnce` flag)
+
+**Wave 3 — Direitos LGPD no profile view:**
+- [x] Seção "Privacidade e Dados (LGPD)" com Art. 18 + link pra política
+- [x] **📤 Exportar meus dados (JSON)** — formato unificado (LGPD portabilidade + backup restaurável compatível com `importData`)
+- [x] **📥 Importar backup (JSON)** — consolidado no profile view, removido card da Agenda
+- [x] **🗑 Apagar minha conta** — exclusão REAL: batch delete Firestore `users/{uid}/data/*` → `auth.currentUser.delete()` → trata `auth/requires-recent-login` com re-auth (password prompt ou Google popup)
+- [x] Adaptação pra modo "Sem conta": seção "Dados Locais" com export/import/wipe via `resetAllData()`
+
+**Wave 4 — Disclaimer médico + ajuda/contato:**
+- [x] Card de disclaimer médico no final da aba Dieta (border vermelho, italic, link pros Termos)
+- [x] Asterisco vermelho ao lado do "kcal/dia" no header como referência visual
+- [x] Seção "Ajuda e Contato" no profile view: botão refazer tour, mailto pré-preenchido, links pros docs legais
+
+**Bugfixes Wave 5:**
+- [x] Chave separada `lgpd_consent` em `STORAGE_KEYS` — isolada do `user_profile` pra não conflitar com onboarding nem ser sobrescrita por `uploadLocalToFirestore`
+- [x] Ícones de export/import corrigidos (📤 export, 📥 import)
+- [x] Consent modal agora **não aparece** a cada login, só uma vez
+
+### Sprint 0D — UX pro estranho (v2.1.75 → v2.1.86)
+
+**Tarefa 1 — Tooltips contextuais no onboarding:**
+- [x] Botão "?" ao lado de 4 campos técnicos (Gordura corporal %, Nível de atividade, Déficit, Superávit)
+- [x] Explicações com valores típicos, exemplos práticos, guia por faixa
+- [x] Toggle via `_toggleOBHelp()` com `aria-expanded` acessível
+
+**Tarefa 2 — Déficit extremo atrás de modo avançado:**
+- [x] Opção "Extremo 40%" removida do select por padrão
+- [x] Checkbox custom circular "Habilitar modo avançado" abaixo do select
+- [x] Warning vermelho destacado com risco de perda de massa magra, comprometimento hormonal, rebote
+- [x] `_syncAdvancedDeficitFromProfile` preserva escolha pra usuários existentes em edit
+
+**Tarefa 3 — Landing colapsável "Saiba mais":**
+- [x] `<details>` nativo abaixo do "Continuar sem conta" no auth-main
+- [x] 3 blocos: "✓ É pra você se" (5 critérios), "✗ NÃO é pra você se" (5 contraindicações), nota final com links legais
+- [x] Fontes reduzidas em 20% conforme feedback
+
+**Tarefa 4 — Tour walkthrough (23 passos):**
+- [x] Welcome + 5 abas intro (Marmitas, Compras, Dieta, Treino, Agenda) + 16 intermediários + Final
+- [x] Cards hero com imagens 720x720 HD (via Google Whisk com `icon-logo-v2.png` como reference), backup das originais em `tour-images/originals/`
+- [x] Alternância de personagem: mulher (1,3,5), homem (2,4,6), casal (7)
+- [x] Cards compact pros passos intermediários, posicionados dinamicamente próximos ao target
+- [x] Spotlight via cutout `position:fixed` com `box-shadow: 0 0 0 9999px` garantindo escurecimento global confiável
+- [x] Cutout dentro do `#tour-overlay` pra manter stacking context correto (card não escurecido)
+- [x] `targetSelectors` (array) pra múltiplos elementos num único cutout (Almoço+Jantar, Salvar+Histórico)
+- [x] Scroll suave dinâmico com `scrollIntoView block:center`
+- [x] `switchTab` só chamado se aba mudou (não reseta scroll em passos da mesma aba)
+- [x] `visibility: hidden` durante transição pra evitar "jump" visual
+- [x] Cutout captura cliques pra avançar o tour (em vez de disparar ação do elemento destacado)
+- [x] Trigger **apenas** pós-onboarding ou botão manual no profile (usuários existentes não veem automaticamente)
+- [x] Removido indicador X/Y que criava pressão pra terminar
+- [x] Ao finalizar, volta pra aba Marmitas no topo (`switchTab('marmitas')`)
+
+### Sprint 0E — Infraestrutura (docs prontos)
+
+- [x] **SECURITY.md seção 3 "Infraestrutura e Billing"** com passo-a-passo completo:
+  - Comparativo Spark vs Blaze
+  - Custo real esperado (R$ 0 pra 0-50 usuários, R$ 0-5 pra 50-200, etc.)
+  - Migração pra Blaze via Firebase Console (com URLs)
+  - Budget alert R$ 50/mês com thresholds 50%/80%/100%
+  - Monitoramento contínuo e backups opcionais do Firestore
+- [ ] **Ação do usuário pendente:** migrar pra Blaze + setar budget alert
+
+### Sprint 0F — Validação (checklist pronto)
+
+- [x] **SMOKE_TEST.md** com 10 cenários E2E cobrindo:
+  1. Primeiro acesso sem conta
+  2. Cadastro email/senha + 3 checkboxes LGPD
+  3. Cadastro Google + consent modal blocante
+  4. Uso funcional das 5 abas
+  5. Direitos LGPD no profile view
+  6. Apagar conta com re-auth
+  7. Importar backup
+  8. Dark mode
+  9. Offline/PWA install
+  10. Firestore Security Rules Playground
+- [ ] **Execução pendente:** usuário roda o checklist e marca os [x]
+
+### Polish de UX pós-Sprint 0 (v2.1.87 → v2.1.109)
+
+**Auth flow:**
+- [x] Botão "voltar" visível no onboarding em modo create com `customConfirm`
+- [x] `sessionStorage.auth_action_taken` detecta sessão abandonada — se usuário sai sem completar onboarding e reabre, vai pra tela de login em vez de ficar preso no form
+- [x] Hamburger icon (3 barras) à esquerda do avatar no user-bar como affordance visual de menu
+- [x] Card de disclaimer médico movido pro fim da aba Dieta (em vez de badge no topo)
+
+**Tour refinements:**
+- [x] Cards estreitos com imagens 1:1 (max-width 340px, min-height 560px padronizado)
+- [x] Imagens do tour em HD (~720x720) cropped sem upscale, quality 90 JPG
+- [x] Crop manual tour-4 com offset +40px pra centralizar melhor
+- [x] Highlights mais precisos em refeição/treino/calendário (primeiro item, `#cal-card` wrapper)
+- [x] Fonte `.ob-advanced-warning` reduzida 20%
+- [x] Checkbox custom circular 14px com `!important` pra iOS PWA
+- [x] Texto "Compartilhar Lista": "ou imprimir e anotar no mercado"
+- [x] Números removidos dos títulos de aba intro (Marmitas, Compras, etc.)
+- [x] Textos mais concisos em Meta calórica, Progresso do dia, Calendário
+
+**Cleanup:**
+- [x] Card "Zona de Perigo" removido da Agenda (redundante com profile view)
+- [x] Legenda do calendário: `.cal-dot.forca` muda de `--blue-mid` (aliasado pra verde) pra `--purple` — 3 cores distintas agora (marmita verde, treino roxo, cardio laranja)
+- [x] Campo `cal-card` ID novo no wrapper pra highlight completo (header + grid + legenda)
+
+**Infraestrutura do tour e docs legais:**
+- [x] `scripts/build-legal-docs.js` — gerador do `legal-docs.js` a partir dos .md
+- [x] `_createTourCutout` e `_positionTourCardNearTarget` aceitam arrays, computam rect union
+- [x] `_closeTour` limpa inline styles do card e retorna pra aba Marmitas
+
+### Arquivos novos ou significativamente mudados
+
+- **Criados:** `PRIVACY.md`, `TERMS.md`, `EXPANSION_STRATEGY.md`, `SMOKE_TEST.md`, `legal-docs.js`, `scripts/build-legal-docs.js`, `.nojekyll`, `tour-images/tour-1.jpg` a `tour-7.jpg` + `originals/`
+- **Expandidos:** `SECURITY.md` (seção 3 Infraestrutura), `ROADMAP.md`
+- **Grandes mudanças:** `app.js` (auth flow, consent, delete/export/import, tour engine), `styles.css` (landing, consent, tour card, cutout, hamburger, disclaimer), `index.html` (auth flow, modais, tour overlay, cal-card ID), `sw.js` (v2.1.70 → v2.1.109), `data.js` (STORAGE_KEYS.lgpdConsent)
+
+### Próximos passos (próxima sessão)
+
+- [ ] **Sprint 0E execução:** usuário migrar Firebase pra Blaze + configurar budget alert seguindo SECURITY.md seção 3
+- [ ] **Sprint 0F execução:** rodar SMOKE_TEST.md completo no celular, marcar [x] nos 10 cenários, documentar bugs encontrados
+- [ ] **Fase 0 → 100%** após 0E + 0F executados
+- [ ] **Fase 1 soft launch:** listar candidatos a beta testers, enviar convites, acompanhar uso real por 2-4 semanas
+
+### Tests: 129/129 ✓ (nenhum teste novo — mudanças são UI/flow/UX)
+
+---
+
 ## ✅ Roadmap completo (v2.1.69)
 
 Todos os 33 itens originais + extras estão ✅ completos ou ❌ marcados won't-do.
